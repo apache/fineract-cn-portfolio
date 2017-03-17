@@ -1,0 +1,83 @@
+#
+# Copyright 2017 The Mifos Initiative.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+
+#
+# Copyright 2016 The Mifos Initiative.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    preferIpAddress: true
+
+server:
+  port: 8081
+  contextPath: /portfolio/v1/*
+
+cassandra:
+  clusterName: datacenter1
+  contactPoints: 127.0.0.1:9042,127.0.0.2:9042,127.0.0.3:9042
+  keyspace: seshat
+  cl:
+    read: LOCAL_QUORUM
+    write: LOCAL_QUORUM
+    delete: LOCAL_QUORUM
+
+mariadb:
+  driverClass: org.mariadb.jdbc.Driver
+  database: seshat
+  host: localhost
+  port: 3306
+  user: root
+  password: mysql
+
+bonecp:
+  idleMaxAgeInMinutes: 240
+  idleConnectionTestPeriodInMinutes: 60
+  maxConnectionsPerPartition: 10
+  minConnectionsPerPartition: 1
+  partitionCount: 2
+  acquireIncrement: 5
+  statementsCacheSize: 100
+
+async:
+  corePoolSize: 32
+  maxPoolSize: 16384
+  queueCapacity: 0
+  threadName: async-processor-
+
+flyway:
+  enabled: false
+
+system:
+  publicKey:
+    exponent: 65537
+    modulus: 21188023007955682867939457181271038457216099278949187456460742046123672432355777599460689470319454021384777684967830053993002724303461144745107517305075315187397862430851722919529943465029389248042840364475999768651348557757734298942211509744303551097953258597691851996692366468761965138767429272032120029271744611798874201312092155969603381492096789028306859853929900848124928201000469425135976322303229632628092728624143573273277870884919055453251617011673264035045823652246768583219018126865521694880333238485410601803458379987829318615730229086183405850999386270584135805252231189505197494383178133769189765423639

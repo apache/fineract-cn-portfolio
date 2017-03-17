@@ -1,0 +1,6 @@
+rootProject.name = 'portfolio'
+
+includeBuild 'api'
+includeBuild 'service'
+includeBuild 'component-test'
+

@@ -35,7 +35,7 @@ public class CheckAccountAssignments implements ConstraintValidator<ValidAccount
   }
 
   public boolean isValid(final Set<AccountAssignment> accountAssignments, final ConstraintValidatorContext context) {
-    if (accountAssignments == null || accountAssignments.size() < 1)
+    if (accountAssignments == null)
       return false;
 
     final List<String> accountDesignators = accountAssignments.stream()

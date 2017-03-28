@@ -15,12 +15,11 @@
  */
 package io.mifos.portfolio;
 
-import io.mifos.portfolio.AbstractPortfolioTest;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.Command;
 import io.mifos.portfolio.api.v1.domain.Product;
-import io.mifos.individuallending.api.v1.domain.workflow.Action;
-import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import org.junit.Assert;
 import org.junit.Test;
 

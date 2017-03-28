@@ -15,14 +15,13 @@
  */
 package io.mifos.portfolio;
 
-import io.mifos.portfolio.AbstractPortfolioTest;
+import io.mifos.core.api.util.NotFoundException;
+import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
-import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
-import io.mifos.individuallending.api.v1.domain.workflow.Action;
-import io.mifos.core.api.util.NotFoundException;
 import org.junit.Assert;
 import org.junit.Test;
 

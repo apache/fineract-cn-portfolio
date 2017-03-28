@@ -29,7 +29,7 @@ import java.lang.annotation.*;
         validatedBy = {CheckAccountAssignments.class}
 )
 public @interface ValidAccountAssignments {
-  String message() default "Invalid fineract identifier.";
+  String message() default "Invalid account assignmenets.";
 
   Class<?>[] groups() default {};
 

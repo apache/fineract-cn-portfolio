@@ -18,12 +18,10 @@ package io.mifos.portfolio.service.internal.mapper;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.service.internal.repository.ProductAccountAssignmentEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
-import io.mifos.portfolio.service.internal.service.AccountingAdapter;
+import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -111,18 +109,5 @@ public class ProductMapper {
 
   public static List<Product> map(final List<ProductEntity> productEntities) {
     return productEntities.stream().map(ProductMapper::map).collect(Collectors.toList());
-  }
-
-  public static boolean accountAssignmentsCoverChargeDefinitions(
-          final Set<AccountAssignment> accountAssignments,
-          final List<ChargeDefinition> chargeDefinitionEntities) {
-    final Set<String> allAccountDesignatorsRequired = chargeDefinitionEntities.stream()
-            .flatMap(x -> Stream.of(x.getAccrualAccountDesignator(), x.getFromAccountDesignator(), x.getToAccountDesignator()))
-            .filter(x -> x != null)
-            .collect(Collectors.toSet());
-    final Set<String> allAccountDesignatorsDefined = accountAssignments.stream().map(AccountAssignment::getDesignator)
-            .collect(Collectors.toSet());
-    return allAccountDesignatorsDefined.containsAll(allAccountDesignatorsRequired);
-
   }
 }

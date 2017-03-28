@@ -32,6 +32,7 @@ dependencies {
             [group: 'org.springframework.cloud', name: 'spring-cloud-spring-service-connector'],
             [group: 'org.springframework.boot', name: 'spring-boot-starter-jetty'],
             [group: 'io.mifos.portfolio', name: 'api', version: project.version],
+            [group: 'io.mifos.accounting', name: 'api', version: versions.frameworkaccounting],
             [group: 'io.mifos.anubis', name: 'library', version: versions.frameworkanubis],
             [group: 'com.google.code.gson', name: 'gson'],
             [group: 'io.mifos.core', name: 'api', version: versions.frameworkapi],

@@ -18,6 +18,7 @@ package io.mifos.portfolio.service.rest;
 import io.mifos.anubis.annotation.AcceptedTokenType;
 import io.mifos.anubis.annotation.Permittable;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
+import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Myrle Krantz
@@ -48,7 +50,8 @@ public class ProductRestController {
   private final PatternService patternService;
 
   @Autowired public ProductRestController(final CommandGateway commandGateway,
-      final ProductService productService, final PatternService patternService) {
+                                          final ProductService productService,
+                                          final PatternService patternService) {
     super();
     this.commandGateway = commandGateway;
     this.productService = productService;
@@ -89,6 +92,20 @@ public class ProductRestController {
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_OPERATIONS_MANAGEMENT)
   @RequestMapping(
+          value = "/{productidentifier}/incompleteaccountassignments",
+          method = RequestMethod.GET,
+          consumes = MediaType.APPLICATION_JSON_VALUE,
+          produces = MediaType.APPLICATION_JSON_VALUE)
+  public @ResponseBody ResponseEntity<Set<AccountAssignment>> getIncompleteAccountAssignments(@PathVariable("productidentifier") final String productIdentifier)
+  {
+    productService.findByIdentifier(productIdentifier)
+            .orElseThrow(() -> ServiceException.notFound("Instance with identifier " + productIdentifier + " doesn't exist."));
+
+    return ResponseEntity.ok(productService.getIncompleteAccountAssignments(productIdentifier));
+  }
+
+  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_OPERATIONS_MANAGEMENT)
+  @RequestMapping(
           value = "/{productidentifier}/enabled",
           method = RequestMethod.PUT,
           consumes = MediaType.APPLICATION_JSON_VALUE,
@@ -100,7 +117,7 @@ public class ProductRestController {
     productService.findByIdentifier(productIdentifier)
             .orElseThrow(() -> ServiceException.notFound("Instance with identifier " + productIdentifier + " doesn't exist."));
 
-    if (!productService.isProductReadyToBeEnabled(productIdentifier))
+    if (!productService.areChargeDefinitionsCoveredByAccountAssignments(productIdentifier))
       throw ServiceException.conflict("Product with identifier " + productIdentifier + " is not ready to be enabled.");
 
     commandGateway.process(new ChangeEnablingOfProductCommand(productIdentifier, enabled));

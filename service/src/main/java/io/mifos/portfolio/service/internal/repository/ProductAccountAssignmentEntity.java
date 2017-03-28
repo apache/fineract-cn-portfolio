@@ -15,7 +15,7 @@
  */
 package io.mifos.portfolio.service.internal.repository;
 
-import io.mifos.portfolio.service.internal.service.AccountingAdapter;
+import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 
 import javax.persistence.*;
 

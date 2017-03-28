@@ -77,6 +77,13 @@ public interface PortfolioManager {
                      final Product product);
 
   @RequestMapping(
+          value = "/products/{productidentifier}/incompleteaccountassignments",
+          method = RequestMethod.GET,
+          produces = MediaType.APPLICATION_JSON_VALUE,
+          consumes = MediaType.APPLICATION_JSON_VALUE)
+  Set<AccountAssignment> getIncompleteAccountAssignments(@PathVariable("productidentifier") final String productIdentifier);
+
+  @RequestMapping(
           value = "/products/{productidentifier}/enabled",
           method = RequestMethod.PUT,
           produces = MediaType.APPLICATION_JSON_VALUE,

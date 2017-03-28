@@ -18,6 +18,7 @@ package io.mifos.portfolio.service.internal.command.handler;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.events.EventConstants;
+import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.products.spi.PatternFactory;
 import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
 import io.mifos.portfolio.service.internal.command.CreateProductCommand;
@@ -48,16 +49,19 @@ public class ProductCommandHandler {
   private final PatternFactoryRegistry patternFactoryRegistry;
   private final ProductRepository productRepository;
   private final ChargeDefinitionRepository chargeDefinitionRepository;
+  private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public ProductCommandHandler(
           final PatternFactoryRegistry patternFactoryRegistry,
           final ProductRepository productRepository,
-          final ChargeDefinitionRepository chargeDefinitionRepository) {
+          final ChargeDefinitionRepository chargeDefinitionRepository,
+          final AccountingAdapter accountingAdapter) {
     super();
     this.patternFactoryRegistry = patternFactoryRegistry;
     this.productRepository = productRepository;
     this.chargeDefinitionRepository = chargeDefinitionRepository;
+    this.accountingAdapter = accountingAdapter;
   }
 
   @Transactional
@@ -89,15 +93,21 @@ public class ProductCommandHandler {
     final ProductEntity productEntity = this.productRepository.findByIdentifier(changeEnablingOfProductCommand.getProductIdentifier())
             .orElseThrow(() -> ServiceException.notFound("Product not found '" + changeEnablingOfProductCommand.getProductIdentifier() + "'."));
 
-    final Set<AccountAssignment> accountAssignments = ProductMapper.map(productEntity).getAccountAssignments();
-    final List<ChargeDefinition> chargeDefinitions = chargeDefinitionRepository
-            .findByProductId(productEntity.getIdentifier())
-            .stream()
-            .map(ChargeDefinitionMapper::map)
-            .collect(Collectors.toList());
+    //noinspection PointlessBooleanExpression
+    if (changeEnablingOfProductCommand.getEnabled() == true) {
+      final Set<AccountAssignment> accountAssignments = ProductMapper.map(productEntity).getAccountAssignments();
+      final List<ChargeDefinition> chargeDefinitions = chargeDefinitionRepository
+              .findByProductId(productEntity.getIdentifier())
+              .stream()
+              .map(ChargeDefinitionMapper::map)
+              .collect(Collectors.toList());
 
-    if (!ProductMapper.accountAssignmentsCoverChargeDefinitions(accountAssignments, chargeDefinitions))
-      throw ServiceException.conflict("Not ready to enable product '" + changeEnablingOfProductCommand.getProductIdentifier() + "'.");
+      if (!AccountingAdapter.accountAssignmentsCoverChargeDefinitions(accountAssignments, chargeDefinitions))
+        throw ServiceException.conflict("Not ready to enable product '" + changeEnablingOfProductCommand.getProductIdentifier() + "'. One or more of the charge definitions contains a designator for which no account assignment exists.");
+
+      if (!accountingAdapter.accountAssignmentsRepresentRealAccounts(accountAssignments))
+        throw ServiceException.conflict("Not ready to enable product '" + changeEnablingOfProductCommand.getProductIdentifier() + "'. One or more of the account assignments points to an account or ledger which does not exist.");
+    }
 
     productEntity.setEnabled(changeEnablingOfProductCommand.getEnabled());
 

@@ -29,6 +29,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.netflix.feign.EnableFeignClients;
+import org.springframework.cloud.netflix.ribbon.RibbonClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
@@ -51,6 +53,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 })
 @EnableJpaRepositories(basePackages = "io.mifos.portfolio.service.internal.repository")
 @EntityScan(basePackages = "io.mifos.portfolio.service.internal.repository")
+@EnableFeignClients(basePackages = {"io.mifos.accounting.api.v1"})
 @Import(IndividualLendingConfiguration.class)
 public class PortfolioServiceConfiguration {
 

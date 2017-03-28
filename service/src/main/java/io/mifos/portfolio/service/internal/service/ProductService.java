@@ -21,12 +21,12 @@ import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.service.internal.mapper.ProductMapper;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
+import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author Myrle Krantz
@@ -36,13 +36,16 @@ public class ProductService {
 
   private final ProductRepository productRepository;
   private final ChargeDefinitionService chargeDefinitionService;
+  private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public ProductService(final ProductRepository productRepository,
-                        final ChargeDefinitionService chargeDefinitionService) {
+                        final ChargeDefinitionService chargeDefinitionService,
+                        final AccountingAdapter accountingAdapter) {
     super();
     this.productRepository = productRepository;
     this.chargeDefinitionService = chargeDefinitionService;
+    this.accountingAdapter = accountingAdapter;
   }
 
   public List<Product> findAllEntities() {
@@ -58,13 +61,55 @@ public class ProductService {
     return productRepository.findByIdentifier(identifier).map(ProductEntity::getEnabled);
   }
 
-  public Boolean isProductReadyToBeEnabled(final String identifier) {
+  public Boolean areChargeDefinitionsCoveredByAccountAssignments(final String identifier) {
     final Optional<Product> maybeProduct = findByIdentifier(identifier);
     if (!maybeProduct.isPresent())
       return false;
     final Product product = maybeProduct.get();
     final Set<AccountAssignment> accountAssignments = product.getAccountAssignments();
     final List<ChargeDefinition> chargeDefinitions = chargeDefinitionService.findAllEntities(identifier);
-    return ProductMapper.accountAssignmentsCoverChargeDefinitions(accountAssignments, chargeDefinitions);
+    return AccountingAdapter.accountAssignmentsCoverChargeDefinitions(accountAssignments, chargeDefinitions);
+  }
+
+  public Set<AccountAssignment> getIncompleteAccountAssignments(final String identifier) {
+    final Set<String> requiredAccountDesignators = AccountingAdapter.getRequiredAccountDesignators(chargeDefinitionService.findAllEntities(identifier));
+
+    final AccountAssignmentValidator accountAssignmentValidator
+            = new AccountAssignmentValidator(findByIdentifier(identifier)
+            .map(Product::getAccountAssignments)
+            .orElse(Collections.emptySet()));
+
+    return requiredAccountDesignators.stream()
+            .map(accountAssignmentValidator::getDesignatorMapping)
+            .filter(ProductService::accountAssignmentIsComplete)
+            .collect(Collectors.toSet());
+  }
+
+  private static boolean accountAssignmentIsComplete(final AccountAssignment x) {
+    return (x.getAccountIdentifier() == null) && (x.getLedgerIdentifier() == null);
+  }
+
+  private class AccountAssignmentValidator {
+    private final Map<String, List<AccountAssignment>> accountAssignmentsMap;
+
+    private AccountAssignmentValidator(final Set<AccountAssignment> accountAssignments)
+    {
+      accountAssignmentsMap = accountAssignments.stream().collect(Collectors.groupingBy(AccountAssignment::getDesignator));
+    }
+
+    private boolean designatorHasValidMapping(final String designator) {
+      final List<AccountAssignment> accountAssignment = accountAssignmentsMap.get(designator);
+
+      return ((accountAssignment != null) &&
+              (accountAssignment.size() == 1) &&
+              accountingAdapter.accountAssignmentRepresentsRealAccount(accountAssignment.get(0)));
+    }
+
+    private AccountAssignment getDesignatorMapping(final String designator) {
+      if (designatorHasValidMapping(designator))
+        return accountAssignmentsMap.get(designator).get(0);
+      else
+        return new AccountAssignment(designator, null);
+    }
   }
 }

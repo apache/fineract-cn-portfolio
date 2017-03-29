@@ -22,6 +22,7 @@ import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
+import io.mifos.portfolio.service.internal.command.ChangeProductCommand;
 import io.mifos.portfolio.service.internal.command.CreateProductCommand;
 import io.mifos.portfolio.service.internal.service.PatternService;
 import io.mifos.portfolio.service.internal.service.ProductService;
@@ -64,7 +65,7 @@ public class ProductRestController {
     return this.productService.findAllEntities();
   }
 
-  @Permittable(AcceptedTokenType.TENANT)
+  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
   @RequestMapping(method = RequestMethod.POST) //
   public @ResponseBody ResponseEntity<Void> createEntity(@RequestBody @Valid final Product instance) {
     productService.findByIdentifier(instance.getIdentifier())
@@ -88,6 +89,26 @@ public class ProductRestController {
     return productService.findByIdentifier(productIdentifier)
             .map(ResponseEntity::ok)
             .orElseThrow(() -> ServiceException.notFound("Instance with identifier " + productIdentifier + " doesn't exist."));
+  }
+
+  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
+  @RequestMapping(
+          value = "/{productidentifier}",
+          method = RequestMethod.PUT,
+          consumes = MediaType.ALL_VALUE,
+          produces = MediaType.APPLICATION_JSON_VALUE)
+  public @ResponseBody ResponseEntity<Void> changeProduct(@PathVariable("productidentifier") final String productIdentifier,
+                                                          @RequestBody @Valid final Product instance)
+  {
+    productService.findByIdentifier(productIdentifier)
+            .orElseThrow(() -> ServiceException.notFound("Instance with identifier " + productIdentifier + " doesn't exist."));
+
+    if (!productIdentifier.equals(instance.getIdentifier()))
+      throw ServiceException.badRequest("Instance identifier may not be changed. Identifier provided in instance = " + instance.getIdentifier() + ". Instance referenced in path = " + productIdentifier + ".");
+
+    commandGateway.process(new ChangeProductCommand(instance));
+
+    return ResponseEntity.accepted().build();
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_OPERATIONS_MANAGEMENT)

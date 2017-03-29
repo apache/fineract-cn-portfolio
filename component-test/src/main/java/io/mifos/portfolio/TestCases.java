@@ -27,6 +27,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
@@ -57,9 +58,9 @@ public class TestCases extends AbstractPortfolioTest {
 
     Assert.assertEquals(caseInstance, caseAsSaved);
     Assert.assertEquals(caseAsSaved.getCreatedBy(), TEST_USER);
-    checkTimeStamp(caseAsSaved.getCreatedOn(), now);
+    assertTimeStampWithinDelta(caseAsSaved.getCreatedOn(), now, Duration.ofSeconds(2));
     Assert.assertEquals(caseAsSaved.getLastModifiedBy(), TEST_USER);
-    checkTimeStamp(caseAsSaved.getLastModifiedOn(), now);
+    assertTimeStampWithinDelta(caseAsSaved.getLastModifiedOn(), now, Duration.ofSeconds(2));
     Assert.assertEquals(Case.State.CREATED.name(), caseAsSaved.getCurrentState());
   }
 
@@ -84,9 +85,10 @@ public class TestCases extends AbstractPortfolioTest {
     final String changedParameters = new Gson().toJson(newCaseParameters);
     caseInstance.setParameters(changedParameters);
 
-    TimeUnit.SECONDS.sleep(3);
+    TimeUnit.SECONDS.sleep(2);
 
     final LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+
     portfolioManager.changeCase(product.getIdentifier(), caseInstance.getIdentifier(), caseInstance);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CASE,
             new CaseEvent(product.getIdentifier(), caseInstance.getIdentifier())));
@@ -94,18 +96,18 @@ public class TestCases extends AbstractPortfolioTest {
     final Case caseAsSaved = portfolioManager.getCase(product.getIdentifier(), caseInstance.getIdentifier());
 
     Assert.assertEquals(caseInstance, caseAsSaved);
-    Assert.assertEquals(caseAsSaved.getLastModifiedBy(), TEST_USER);
-    checkTimeStamp(caseAsSaved.getLastModifiedOn(), now);
+    Assert.assertEquals(TEST_USER, caseAsSaved.getLastModifiedBy());
+    assertTimeStampWithinDelta(caseAsSaved.getLastModifiedOn(), now, Duration.ofSeconds(2));
     Assert.assertEquals(Case.State.CREATED.name(), caseAsSaved.getCurrentState());
   }
 
-  private void checkTimeStamp(final String timeStamp, final LocalDateTime expectedTimeStamp) {
+  public static void assertTimeStampWithinDelta(final String timeStamp, final LocalDateTime expectedTimeStamp, final Duration maximumDelta) {
     final LocalDateTime parsedTimeStamp = DateConverter.fromIsoString(timeStamp);
 
-    final long deltaFromExpected = Math.abs(parsedTimeStamp.until(expectedTimeStamp, ChronoUnit.SECONDS));
+    final Duration deltaFromExpected = Duration.ofNanos(Math.abs(parsedTimeStamp.until(expectedTimeStamp, ChronoUnit.NANOS)));
 
-    Assert.assertTrue("Delta from expected should have been less than 3 seconds, but was " + deltaFromExpected +
+    Assert.assertTrue("Delta from expected should have been less than " + maximumDelta + ", but was " + deltaFromExpected +
                     ". Timestamp string was " + timeStamp + ".",
-            deltaFromExpected <= 2);
+            deltaFromExpected.compareTo(maximumDelta) < 0);
   }
 }

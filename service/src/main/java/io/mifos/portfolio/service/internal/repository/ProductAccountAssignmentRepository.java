@@ -13,29 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio.service.internal.command;
+package io.mifos.portfolio.service.internal.repository;
 
-import io.mifos.portfolio.api.v1.domain.Product;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 /**
  * @author Myrle Krantz
  */
-public class CreateProductCommand {
-
-  private Product instance;
-
-  public CreateProductCommand() {
-  }
-
-  public CreateProductCommand(Product instance) {
-    this.instance = instance;
-  }
-
-  public Product getInstance() {
-    return instance;
-  }
-
-  public void setInstance(Product instance) {
-    this.instance = instance;
-  }
+@Repository
+public interface ProductAccountAssignmentRepository extends JpaRepository<ProductAccountAssignmentEntity, Long> {
 }

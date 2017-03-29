@@ -20,14 +20,14 @@ import io.mifos.portfolio.api.v1.domain.Product;
 /**
  * @author Myrle Krantz
  */
-public class CreateProductCommand {
-
+public class ChangeProductCommand {
   private Product instance;
 
-  public CreateProductCommand() {
+  @SuppressWarnings("unused")
+  public ChangeProductCommand() {
   }
 
-  public CreateProductCommand(Product instance) {
+  public ChangeProductCommand(Product instance) {
     this.instance = instance;
   }
 

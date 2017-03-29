@@ -15,10 +15,12 @@
  */
 package io.mifos.portfolio.service.internal.repository;
 
+import io.mifos.core.mariadb.util.LocalDateTimeConverter;
 import io.mifos.portfolio.api.v1.domain.InterestBasis;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Set;
 
@@ -87,6 +89,20 @@ public class ProductEntity {
 
   @Column(name = "parameters")
   private String parameters;
+
+  @Column(name = "created_on")
+  @Convert(converter = LocalDateTimeConverter.class)
+  private LocalDateTime createdOn;
+
+  @Column(name = "created_by")
+  private String createdBy;
+
+  @Column(name = "last_modified_on")
+  @Convert(converter = LocalDateTimeConverter.class)
+  private LocalDateTime lastModifiedOn;
+
+  @Column(name = "last_modified_by")
+  private String lastModifiedBy;
 
   public ProductEntity() {
     super();
@@ -236,5 +252,37 @@ public class ProductEntity {
 
   public void setParameters(String parameters) {
     this.parameters = parameters;
+  }
+
+  public LocalDateTime getCreatedOn() {
+    return createdOn;
+  }
+
+  public void setCreatedOn(LocalDateTime createdOn) {
+    this.createdOn = createdOn;
+  }
+
+  public String getCreatedBy() {
+    return createdBy;
+  }
+
+  public void setCreatedBy(String createdBy) {
+    this.createdBy = createdBy;
+  }
+
+  public LocalDateTime getLastModifiedOn() {
+    return lastModifiedOn;
+  }
+
+  public void setLastModifiedOn(LocalDateTime lastModifiedOn) {
+    this.lastModifiedOn = lastModifiedOn;
+  }
+
+  public String getLastModifiedBy() {
+    return lastModifiedBy;
+  }
+
+  public void setLastModifiedBy(String lastModifiedBy) {
+    this.lastModifiedBy = lastModifiedBy;
   }
 }

@@ -15,24 +15,23 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
-import io.mifos.portfolio.api.v1.domain.AccountAssignment;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.api.v1.events.EventConstants;
-import io.mifos.portfolio.service.internal.util.AccountingAdapter;
-import io.mifos.products.spi.PatternFactory;
-import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
-import io.mifos.portfolio.service.internal.command.CreateProductCommand;
-import io.mifos.portfolio.service.internal.mapper.ChargeDefinitionMapper;
-import io.mifos.portfolio.service.internal.mapper.ProductMapper;
-import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
-import io.mifos.portfolio.service.internal.repository.ChargeDefinitionEntity;
-import io.mifos.portfolio.service.internal.repository.ChargeDefinitionRepository;
-import io.mifos.portfolio.service.internal.repository.ProductEntity;
-import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import io.mifos.core.command.annotation.Aggregate;
 import io.mifos.core.command.annotation.CommandHandler;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.lang.ServiceException;
+import io.mifos.portfolio.api.v1.domain.AccountAssignment;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.events.EventConstants;
+import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
+import io.mifos.portfolio.service.internal.command.ChangeProductCommand;
+import io.mifos.portfolio.service.internal.command.CreateProductCommand;
+import io.mifos.portfolio.service.internal.mapper.ChargeDefinitionMapper;
+import io.mifos.portfolio.service.internal.mapper.ProductMapper;
+import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
+import io.mifos.portfolio.service.internal.repository.*;
+import io.mifos.portfolio.service.internal.util.AccountingAdapter;
+import io.mifos.products.spi.PatternFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,18 +49,21 @@ public class ProductCommandHandler {
   private final ProductRepository productRepository;
   private final ChargeDefinitionRepository chargeDefinitionRepository;
   private final AccountingAdapter accountingAdapter;
+  private final ProductAccountAssignmentRepository productAccountAssignmentRepository;
 
   @Autowired
   public ProductCommandHandler(
           final PatternFactoryRegistry patternFactoryRegistry,
           final ProductRepository productRepository,
           final ChargeDefinitionRepository chargeDefinitionRepository,
-          final AccountingAdapter accountingAdapter) {
+          final AccountingAdapter accountingAdapter,
+          final ProductAccountAssignmentRepository productAccountAssignmentRepository) {
     super();
     this.patternFactoryRegistry = patternFactoryRegistry;
     this.productRepository = productRepository;
     this.chargeDefinitionRepository = chargeDefinitionRepository;
     this.accountingAdapter = accountingAdapter;
+    this.productAccountAssignmentRepository = productAccountAssignmentRepository;
   }
 
   @Transactional
@@ -69,20 +71,39 @@ public class ProductCommandHandler {
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.POST_PRODUCT)
   public String process(final CreateProductCommand createProductCommand) {
     final PatternFactory patternFactory = patternFactoryRegistry
-            .getPatternFactoryForPackage(createProductCommand.product().getPatternPackage())
+            .getPatternFactoryForPackage(createProductCommand.getInstance().getPatternPackage())
             .orElseThrow(IllegalArgumentException::new);
-    final ProductEntity productEntity = ProductMapper.map(createProductCommand.product(), false);
+    final ProductEntity productEntity = ProductMapper.map(createProductCommand.getInstance(), false);
     this.productRepository.save(productEntity);
 
     patternFactory.charges().forEach(charge -> createChargeDefinition(productEntity, charge));
 
-    return createProductCommand.product().getIdentifier();
+    return createProductCommand.getInstance().getIdentifier();
   }
 
   private void createChargeDefinition(final ProductEntity productEntity, final ChargeDefinition chargeDefinition) {
     final ChargeDefinitionEntity chargeDefinitionEntity =
             ChargeDefinitionMapper.map(productEntity, chargeDefinition);
     chargeDefinitionRepository.save(chargeDefinitionEntity);
+  }
+
+  @Transactional
+  @CommandHandler
+  @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.PUT_PRODUCT)
+  public String process(final ChangeProductCommand changeProductCommand) {
+    final Product instance = changeProductCommand.getInstance();
+
+    final ProductEntity oldEntity = productRepository
+            .findByIdentifier(instance.getIdentifier())
+            .orElseThrow(() -> ServiceException.notFound("Product not found '" + instance.getIdentifier() + "'."));
+
+    final ProductEntity changedProductEntity = ProductMapper.mapOverOldProductEntity(instance, oldEntity);
+
+    changedProductEntity.getAccountAssignments().forEach(productAccountAssignmentRepository::save);
+
+    productRepository.save(changedProductEntity);
+
+    return changeProductCommand.getInstance().getIdentifier();
   }
 
   @Transactional

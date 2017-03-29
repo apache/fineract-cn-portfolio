@@ -102,14 +102,20 @@ public class ProductTest {
             .adjustment(product -> product.setDescription(StringUtils.repeat("x", 4097)))
             .valid(false));
     ret.add(new ValidationTestCase<Product>("tooLongAccountIdentifier")
-            .adjustment(product -> product.getAccountAssignments().add(new AccountAssignment("x", "0123456789")))
+            .adjustment(product -> product.getAccountAssignments().add(new AccountAssignment("xyz", StringUtils.repeat("0", 33))))
             .valid(false));
     ret.add(new ValidationTestCase<Product>("duplicateAccountAssignment")
             .adjustment(product -> {
-              product.getAccountAssignments().add(new AccountAssignment("x", "01234"));
-              product.getAccountAssignments().add(new AccountAssignment("x", "56789"));
+              product.getAccountAssignments().add(new AccountAssignment("xyz", "002-011"));
+              product.getAccountAssignments().add(new AccountAssignment("xyz", "002-012"));
             })
             .valid(false));
+    ret.add(new ValidationTestCase<Product>("additionalAccountAssignment")
+            .adjustment(product -> {
+              product.getAccountAssignments().add(new AccountAssignment("xyz", "002-011"));
+              product.getAccountAssignments().add(new AccountAssignment("mno", "002-012"));
+            })
+            .valid(true));
     ret.add(new ValidationTestCase<Product>("nullCurrencyCode")
             .adjustment(product -> product.setCurrencyCode(null))
             .valid(false));

@@ -15,10 +15,8 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.time.temporal.ChronoUnit;
@@ -28,8 +26,25 @@ import java.util.Collection;
 /**
  * @author Myrle Krantz
  */
-@RunWith(Parameterized.class)
-public class PaymentCycleTest {
+public class PaymentCycleTest extends ValidationTest<PaymentCycle> {
+
+  public PaymentCycleTest(ValidationTestCase<PaymentCycle> testCase) {
+    super(testCase);
+  }
+
+  @Override
+  protected PaymentCycle createValidTestSubject() {
+    final PaymentCycle ret = new PaymentCycle();
+
+    ret.setPeriod(12);
+    ret.setTemporalUnit(ChronoUnit.MONTHS);
+    ret.setAlignmentDay(1);
+    ret.setAlignmentWeek(null);
+    ret.setAlignmentMonth(null);
+
+    return ret;
+  }
+
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
@@ -47,31 +62,6 @@ public class PaymentCycleTest {
     ret.add(new ValidationTestCase<PaymentCycle>("lastDayOfMonth")
             .adjustment(x -> x.setAlignmentWeek(-1))
             .valid(true));
-    return ret;
-  }
-  private final ValidationTestCase<PaymentCycle> testCase;
-
-  public PaymentCycleTest(final ValidationTestCase<PaymentCycle> testCase)
-  {
-    this.testCase = testCase;
-  }
-
-  @Test()
-  public void test(){
-    final PaymentCycle testSubject = createPaymentCycle();
-    testCase.applyAdjustment(testSubject);
-    Assert.assertTrue(testCase.toString(), testCase.check(testSubject));
-  }
-
-  private PaymentCycle createPaymentCycle() {
-    final PaymentCycle ret = new PaymentCycle();
-
-    ret.setPeriod(12);
-    ret.setTemporalUnit(ChronoUnit.MONTHS);
-    ret.setAlignmentDay(1);
-    ret.setAlignmentWeek(null);
-    ret.setAlignmentMonth(null);
-
     return ret;
   }
 }

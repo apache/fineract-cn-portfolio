@@ -15,10 +15,8 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.math.BigDecimal;
@@ -28,8 +26,17 @@ import java.util.Collection;
 /**
  * @author Myrle Krantz
  */
-@RunWith(Parameterized.class)
-public class BalanceRangeTest {
+public class BalanceRangeTest extends ValidationTest<BalanceRange> {
+
+  public BalanceRangeTest(ValidationTestCase<BalanceRange> testCase) {
+    super(testCase);
+  }
+
+  @Override
+  protected BalanceRange createValidTestSubject() {
+    return new BalanceRange(BigDecimal.ZERO, BigDecimal.TEN);
+  }
+
   @Parameterized.Parameters
   public static Collection testCases() {
 
@@ -48,23 +55,5 @@ public class BalanceRangeTest {
             .adjustment((x) -> x.setMinimum(BigDecimal.TEN.multiply(BigDecimal.TEN)))
             .valid(false));
     return ret;
-  }
-  private final ValidationTestCase<BalanceRange> testCase;
-
-  public BalanceRangeTest(final ValidationTestCase<BalanceRange> testCase)
-  {
-    this.testCase = testCase;
-  }
-
-  private BalanceRange createTestSubject()
-  {
-    return new BalanceRange(BigDecimal.ZERO, BigDecimal.TEN);
-  }
-
-  @Test()
-  public void test(){
-    final BalanceRange testSubject = createTestSubject();
-    testCase.applyAdjustment(testSubject);
-    Assert.assertTrue(testCase.toString(), testCase.check(testSubject));
   }
 }

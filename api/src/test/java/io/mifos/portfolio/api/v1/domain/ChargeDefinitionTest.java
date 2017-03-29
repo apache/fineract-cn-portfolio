@@ -15,22 +15,40 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * @author Myrle Krantz
  */
-@RunWith(Parameterized.class)
-public class ChargeDefinitionTest {
+public class ChargeDefinitionTest extends ValidationTest<ChargeDefinition> {
+  public ChargeDefinitionTest(ValidationTestCase<ChargeDefinition> testCase) {
+    super(testCase);
+  }
+
+  @Override
+  protected ChargeDefinition createValidTestSubject() {
+    final ChargeDefinition ret = new ChargeDefinition();
+    ret.setIdentifier("bleblahBlub");
+    ret.setName("blubber");
+    ret.setDescription("blah");
+    ret.setChargeAction(Action.OPEN.name());
+    ret.setAmount(BigDecimal.ONE);
+    ret.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
+    ret.setFromAccountDesignator("x1234567898");
+    ret.setToAccountDesignator("y1234567898");
+    ret.setForCycleSizeUnit(ChronoUnit.YEARS);
+
+    return ret;
+  }
+
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
@@ -70,32 +88,5 @@ public class ChargeDefinitionTest {
             .valid(false));
     return ret;
   }
-  private final ValidationTestCase<ChargeDefinition> testCase;
 
-  public ChargeDefinitionTest(final ValidationTestCase<ChargeDefinition> testCase)
-  {
-    this.testCase = testCase;
-  }
-
-  @Test()
-  public void test(){
-    final ChargeDefinition testSubject = createValidTestSubject();
-    testCase.applyAdjustment(testSubject);
-    Assert.assertTrue(testCase.toString(), testCase.check(testSubject));
-  }
-
-  private ChargeDefinition createValidTestSubject() {
-    final ChargeDefinition ret = new ChargeDefinition();
-    ret.setIdentifier("bleblahBlub");
-    ret.setName("blubber");
-    ret.setDescription("blah");
-    ret.setChargeAction(Action.OPEN.name());
-    ret.setAmount(BigDecimal.ONE);
-    ret.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    ret.setFromAccountDesignator("x1234567898");
-    ret.setToAccountDesignator("y1234567898");
-    ret.setForCycleSizeUnit(ChronoUnit.YEARS);
-
-    return ret;
-  }
 }

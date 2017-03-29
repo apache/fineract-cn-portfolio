@@ -104,6 +104,12 @@ public class ProductTest {
     ret.add(new ValidationTestCase<Product>("tooLongAccountIdentifier")
             .adjustment(product -> product.getAccountAssignments().add(new AccountAssignment("x", "0123456789")))
             .valid(false));
+    ret.add(new ValidationTestCase<Product>("duplicateAccountAssignment")
+            .adjustment(product -> {
+              product.getAccountAssignments().add(new AccountAssignment("x", "01234"));
+              product.getAccountAssignments().add(new AccountAssignment("x", "56789"));
+            })
+            .valid(false));
     ret.add(new ValidationTestCase<Product>("nullCurrencyCode")
             .adjustment(product -> product.setCurrencyCode(null))
             .valid(false));

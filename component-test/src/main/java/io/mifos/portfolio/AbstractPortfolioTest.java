@@ -81,7 +81,7 @@ public class AbstractPortfolioTest {
 
   static final String TEST_USER = "setau";
 
-  private final static TestEnvironment testEnvironment = new TestEnvironment(APP_NAME);
+  final static TestEnvironment testEnvironment = new TestEnvironment(APP_NAME);
   private final static CassandraInitializer cassandraInitializer = new CassandraInitializer();
   private final static MariaDBInitializer mariaDBInitializer = new MariaDBInitializer();
   private final static TenantDataStoreContextTestRule tenantDataStoreContext = TenantDataStoreContextTestRule.forRandomTenantName(cassandraInitializer, mariaDBInitializer);

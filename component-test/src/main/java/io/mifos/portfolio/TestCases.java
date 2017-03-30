@@ -16,21 +16,17 @@
 package io.mifos.portfolio;
 
 import com.google.gson.Gson;
+import io.mifos.core.test.domain.TimeStampChecker;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.events.CaseEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
-import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
-import io.mifos.core.lang.DateConverter;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -49,7 +45,7 @@ public class TestCases extends AbstractPortfolioTest {
   public void shouldCreateCase() throws InterruptedException {
     final Product product = createProduct();
 
-    final LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+    final TimeStampChecker timeStampChecker = TimeStampChecker.roughlyNow();
     final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> {});
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CASE,
             new CaseEvent(product.getIdentifier(), caseInstance.getIdentifier())));
@@ -58,9 +54,9 @@ public class TestCases extends AbstractPortfolioTest {
 
     Assert.assertEquals(caseInstance, caseAsSaved);
     Assert.assertEquals(caseAsSaved.getCreatedBy(), TEST_USER);
-    assertTimeStampWithinDelta(caseAsSaved.getCreatedOn(), now, Duration.ofSeconds(2));
+    timeStampChecker.assertCorrect(caseAsSaved.getCreatedOn());
     Assert.assertEquals(caseAsSaved.getLastModifiedBy(), TEST_USER);
-    assertTimeStampWithinDelta(caseAsSaved.getLastModifiedOn(), now, Duration.ofSeconds(2));
+    timeStampChecker.assertCorrect(caseAsSaved.getLastModifiedOn());
     Assert.assertEquals(Case.State.CREATED.name(), caseAsSaved.getCurrentState());
   }
 
@@ -87,7 +83,7 @@ public class TestCases extends AbstractPortfolioTest {
 
     TimeUnit.SECONDS.sleep(2);
 
-    final LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+    final TimeStampChecker timeStampChecker = TimeStampChecker.roughlyNow();
 
     portfolioManager.changeCase(product.getIdentifier(), caseInstance.getIdentifier(), caseInstance);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CASE,
@@ -97,17 +93,7 @@ public class TestCases extends AbstractPortfolioTest {
 
     Assert.assertEquals(caseInstance, caseAsSaved);
     Assert.assertEquals(TEST_USER, caseAsSaved.getLastModifiedBy());
-    assertTimeStampWithinDelta(caseAsSaved.getLastModifiedOn(), now, Duration.ofSeconds(2));
+    timeStampChecker.assertCorrect(caseAsSaved.getLastModifiedOn());
     Assert.assertEquals(Case.State.CREATED.name(), caseAsSaved.getCurrentState());
-  }
-
-  public static void assertTimeStampWithinDelta(final String timeStamp, final LocalDateTime expectedTimeStamp, final Duration maximumDelta) {
-    final LocalDateTime parsedTimeStamp = DateConverter.fromIsoString(timeStamp);
-
-    final Duration deltaFromExpected = Duration.ofNanos(Math.abs(parsedTimeStamp.until(expectedTimeStamp, ChronoUnit.NANOS)));
-
-    Assert.assertTrue("Delta from expected should have been less than " + maximumDelta + ", but was " + deltaFromExpected +
-                    ". Timestamp string was " + timeStamp + ".",
-            deltaFromExpected.compareTo(maximumDelta) < 0);
   }
 }

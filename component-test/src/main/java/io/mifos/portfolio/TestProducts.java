@@ -16,6 +16,7 @@
 package io.mifos.portfolio;
 
 import com.google.gson.Gson;
+import io.mifos.core.test.domain.TimeStampChecker;
 import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.client.ProductAlreadyExistsException;
@@ -27,15 +28,13 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * @author Myrle Krantz
@@ -75,17 +74,20 @@ public class TestProducts extends AbstractPortfolioTest {
 
   @Test
   public void shouldChangeProductAccountAssignments() throws InterruptedException {
-    final Product product = createAdjustedProduct(x -> {});
+    final Product product = createAdjustedProduct(x -> x.setAccountAssignments(Collections.emptySet()));
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_PRODUCT, product.getIdentifier()));
 
-    final Set<AccountAssignment> accountAssignments = new HashSet<>(product.getAccountAssignments());
-    accountAssignments.add(new AccountAssignment("xyz", "002-011"));
-    accountAssignments.add(new AccountAssignment("mno", "002-012"));
+    final Set<AccountAssignment> incompleteAccountAssignments = portfolioManager.getIncompleteAccountAssignments(product.getIdentifier());
+
+    final Set<AccountAssignment> accountAssignments = incompleteAccountAssignments.stream()
+            .map(x -> new AccountAssignment(x.getDesignator(), testEnvironment.generateUniqueIdentifer("account")))
+            .collect(Collectors.toSet());
+
     product.setAccountAssignments(accountAssignments);
 
     TimeUnit.SECONDS.sleep(3);
 
-    final LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+    final TimeStampChecker timeStampChecker = TimeStampChecker.roughlyNow();
     portfolioManager.changeProduct(product.getIdentifier(), product);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT, product.getIdentifier()));
 
@@ -93,7 +95,7 @@ public class TestProducts extends AbstractPortfolioTest {
 
     Assert.assertEquals(product, productAsSaved);
     Assert.assertEquals(TEST_USER, productAsSaved.getLastModifiedBy());
-    TestCases.assertTimeStampWithinDelta(productAsSaved.getLastModifiedOn(), now, Duration.ofSeconds(3));
+    timeStampChecker.assertCorrect(productAsSaved.getLastModifiedOn());
   }
 
   @Test

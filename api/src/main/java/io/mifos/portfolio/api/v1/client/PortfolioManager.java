@@ -73,6 +73,7 @@ public interface PortfolioManager {
           method = RequestMethod.PUT,
           produces = MediaType.ALL_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE)
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
   void changeProduct(@PathVariable("productidentifier") final String productIdentifier,
                      final Product product);
 

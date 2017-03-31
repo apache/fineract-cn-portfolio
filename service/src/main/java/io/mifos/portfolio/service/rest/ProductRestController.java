@@ -24,6 +24,7 @@ import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
 import io.mifos.portfolio.service.internal.command.ChangeProductCommand;
 import io.mifos.portfolio.service.internal.command.CreateProductCommand;
+import io.mifos.portfolio.service.internal.service.CaseService;
 import io.mifos.portfolio.service.internal.service.PatternService;
 import io.mifos.portfolio.service.internal.service.ProductService;
 import io.mifos.core.command.gateway.CommandGateway;
@@ -35,6 +36,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import javax.xml.ws.Response;
 import java.util.List;
 import java.util.Set;
 
@@ -47,14 +49,17 @@ import java.util.Set;
 public class ProductRestController {
 
   private final CommandGateway commandGateway;
+  private final CaseService caseService;
   private final ProductService productService;
   private final PatternService patternService;
 
   @Autowired public ProductRestController(final CommandGateway commandGateway,
+                                          final CaseService caseService,
                                           final ProductService productService,
                                           final PatternService patternService) {
     super();
     this.commandGateway = commandGateway;
+    this.caseService = caseService;
     this.productService = productService;
     this.patternService = patternService;
   }
@@ -106,6 +111,9 @@ public class ProductRestController {
     if (!productIdentifier.equals(instance.getIdentifier()))
       throw ServiceException.badRequest("Instance identifier may not be changed. Identifier provided in instance = " + instance.getIdentifier() + ". Instance referenced in path = " + productIdentifier + ".");
 
+    if (caseService.existsByProductIdentifier(productIdentifier))
+      throw ServiceException.conflict("Cases exist for product with the identifier '" + productIdentifier + "'. Product cannot be changed.");
+
     commandGateway.process(new ChangeProductCommand(instance));
 
     return ResponseEntity.accepted().build();
@@ -138,8 +146,10 @@ public class ProductRestController {
     productService.findByIdentifier(productIdentifier)
             .orElseThrow(() -> ServiceException.notFound("Instance with identifier " + productIdentifier + " doesn't exist."));
 
-    if (!productService.areChargeDefinitionsCoveredByAccountAssignments(productIdentifier))
-      throw ServiceException.conflict("Product with identifier " + productIdentifier + " is not ready to be enabled.");
+    if (enabled) {
+      if (!productService.areChargeDefinitionsCoveredByAccountAssignments(productIdentifier))
+        throw ServiceException.conflict("Product with identifier " + productIdentifier + " is not ready to be enabled.");
+    }
 
     commandGateway.process(new ChangeEnablingOfProductCommand(productIdentifier, enabled));
 

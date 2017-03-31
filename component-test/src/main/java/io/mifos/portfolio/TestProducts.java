@@ -21,6 +21,7 @@ import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.client.ProductAlreadyExistsException;
 import io.mifos.portfolio.api.v1.client.ProductDefinitionIncomplete;
+import io.mifos.portfolio.api.v1.client.ProductInUseException;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import org.apache.commons.lang.StringUtils;
@@ -151,6 +152,33 @@ public class TestProducts extends AbstractPortfolioTest {
   public void duplicateProductIdentifierShouldThrow() throws InterruptedException {
     createAdjustedProduct(product -> product.setIdentifier("ditto"));
     createAdjustedProduct(product -> product.setIdentifier("ditto"));
+  }
+
+  @Test
+  public void shouldFailToChangeProductAfterCaseHasBeenCreated() throws InterruptedException {
+    final Product product = createAdjustedProduct(x -> {});
+
+    createAdjustedCase(product.getIdentifier(), x -> {});
+
+    final Product slightlyChangedProduct = Fixture.createAdjustedProduct(x -> x.setDescription("changed description."));
+    slightlyChangedProduct.setIdentifier(product.getIdentifier());
+    try {
+      portfolioManager.changeProduct(product.getIdentifier(), slightlyChangedProduct);
+      Assert.fail("This should throw a ProductInUseException.");
+    }
+    catch (final ProductInUseException ignore) {
+    }
+
+    final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
+
+    Assert.assertEquals(product, productAsSaved);
+    Assert.assertNotEquals(slightlyChangedProduct, productAsSaved);
+    Assert.assertEquals(TEST_USER, productAsSaved.getLastModifiedBy());
+
+    portfolioManager.enableProduct(product.getIdentifier(), false);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
+
+    Assert.assertFalse(portfolioManager.getProductEnabled(product.getIdentifier()));
   }
 
   private Product createAdjustedProduct(final Consumer<Product> adjustment) throws InterruptedException {

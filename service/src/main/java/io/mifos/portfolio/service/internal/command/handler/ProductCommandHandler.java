@@ -29,10 +29,7 @@ import io.mifos.portfolio.service.internal.command.CreateProductCommand;
 import io.mifos.portfolio.service.internal.mapper.ChargeDefinitionMapper;
 import io.mifos.portfolio.service.internal.mapper.ProductMapper;
 import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
-import io.mifos.portfolio.service.internal.repository.ChargeDefinitionEntity;
-import io.mifos.portfolio.service.internal.repository.ChargeDefinitionRepository;
-import io.mifos.portfolio.service.internal.repository.ProductEntity;
-import io.mifos.portfolio.service.internal.repository.ProductRepository;
+import io.mifos.portfolio.service.internal.repository.*;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.products.spi.PatternFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,6 +46,7 @@ import java.util.stream.Collectors;
 @Aggregate
 public class ProductCommandHandler {
   private final PatternFactoryRegistry patternFactoryRegistry;
+  private final CaseRepository caseRepository;
   private final ProductRepository productRepository;
   private final ChargeDefinitionRepository chargeDefinitionRepository;
   private final AccountingAdapter accountingAdapter;
@@ -56,11 +54,13 @@ public class ProductCommandHandler {
   @Autowired
   public ProductCommandHandler(
           final PatternFactoryRegistry patternFactoryRegistry,
+          final CaseRepository caseRepository,
           final ProductRepository productRepository,
           final ChargeDefinitionRepository chargeDefinitionRepository,
           final AccountingAdapter accountingAdapter) {
     super();
     this.patternFactoryRegistry = patternFactoryRegistry;
+    this.caseRepository = caseRepository;
     this.productRepository = productRepository;
     this.chargeDefinitionRepository = chargeDefinitionRepository;
     this.accountingAdapter = accountingAdapter;
@@ -92,6 +92,9 @@ public class ProductCommandHandler {
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.PUT_PRODUCT)
   public String process(final ChangeProductCommand changeProductCommand) {
     final Product instance = changeProductCommand.getInstance();
+
+    if (caseRepository.existsByProductIdentifier(instance.getIdentifier()))
+      throw ServiceException.conflict("Cases exist for product with the identifier '" + instance.getIdentifier() + "'. Product cannot be changed.");
 
     final ProductEntity oldEntity = productRepository
             .findByIdentifier(instance.getIdentifier())

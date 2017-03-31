@@ -18,6 +18,7 @@ package io.mifos.portfolio.service.internal.repository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 
 import javax.persistence.*;
+import java.util.Objects;
 
 /**
  * @author Myrle Krantz
@@ -32,7 +33,7 @@ public class ProductAccountAssignmentEntity {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "product_id")
+  @JoinColumn(name = "product_id", nullable = false)
   private ProductEntity product;
 
   @Column(name = "designator")
@@ -83,5 +84,18 @@ public class ProductAccountAssignmentEntity {
 
   public void setType(AccountingAdapter.IdentifierType type) {
     this.thothType = type;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || !(o instanceof ProductAccountAssignmentEntity)) return false;
+    ProductAccountAssignmentEntity that = (ProductAccountAssignmentEntity) o;
+    return Objects.equals(getDesignator(), that.getDesignator());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(getDesignator());
   }
 }

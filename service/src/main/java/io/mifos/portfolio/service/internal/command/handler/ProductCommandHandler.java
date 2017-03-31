@@ -29,7 +29,10 @@ import io.mifos.portfolio.service.internal.command.CreateProductCommand;
 import io.mifos.portfolio.service.internal.mapper.ChargeDefinitionMapper;
 import io.mifos.portfolio.service.internal.mapper.ProductMapper;
 import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
-import io.mifos.portfolio.service.internal.repository.*;
+import io.mifos.portfolio.service.internal.repository.ChargeDefinitionEntity;
+import io.mifos.portfolio.service.internal.repository.ChargeDefinitionRepository;
+import io.mifos.portfolio.service.internal.repository.ProductEntity;
+import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.products.spi.PatternFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,21 +52,18 @@ public class ProductCommandHandler {
   private final ProductRepository productRepository;
   private final ChargeDefinitionRepository chargeDefinitionRepository;
   private final AccountingAdapter accountingAdapter;
-  private final ProductAccountAssignmentRepository productAccountAssignmentRepository;
 
   @Autowired
   public ProductCommandHandler(
           final PatternFactoryRegistry patternFactoryRegistry,
           final ProductRepository productRepository,
           final ChargeDefinitionRepository chargeDefinitionRepository,
-          final AccountingAdapter accountingAdapter,
-          final ProductAccountAssignmentRepository productAccountAssignmentRepository) {
+          final AccountingAdapter accountingAdapter) {
     super();
     this.patternFactoryRegistry = patternFactoryRegistry;
     this.productRepository = productRepository;
     this.chargeDefinitionRepository = chargeDefinitionRepository;
     this.accountingAdapter = accountingAdapter;
-    this.productAccountAssignmentRepository = productAccountAssignmentRepository;
   }
 
   @Transactional
@@ -97,11 +97,9 @@ public class ProductCommandHandler {
             .findByIdentifier(instance.getIdentifier())
             .orElseThrow(() -> ServiceException.notFound("Product not found '" + instance.getIdentifier() + "'."));
 
-    final ProductEntity changedProductEntity = ProductMapper.mapOverOldProductEntity(instance, oldEntity);
+    final ProductEntity newEntity = ProductMapper.mapOverOldEntity(instance, oldEntity);
 
-    changedProductEntity.getAccountAssignments().forEach(productAccountAssignmentRepository::save);
-
-    productRepository.save(changedProductEntity);
+    productRepository.save(newEntity);
 
     return changeProductCommand.getInstance().getIdentifier();
   }

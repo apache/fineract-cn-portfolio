@@ -39,8 +39,7 @@ public class CaseEntity {
   @Column(name = "product_identifier")
   private String productIdentifier;
 
-  @OneToMany(targetEntity = CaseAccountAssignmentEntity.class, cascade = CascadeType.ALL)
-  @JoinColumn(name = "case_id")
+  @OneToMany(targetEntity = CaseAccountAssignmentEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "caseEntity")
   private Set<CaseAccountAssignmentEntity> accountAssignments;
 
   @Column(name = "current_state")

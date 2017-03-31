@@ -27,6 +27,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -95,5 +96,24 @@ public class TestCases extends AbstractPortfolioTest {
     Assert.assertEquals(TEST_USER, caseAsSaved.getLastModifiedBy());
     timeStampChecker.assertCorrect(caseAsSaved.getLastModifiedOn());
     Assert.assertEquals(Case.State.CREATED.name(), caseAsSaved.getCurrentState());
+  }
+
+  @Test
+  public void shouldRemoveCaseAccountAssignments() throws InterruptedException {
+    final Product product = createProduct();
+
+    product.setAccountAssignments(Collections.emptySet());
+    portfolioManager.changeProduct(product.getIdentifier(), product);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT, product.getIdentifier()));
+
+    final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
+    Assert.assertTrue("Account assignments should be empty, but contain: " + productAsSaved.getAccountAssignments(),
+            productAsSaved.getAccountAssignments().isEmpty());
+    Assert.assertEquals(product, productAsSaved);
+
+    final Set<AccountAssignment> incompleteAccountAssignmentsAfterChange
+            = portfolioManager.getIncompleteAccountAssignments(product.getIdentifier());
+    Assert.assertFalse("Incomplete account assignments should not be empty, but is. (Beware the double negative.)",
+            incompleteAccountAssignmentsAfterChange.isEmpty());
   }
 }

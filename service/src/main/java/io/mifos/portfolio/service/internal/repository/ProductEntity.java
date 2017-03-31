@@ -22,6 +22,7 @@ import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -83,8 +84,7 @@ public class ProductEntity {
   @Column(name = "minor_currency_unit_digits")
   private Integer minorCurrencyUnitDigits;
 
-  @OneToMany(targetEntity = ProductAccountAssignmentEntity.class, cascade = CascadeType.ALL)
-  @JoinColumn(name = "product_id")
+  @OneToMany(targetEntity = ProductAccountAssignmentEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "product")
   private Set<ProductAccountAssignmentEntity> accountAssignments;
 
   @Column(name = "parameters")
@@ -284,5 +284,18 @@ public class ProductEntity {
 
   public void setLastModifiedBy(String lastModifiedBy) {
     this.lastModifiedBy = lastModifiedBy;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || !(o instanceof ProductEntity)) return false;
+    ProductEntity that = (ProductEntity) o;
+    return Objects.equals(getIdentifier(), that.getIdentifier());
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(getIdentifier());
   }
 }

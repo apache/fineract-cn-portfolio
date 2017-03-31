@@ -15,15 +15,17 @@
  */
 package io.mifos.portfolio.service.internal.mapper;
 
+import io.mifos.core.api.util.UserContextHolder;
+import io.mifos.core.lang.DateConverter;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.service.internal.repository.CaseAccountAssignmentEntity;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
-import io.mifos.core.api.util.UserContextHolder;
-import io.mifos.core.lang.DateConverter;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -61,7 +63,7 @@ public class CaseMapper {
     ret.setIdentifier(instance.getIdentifier());
     ret.setProductIdentifier(instance.getProductIdentifier());
     ret.setAccountAssignments(instance.getAccountAssignments().stream()
-            .map(x -> CaseMapper.mapAccountAssignment(x, ret))
+            .map(x -> CaseMapper.map(x, ret))
             .collect(Collectors.toSet()));
     ret.setCurrentState(instance.getCurrentState());
 
@@ -75,7 +77,7 @@ public class CaseMapper {
     return ret;
   }
 
-  public static CaseAccountAssignmentEntity mapAccountAssignment(final AccountAssignment instance, final CaseEntity caseInstance) {
+  public static CaseAccountAssignmentEntity map(final AccountAssignment instance, final CaseEntity caseInstance) {
     final CaseAccountAssignmentEntity ret = new CaseAccountAssignmentEntity();
 
     ret.setCaseEntity(caseInstance);
@@ -83,5 +85,32 @@ public class CaseMapper {
     ret.setIdentifier(instance.getAccountIdentifier());
 
     return ret;
+  }
+
+  public static CaseEntity mapOverOldEntity(final Case instance, final CaseEntity oldEntity) {
+    final CaseEntity newEntity = map(instance);
+
+    newEntity.setId(oldEntity.getId());
+    newEntity.setCreatedBy(oldEntity.getCreatedBy());
+    newEntity.setCreatedOn(oldEntity.getCreatedOn());
+
+    final Set<CaseAccountAssignmentEntity> oldAccountAssignmentEntities = oldEntity.getAccountAssignments();
+    final Map<String, CaseAccountAssignmentEntity> accountAssignmentsMap
+            = oldAccountAssignmentEntities.stream()
+            .collect(Collectors.toMap(CaseAccountAssignmentEntity::getDesignator, x -> x));
+
+    final Set<AccountAssignment> newAccountAssignments = instance.getAccountAssignments();
+    final Set<CaseAccountAssignmentEntity> newAccountAssignmentEntities =
+            newAccountAssignments.stream().map(x -> {
+              final CaseAccountAssignmentEntity newAccountAssignmentEntity = CaseMapper.map(x, newEntity);
+              final CaseAccountAssignmentEntity oldAccountAssignmentEntity = accountAssignmentsMap.get(x.getDesignator());
+              if (oldAccountAssignmentEntity != null) newAccountAssignmentEntity.setId(oldAccountAssignmentEntity.getId());
+
+              return newAccountAssignmentEntity;
+            }).collect(Collectors.toSet());
+
+
+    newEntity.setAccountAssignments(newAccountAssignmentEntities);
+    return newEntity;
   }
 }

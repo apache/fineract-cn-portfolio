@@ -128,29 +128,30 @@ public class ProductMapper {
     return productEntities.stream().map(ProductMapper::map).collect(Collectors.toList());
   }
 
-  public static ProductEntity mapOverOldProductEntity(final Product instance, final ProductEntity oldEntity) {
-    final ProductEntity newProductEntity = map(instance, false);
+  public static ProductEntity mapOverOldEntity(final Product instance, final ProductEntity oldEntity) {
+    final ProductEntity newEntity = map(instance, false);
 
-    newProductEntity.setId(oldEntity.getId());
-    newProductEntity.setCreatedBy(oldEntity.getCreatedBy());
-    newProductEntity.setCreatedOn(oldEntity.getCreatedOn());
+    newEntity.setId(oldEntity.getId());
+    newEntity.setCreatedBy(oldEntity.getCreatedBy());
+    newEntity.setCreatedOn(oldEntity.getCreatedOn());
 
-    final Set<ProductAccountAssignmentEntity> accountAssignments = oldEntity.getAccountAssignments();
+    final Set<ProductAccountAssignmentEntity> oldAccountAssignmentEntities = oldEntity.getAccountAssignments();
     final Map<String, ProductAccountAssignmentEntity> accountAssignmentsMap
-            = accountAssignments.stream()
+            = oldAccountAssignmentEntities.stream()
             .collect(Collectors.toMap(ProductAccountAssignmentEntity::getDesignator, x -> x));
 
     final Set<AccountAssignment> newAccountAssignments = instance.getAccountAssignments();
-    newAccountAssignments.forEach(x -> {
-      final String accountDesignator = x.getDesignator();
-      final ProductAccountAssignmentEntity accountAssignmentEntity = accountAssignmentsMap.get(accountDesignator);
-      if (accountAssignmentEntity != null)
-        accountAssignmentEntity.setIdentifier(x.getAccountIdentifier());
-      else
-        accountAssignments.add(ProductMapper.map(x, newProductEntity));
-    });
+    final Set<ProductAccountAssignmentEntity> newAccountAssignmentEntities =
+    newAccountAssignments.stream().map(x -> {
+      final ProductAccountAssignmentEntity newAccountAssignmentEntity = ProductMapper.map(x, newEntity);
+      final ProductAccountAssignmentEntity oldAccountAssignmentEntity = accountAssignmentsMap.get(x.getDesignator());
+      if (oldAccountAssignmentEntity != null) newAccountAssignmentEntity.setId(oldAccountAssignmentEntity.getId());
 
-    newProductEntity.setAccountAssignments(accountAssignments);
-    return newProductEntity;
+      return newAccountAssignmentEntity;
+    }).collect(Collectors.toSet());
+
+
+    newEntity.setAccountAssignments(newAccountAssignmentEntities);
+    return newEntity;
   }
 }

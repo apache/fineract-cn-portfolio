@@ -15,7 +15,6 @@
  */
 package io.mifos.portfolio;
 
-import io.mifos.portfolio.AbstractPortfolioTest;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import org.junit.Assert;
 import org.junit.Test;

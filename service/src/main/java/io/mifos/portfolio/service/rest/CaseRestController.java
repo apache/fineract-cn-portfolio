@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -91,6 +92,11 @@ public class CaseRestController {
 
     caseService.findByIdentifier(productIdentifier, instance.getIdentifier())
             .ifPresent(x -> {throw ServiceException.conflict("Duplicate identifier: " + productIdentifier + "." + x.getIdentifier());});
+
+    final Optional<Boolean> productEnabled = productService.findEnabledByIdentifier(productIdentifier);
+    productEnabled.orElseThrow(() -> ServiceException.internalError("Product should exist, but doesn't"));
+    productEnabled.ifPresent(x -> {
+      if (!x) throw ServiceException.badRequest("Product must be enabled before cases for it can be created: " + productIdentifier);});
 
     if (!instance.getProductIdentifier().equals(productIdentifier))
       throw ServiceException.badRequest("Product identifier in request body must match product identifier in request path.");

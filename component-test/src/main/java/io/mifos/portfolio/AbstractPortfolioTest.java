@@ -145,7 +145,18 @@ public class AbstractPortfolioTest {
   }
 
   Product createProduct() throws InterruptedException {
-    final Product product = Fixture.getTestProduct();
+    return createAdjustedProduct(x -> {});
+  }
+
+  Product createAndEnableProduct() throws InterruptedException {
+    final Product product = createAdjustedProduct(x -> {});
+    portfolioManager.enableProduct(product.getIdentifier(), true);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
+    return product;
+  }
+
+  Product createAdjustedProduct(final Consumer<Product> adjustment) throws InterruptedException {
+    final Product product = Fixture.createAdjustedProduct(adjustment);
     portfolioManager.createProduct(product);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_PRODUCT, product.getIdentifier()));
     return product;

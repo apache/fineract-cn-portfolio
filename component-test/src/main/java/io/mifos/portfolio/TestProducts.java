@@ -23,6 +23,7 @@ import io.mifos.portfolio.api.v1.client.ProductAlreadyExistsException;
 import io.mifos.portfolio.api.v1.client.ProductDefinitionIncomplete;
 import io.mifos.portfolio.api.v1.client.ProductInUseException;
 import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Assert;
@@ -34,7 +35,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -119,7 +119,7 @@ public class TestProducts extends AbstractPortfolioTest {
   }
 
   @Test
-  public void incompleteProductDefinitionCantBeActivated() {
+  public void incompleteProductDefinitionCantBeActivated() throws InterruptedException {
     final Product product = Fixture.createAdjustedProduct(x -> {});
     portfolioManager.createProduct(product);
     final ChargeDefinition chargeDefinitionContainingIncompleteAccountAssignment = new ChargeDefinition();
@@ -132,6 +132,8 @@ public class TestProducts extends AbstractPortfolioTest {
     chargeDefinitionContainingIncompleteAccountAssignment.setChargeAction(Action.OPEN.name());
     chargeDefinitionContainingIncompleteAccountAssignment.setDescription("who cares what the description is?");
     portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinitionContainingIncompleteAccountAssignment);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CHARGE_DEFINITION,
+            new ChargeDefinitionEvent(product.getIdentifier(), chargeDefinitionContainingIncompleteAccountAssignment.getIdentifier())));
 
     try {
       portfolioManager.enableProduct(product.getIdentifier(), true);
@@ -156,7 +158,7 @@ public class TestProducts extends AbstractPortfolioTest {
 
   @Test
   public void shouldFailToChangeProductAfterCaseHasBeenCreated() throws InterruptedException {
-    final Product product = createAdjustedProduct(x -> {});
+    final Product product = createAndEnableProduct();
 
     createAdjustedCase(product.getIdentifier(), x -> {});
 
@@ -180,14 +182,6 @@ public class TestProducts extends AbstractPortfolioTest {
 
     Assert.assertFalse(portfolioManager.getProductEnabled(product.getIdentifier()));
   }
-
-  private Product createAdjustedProduct(final Consumer<Product> adjustment) throws InterruptedException {
-    final Product product = Fixture.createAdjustedProduct(adjustment);
-    portfolioManager.createProduct(product);
-    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_PRODUCT, product.getIdentifier()));
-    return product;
-  }
-
 
   private Product getTestProductWithMaximumLengthEverything()
   {

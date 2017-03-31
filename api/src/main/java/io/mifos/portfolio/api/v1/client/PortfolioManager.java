@@ -207,6 +207,7 @@ public interface PortfolioManager {
           produces = MediaType.APPLICATION_JSON_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = CaseAlreadyExistsException.class)
   void createCase(@PathVariable("productidentifier") final String productIdentifier,
                   final Case caseInstance);
 

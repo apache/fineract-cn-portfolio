@@ -15,14 +15,8 @@
  */
 package io.mifos.portfolio;
 
+import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.anubis.test.v1.TenantApplicationSecurityEnvironmentTestRule;
-import io.mifos.portfolio.api.v1.client.PortfolioManager;
-import io.mifos.portfolio.api.v1.domain.Case;
-import io.mifos.portfolio.api.v1.domain.Product;
-import io.mifos.portfolio.api.v1.events.CaseEvent;
-import io.mifos.portfolio.api.v1.events.EventConstants;
-import io.mifos.individuallending.api.v1.client.IndividualLending;
-import io.mifos.portfolio.service.PortfolioServiceConfiguration;
 import io.mifos.core.api.context.AutoUserContext;
 import io.mifos.core.test.env.TestEnvironment;
 import io.mifos.core.test.fixture.TenantDataStoreContextTestRule;
@@ -30,10 +24,19 @@ import io.mifos.core.test.fixture.cassandra.CassandraInitializer;
 import io.mifos.core.test.fixture.mariadb.MariaDBInitializer;
 import io.mifos.core.test.listener.EnableEventRecording;
 import io.mifos.core.test.listener.EventRecorder;
+import io.mifos.individuallending.api.v1.client.IndividualLending;
+import io.mifos.portfolio.api.v1.client.PortfolioManager;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.events.CaseEvent;
+import io.mifos.portfolio.api.v1.events.EventConstants;
+import io.mifos.portfolio.service.PortfolioServiceConfiguration;
+import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import org.junit.*;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,6 +55,9 @@ import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import java.util.Set;
 import java.util.function.Consumer;
+
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.doReturn;
 
 /**
  * @author Myrle Krantz
@@ -76,6 +82,13 @@ public class AbstractPortfolioTest {
     @Bean()
     public Logger logger() {
       return LoggerFactory.getLogger("test-logger");
+    }
+    @Bean()
+    public AccountingAdapter accountingAdapter(final LedgerManager ledgerManager)
+    {
+      final AccountingAdapter spy = Mockito.spy(new AccountingAdapter(ledgerManager));
+      doReturn(true).when(spy).accountAssignmentRepresentsRealAccount(any());
+      return spy;
     }
   }
 
@@ -111,6 +124,7 @@ public class AbstractPortfolioTest {
   @Before
   public void prepTest() {
     userContext = this.tenantApplicationSecurityEnvironment.createAutoUserContext(TEST_USER);
+    setupMockAccountingAdapter();
   }
 
   @After
@@ -125,6 +139,9 @@ public class AbstractPortfolioTest {
     } catch (final InterruptedException e) {
       throw new IllegalStateException(e);
     }
+  }
+
+  private void setupMockAccountingAdapter() {
   }
 
   Product createProduct() throws InterruptedException {

@@ -111,8 +111,6 @@ public class CaseRestController {
     if (instance.getLastModifiedOn() != null)
       throw ServiceException.badRequest("LastModifiedOn must 'null' be upon initial creation.");
 
-    //TODO: validate that all designators actually exist in product/pattern...
-
     this.commandGateway.process(new CreateCaseCommand(instance));
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
   }

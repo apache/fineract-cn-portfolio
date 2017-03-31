@@ -17,6 +17,9 @@ package io.mifos.portfolio.service.rest;
 
 import io.mifos.anubis.annotation.AcceptedTokenType;
 import io.mifos.anubis.annotation.Permittable;
+import io.mifos.core.api.util.UserContextHolder;
+import io.mifos.core.command.gateway.CommandGateway;
+import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Pattern;
@@ -24,10 +27,9 @@ import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
 import io.mifos.portfolio.service.internal.command.ChangeProductCommand;
 import io.mifos.portfolio.service.internal.command.CreateProductCommand;
+import io.mifos.portfolio.service.internal.service.CaseService;
 import io.mifos.portfolio.service.internal.service.PatternService;
 import io.mifos.portfolio.service.internal.service.ProductService;
-import io.mifos.core.command.gateway.CommandGateway;
-import io.mifos.core.lang.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -47,14 +49,17 @@ import java.util.Set;
 public class ProductRestController {
 
   private final CommandGateway commandGateway;
+  private final CaseService caseService;
   private final ProductService productService;
   private final PatternService patternService;
 
   @Autowired public ProductRestController(final CommandGateway commandGateway,
+                                          final CaseService caseService,
                                           final ProductService productService,
                                           final PatternService patternService) {
     super();
     this.commandGateway = commandGateway;
+    this.caseService = caseService;
     this.productService = productService;
     this.patternService = patternService;
   }
@@ -73,6 +78,19 @@ public class ProductRestController {
 
     final Pattern pattern = patternService.findByIdentifier(instance.getPatternPackage())
             .orElseThrow(() -> ServiceException.badRequest("Invalid pattern package referenced."));
+
+    final String user = UserContextHolder.checkedGetUser();
+    if (!(instance.getCreatedBy() == null || instance.getCreatedBy().equals(user)))
+      throw ServiceException.badRequest("CreatedBy must be either 'null', or the creating user upon initial creation.");
+
+    if (!(instance.getLastModifiedBy() == null || instance.getLastModifiedBy().equals(user)))
+      throw ServiceException.badRequest("LastModifiedBy must be either 'null', or the creating user upon initial creation.");
+
+    if (instance.getCreatedOn() != null)
+      throw ServiceException.badRequest("CreatedOn must be 'null' upon initial creation.");
+
+    if (instance.getLastModifiedOn() != null)
+      throw ServiceException.badRequest("LastModifiedOn must 'null' be upon initial creation.");
 
     this.commandGateway.process(new CreateProductCommand(instance));
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
@@ -106,6 +124,9 @@ public class ProductRestController {
     if (!productIdentifier.equals(instance.getIdentifier()))
       throw ServiceException.badRequest("Instance identifier may not be changed. Identifier provided in instance = " + instance.getIdentifier() + ". Instance referenced in path = " + productIdentifier + ".");
 
+    if (caseService.existsByProductIdentifier(productIdentifier))
+      throw ServiceException.conflict("Cases exist for product with the identifier '" + productIdentifier + "'. Product cannot be changed.");
+
     commandGateway.process(new ChangeProductCommand(instance));
 
     return ResponseEntity.accepted().build();
@@ -138,8 +159,10 @@ public class ProductRestController {
     productService.findByIdentifier(productIdentifier)
             .orElseThrow(() -> ServiceException.notFound("Instance with identifier " + productIdentifier + " doesn't exist."));
 
-    if (!productService.areChargeDefinitionsCoveredByAccountAssignments(productIdentifier))
-      throw ServiceException.conflict("Product with identifier " + productIdentifier + " is not ready to be enabled.");
+    if (enabled) {
+      if (!productService.areChargeDefinitionsCoveredByAccountAssignments(productIdentifier))
+        throw ServiceException.conflict("Product with identifier " + productIdentifier + " is not ready to be enabled.");
+    }
 
     commandGateway.process(new ChangeEnablingOfProductCommand(productIdentifier, enabled));
 

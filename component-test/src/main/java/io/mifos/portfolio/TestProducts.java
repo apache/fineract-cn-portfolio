@@ -21,7 +21,9 @@ import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.client.ProductAlreadyExistsException;
 import io.mifos.portfolio.api.v1.client.ProductDefinitionIncomplete;
+import io.mifos.portfolio.api.v1.client.ProductInUseException;
 import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Assert;
@@ -33,7 +35,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -44,8 +45,6 @@ public class TestProducts extends AbstractPortfolioTest {
   @Test
   public void shouldCreateAndEnableProduct() throws InterruptedException {
     final Product product = createAdjustedProduct(x -> {});
-
-    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_PRODUCT, product.getIdentifier()));
 
     final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
 
@@ -75,7 +74,6 @@ public class TestProducts extends AbstractPortfolioTest {
   @Test
   public void shouldChangeProductAccountAssignments() throws InterruptedException {
     final Product product = createAdjustedProduct(x -> x.setAccountAssignments(Collections.emptySet()));
-    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_PRODUCT, product.getIdentifier()));
 
     final Set<AccountAssignment> incompleteAccountAssignments = portfolioManager.getIncompleteAccountAssignments(product.getIdentifier());
 
@@ -99,7 +97,29 @@ public class TestProducts extends AbstractPortfolioTest {
   }
 
   @Test
-  public void incompleteProductDefinitionCantBeActivated() {
+  public void shouldRemoveProductAccountAssignments() throws InterruptedException {
+    final Product product = createAdjustedProduct(x -> {});
+
+    final Set<AccountAssignment> incompleteAccountAssignments = portfolioManager.getIncompleteAccountAssignments(product.getIdentifier());
+    Assert.assertTrue(incompleteAccountAssignments.isEmpty());
+
+    product.setAccountAssignments(Collections.emptySet());
+    portfolioManager.changeProduct(product.getIdentifier(), product);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT, product.getIdentifier()));
+
+    final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
+    Assert.assertTrue("Account assignments should be empty, but contain: " + productAsSaved.getAccountAssignments(),
+            productAsSaved.getAccountAssignments().isEmpty());
+    Assert.assertEquals(product, productAsSaved);
+
+    final Set<AccountAssignment> incompleteAccountAssignmentsAfterChange
+            = portfolioManager.getIncompleteAccountAssignments(product.getIdentifier());
+    Assert.assertFalse("Incomplete account assignments should not be empty, but is. (Beware the double negative.)",
+            incompleteAccountAssignmentsAfterChange.isEmpty());
+  }
+
+  @Test
+  public void incompleteProductDefinitionCantBeActivated() throws InterruptedException {
     final Product product = Fixture.createAdjustedProduct(x -> {});
     portfolioManager.createProduct(product);
     final ChargeDefinition chargeDefinitionContainingIncompleteAccountAssignment = new ChargeDefinition();
@@ -112,6 +132,8 @@ public class TestProducts extends AbstractPortfolioTest {
     chargeDefinitionContainingIncompleteAccountAssignment.setChargeAction(Action.OPEN.name());
     chargeDefinitionContainingIncompleteAccountAssignment.setDescription("who cares what the description is?");
     portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinitionContainingIncompleteAccountAssignment);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CHARGE_DEFINITION,
+            new ChargeDefinitionEvent(product.getIdentifier(), chargeDefinitionContainingIncompleteAccountAssignment.getIdentifier())));
 
     try {
       portfolioManager.enableProduct(product.getIdentifier(), true);
@@ -124,26 +146,42 @@ public class TestProducts extends AbstractPortfolioTest {
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void nonExistentPatternPackageShouldThrow()
-  {
+  public void nonExistentPatternPackageShouldThrow() throws InterruptedException {
     createAdjustedProduct(product -> product.setPatternPackage("be.bop.do.wap"));
   }
 
   @Test(expected = ProductAlreadyExistsException.class)
   public void duplicateProductIdentifierShouldThrow() throws InterruptedException {
-    final Product productToCreate = createAdjustedProduct(product -> product.setIdentifier("ditto"));
-
-    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_PRODUCT, productToCreate.getIdentifier()));
-
+    createAdjustedProduct(product -> product.setIdentifier("ditto"));
     createAdjustedProduct(product -> product.setIdentifier("ditto"));
   }
 
-  private Product createAdjustedProduct(final Consumer<Product> adjustment) {
-    final Product product = Fixture.createAdjustedProduct(adjustment);
-    portfolioManager.createProduct(product);
-    return product;
-  }
+  @Test
+  public void shouldFailToChangeProductAfterCaseHasBeenCreated() throws InterruptedException {
+    final Product product = createAndEnableProduct();
 
+    createAdjustedCase(product.getIdentifier(), x -> {});
+
+    final Product slightlyChangedProduct = Fixture.createAdjustedProduct(x -> x.setDescription("changed description."));
+    slightlyChangedProduct.setIdentifier(product.getIdentifier());
+    try {
+      portfolioManager.changeProduct(product.getIdentifier(), slightlyChangedProduct);
+      Assert.fail("This should throw a ProductInUseException.");
+    }
+    catch (final ProductInUseException ignore) {
+    }
+
+    final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
+
+    Assert.assertEquals(product, productAsSaved);
+    Assert.assertNotEquals(slightlyChangedProduct, productAsSaved);
+    Assert.assertEquals(TEST_USER, productAsSaved.getLastModifiedBy());
+
+    portfolioManager.enableProduct(product.getIdentifier(), false);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
+
+    Assert.assertFalse(portfolioManager.getProductEnabled(product.getIdentifier()));
+  }
 
   private Product getTestProductWithMaximumLengthEverything()
   {
@@ -173,5 +211,3 @@ public class TestProducts extends AbstractPortfolioTest {
     return product;
   }
 }
-
-//TODO: Add test for removing account assignments.

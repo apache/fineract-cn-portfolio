@@ -13,14 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio.service.internal.repository;
-
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
+package io.mifos.portfolio.api.v1.client;
 
 /**
  * @author Myrle Krantz
  */
-@Repository
-public interface CaseAccountAssignmentRepository extends JpaRepository<CaseAccountAssignmentEntity, Long> {
+@SuppressWarnings("WeakerAccess")
+public class CaseAlreadyExistsException extends RuntimeException {
 }

@@ -15,30 +15,23 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
-import io.mifos.portfolio.service.internal.command.ChangeCaseCommand;
-import io.mifos.portfolio.service.internal.command.CreateCaseCommand;
-import io.mifos.portfolio.service.internal.mapper.CaseMapper;
-import io.mifos.portfolio.service.internal.repository.*;
-import io.mifos.products.spi.PatternFactory;
-import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
-import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.command.annotation.Aggregate;
 import io.mifos.core.command.annotation.CommandHandler;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.lang.ServiceException;
-import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.events.CaseEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
+import io.mifos.portfolio.service.internal.command.ChangeCaseCommand;
+import io.mifos.portfolio.service.internal.command.CreateCaseCommand;
+import io.mifos.portfolio.service.internal.mapper.CaseMapper;
+import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
+import io.mifos.portfolio.service.internal.repository.*;
+import io.mifos.products.spi.PatternFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * @author Myrle Krantz
@@ -49,18 +42,15 @@ public class CaseCommandHandler {
   private final PatternFactoryRegistry patternFactoryRegistry;
   private final ProductRepository productRepository;
   private final CaseRepository caseRepository;
-  private final CaseAccountAssignmentRepository caseAccountAssignmentRepository;
 
   @Autowired
   public CaseCommandHandler(final PatternFactoryRegistry patternFactoryRegistry,
                             final ProductRepository productRepository,
-                            final CaseRepository caseRepository,
-                            final CaseAccountAssignmentRepository caseAccountAssignmentRepository) {
+                            final CaseRepository caseRepository) {
     super();
     this.patternFactoryRegistry = patternFactoryRegistry;
     this.productRepository = productRepository;
     this.caseRepository = caseRepository;
-    this.caseAccountAssignmentRepository = caseAccountAssignmentRepository;
   }
 
   @Transactional
@@ -95,38 +85,18 @@ public class CaseCommandHandler {
   @CommandHandler
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.PUT_CASE)
   public CaseEvent process(final ChangeCaseCommand changeCaseCommand) {
-    final Case caseInstance = changeCaseCommand.getInstance();
+    final Case instance = changeCaseCommand.getInstance();
 
     final CaseEntity oldEntity = caseRepository
-            .findByProductIdentifierAndIdentifier(caseInstance.getProductIdentifier(), caseInstance.getIdentifier())
-            .orElseThrow(() -> ServiceException.notFound("Case not found '"
-                    + caseInstance.getProductIdentifier() + "." + caseInstance.getIdentifier() + "'."));
+            .findByProductIdentifierAndIdentifier(instance.getProductIdentifier(), instance.getIdentifier())
+            .orElseThrow(() -> ServiceException.notFound("Case not found '" + instance.getIdentifier() + "'."));
 
-    oldEntity.setLastModifiedBy(UserContextHolder.checkedGetUser());
-    oldEntity.setLastModifiedOn(LocalDateTime.now(ZoneId.of("UTC")));
+    final CaseEntity newEntity = CaseMapper.mapOverOldEntity(instance, oldEntity);
 
-    final Set<CaseAccountAssignmentEntity> accountAssignments = oldEntity.getAccountAssignments();
-    final Map<String, CaseAccountAssignmentEntity> accountAssignmentsMap
-            = accountAssignments.stream()
-            .collect(Collectors.toMap(CaseAccountAssignmentEntity::getDesignator, x -> x));
+    caseRepository.save(newEntity);
 
-    final Set<AccountAssignment> newAccountAssignments = caseInstance.getAccountAssignments();
-    newAccountAssignments.forEach(x -> {
-      final String accountDesignator = x.getDesignator();
-      final CaseAccountAssignmentEntity accountAssignmentEntity = accountAssignmentsMap.get(accountDesignator);
-      if (accountAssignmentEntity != null)
-        accountAssignmentEntity.setIdentifier(x.getAccountIdentifier());
-      else
-        accountAssignments.add(CaseMapper.mapAccountAssignment(x, oldEntity));
-    });
+    getPatternFactory(instance.getProductIdentifier()).changeParameters(oldEntity.getId(), instance.getParameters());
 
-    accountAssignments.forEach(caseAccountAssignmentRepository::save);
-
-
-    caseRepository.save(oldEntity);
-
-    getPatternFactory(caseInstance.getProductIdentifier()).changeParameters(oldEntity.getId(), caseInstance.getParameters());
-
-    return new CaseEvent(caseInstance.getProductIdentifier(), caseInstance.getIdentifier());
+    return new CaseEvent(instance.getProductIdentifier(), instance.getIdentifier());
   }
 }

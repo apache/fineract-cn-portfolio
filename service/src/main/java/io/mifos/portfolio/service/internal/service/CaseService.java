@@ -94,4 +94,8 @@ public class CaseService {
               .map(ProductEntity::getPatternPackage)
               .flatMap(patternFactoryRegistry::getPatternFactoryForPackage);
   }
+
+  public boolean existsByProductIdentifier(final String productIdentifier) {
+    return caseRepository.existsByProductIdentifier(productIdentifier);
+  }
 }

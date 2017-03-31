@@ -46,24 +46,24 @@ import java.util.stream.Collectors;
 @Aggregate
 public class ProductCommandHandler {
   private final PatternFactoryRegistry patternFactoryRegistry;
+  private final CaseRepository caseRepository;
   private final ProductRepository productRepository;
   private final ChargeDefinitionRepository chargeDefinitionRepository;
   private final AccountingAdapter accountingAdapter;
-  private final ProductAccountAssignmentRepository productAccountAssignmentRepository;
 
   @Autowired
   public ProductCommandHandler(
           final PatternFactoryRegistry patternFactoryRegistry,
+          final CaseRepository caseRepository,
           final ProductRepository productRepository,
           final ChargeDefinitionRepository chargeDefinitionRepository,
-          final AccountingAdapter accountingAdapter,
-          final ProductAccountAssignmentRepository productAccountAssignmentRepository) {
+          final AccountingAdapter accountingAdapter) {
     super();
     this.patternFactoryRegistry = patternFactoryRegistry;
+    this.caseRepository = caseRepository;
     this.productRepository = productRepository;
     this.chargeDefinitionRepository = chargeDefinitionRepository;
     this.accountingAdapter = accountingAdapter;
-    this.productAccountAssignmentRepository = productAccountAssignmentRepository;
   }
 
   @Transactional
@@ -93,15 +93,16 @@ public class ProductCommandHandler {
   public String process(final ChangeProductCommand changeProductCommand) {
     final Product instance = changeProductCommand.getInstance();
 
+    if (caseRepository.existsByProductIdentifier(instance.getIdentifier()))
+      throw ServiceException.conflict("Cases exist for product with the identifier '" + instance.getIdentifier() + "'. Product cannot be changed.");
+
     final ProductEntity oldEntity = productRepository
             .findByIdentifier(instance.getIdentifier())
             .orElseThrow(() -> ServiceException.notFound("Product not found '" + instance.getIdentifier() + "'."));
 
-    final ProductEntity changedProductEntity = ProductMapper.mapOverOldProductEntity(instance, oldEntity);
+    final ProductEntity newEntity = ProductMapper.mapOverOldEntity(instance, oldEntity);
 
-    changedProductEntity.getAccountAssignments().forEach(productAccountAssignmentRepository::save);
-
-    productRepository.save(changedProductEntity);
+    productRepository.save(newEntity);
 
     return changeProductCommand.getInstance().getIdentifier();
   }

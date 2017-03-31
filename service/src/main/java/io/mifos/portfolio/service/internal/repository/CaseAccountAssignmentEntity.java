@@ -30,7 +30,7 @@ public class CaseAccountAssignmentEntity {
   private Long id;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "case_id")
+  @JoinColumn(name = "case_id", nullable = false)
   private CaseEntity caseEntity;
 
   @Column(name = "designator")

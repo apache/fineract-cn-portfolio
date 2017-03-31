@@ -66,7 +66,7 @@ public class AccountingAdapter {
 
   public boolean accountAssignmentsRepresentRealAccounts(final Set<AccountAssignment> accountAssignments)
   {
-    return accountAssignments.stream().filter(x -> !accountAssignmentRepresentsRealAccount(x)).findAny().isPresent();
+    return accountAssignments.stream().allMatch(this::accountAssignmentRepresentsRealAccount);
   }
 
   public boolean accountAssignmentRepresentsRealAccount(final AccountAssignment accountAssignment) {

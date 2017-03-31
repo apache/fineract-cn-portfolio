@@ -17,16 +17,25 @@ package io.mifos.portfolio.service.internal.command;
 
 import io.mifos.portfolio.api.v1.domain.Product;
 
+/**
+ * @author Myrle Krantz
+ */
 public class CreateProductCommand {
 
-  private final Product product;
+  private Product instance;
 
-  public CreateProductCommand(final Product product) {
-    super();
-    this.product = product;
+  public CreateProductCommand() {
   }
 
-  public Product product() {
-    return this.product;
+  public CreateProductCommand(Product instance) {
+    this.instance = instance;
+  }
+
+  public Product getInstance() {
+    return instance;
+  }
+
+  public void setInstance(Product instance) {
+    this.instance = instance;
   }
 }

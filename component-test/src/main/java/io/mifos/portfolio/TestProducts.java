@@ -16,12 +16,13 @@
 package io.mifos.portfolio;
 
 import com.google.gson.Gson;
+import io.mifos.core.test.domain.TimeStampChecker;
+import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.client.ProductAlreadyExistsException;
 import io.mifos.portfolio.api.v1.client.ProductDefinitionIncomplete;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.api.v1.events.EventConstants;
-import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
-import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import org.apache.commons.lang.StringUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,7 +32,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /**
  * @author Myrle Krantz
@@ -67,6 +70,32 @@ public class TestProducts extends AbstractPortfolioTest {
 
     Assert.assertEquals(product, productAsSaved);
 
+  }
+
+  @Test
+  public void shouldChangeProductAccountAssignments() throws InterruptedException {
+    final Product product = createAdjustedProduct(x -> x.setAccountAssignments(Collections.emptySet()));
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_PRODUCT, product.getIdentifier()));
+
+    final Set<AccountAssignment> incompleteAccountAssignments = portfolioManager.getIncompleteAccountAssignments(product.getIdentifier());
+
+    final Set<AccountAssignment> accountAssignments = incompleteAccountAssignments.stream()
+            .map(x -> new AccountAssignment(x.getDesignator(), testEnvironment.generateUniqueIdentifer("account")))
+            .collect(Collectors.toSet());
+
+    product.setAccountAssignments(accountAssignments);
+
+    TimeUnit.SECONDS.sleep(3);
+
+    final TimeStampChecker timeStampChecker = TimeStampChecker.roughlyNow();
+    portfolioManager.changeProduct(product.getIdentifier(), product);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT, product.getIdentifier()));
+
+    final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
+
+    Assert.assertEquals(product, productAsSaved);
+    Assert.assertEquals(TEST_USER, productAsSaved.getLastModifiedBy());
+    timeStampChecker.assertCorrect(productAsSaved.getLastModifiedOn());
   }
 
   @Test
@@ -143,7 +172,6 @@ public class TestProducts extends AbstractPortfolioTest {
     product.setParameters(gson.toJson(productParameters));
     return product;
   }
-
-  //TODO: missing change product tests
-  //TODO: move validator checking tests into unit tests in api.  Adjust template accordingly.
 }
+
+//TODO: Add test for removing account assignments.

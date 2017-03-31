@@ -15,10 +15,8 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
@@ -27,8 +25,17 @@ import java.util.Collection;
 /**
  * @author Myrle Krantz
  */
-@RunWith(Parameterized.class)
-public class AccountAssignmentTest {
+public class AccountAssignmentTest extends ValidationTest<AccountAssignment> {
+
+  public AccountAssignmentTest(ValidationTestCase<AccountAssignment> testCase) {
+    super(testCase);
+  }
+
+  @Override
+  protected AccountAssignment createValidTestSubject() {
+    return new AccountAssignment("xxx", "yyy");
+  }
+
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
@@ -48,23 +55,5 @@ public class AccountAssignmentTest {
             .adjustment(x -> { x.setLedgerIdentifier("zzz"); x.setAccountIdentifier(null); })
             .valid(true));
     return ret;
-  }
-  private final ValidationTestCase<AccountAssignment> testCase;
-
-  public AccountAssignmentTest(final ValidationTestCase<AccountAssignment> testCase)
-  {
-    this.testCase = testCase;
-  }
-
-  private AccountAssignment createAccountAssignment()
-  {
-    return new AccountAssignment("xxx", "yyy");
-  }
-
-  @Test()
-  public void test(){
-    final AccountAssignment testSubject = createAccountAssignment();
-    testCase.applyAdjustment(testSubject);
-    Assert.assertTrue(testCase.toString(), testCase.check(testSubject));
   }
 }

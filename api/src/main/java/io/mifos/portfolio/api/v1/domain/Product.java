@@ -64,6 +64,11 @@ public final class Product {
   @Length(max = 8092)
   private String parameters; //json serialization of product specific parameters.
 
+  private String createdOn;
+  private String createdBy;
+  private String lastModifiedOn;
+  private String lastModifiedBy;
+
   public Product() {
   }
 
@@ -163,6 +168,38 @@ public final class Product {
     this.parameters = parameters;
   }
 
+  public String getCreatedOn() {
+    return createdOn;
+  }
+
+  public void setCreatedOn(String createdOn) {
+    this.createdOn = createdOn;
+  }
+
+  public String getCreatedBy() {
+    return createdBy;
+  }
+
+  public void setCreatedBy(String createdBy) {
+    this.createdBy = createdBy;
+  }
+
+  public String getLastModifiedOn() {
+    return lastModifiedOn;
+  }
+
+  public void setLastModifiedOn(String lastModifiedOn) {
+    this.lastModifiedOn = lastModifiedOn;
+  }
+
+  public String getLastModifiedBy() {
+    return lastModifiedBy;
+  }
+
+  public void setLastModifiedBy(String lastModifiedBy) {
+    this.lastModifiedBy = lastModifiedBy;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -202,6 +239,10 @@ public final class Product {
             ", minorCurrencyUnitDigits=" + minorCurrencyUnitDigits +
             ", accountAssignments=" + accountAssignments +
             ", parameters='" + parameters + '\'' +
+            ", createdOn='" + createdOn + '\'' +
+            ", createdBy='" + createdBy + '\'' +
+            ", lastModifiedOn='" + lastModifiedOn + '\'' +
+            ", lastModifiedBy='" + lastModifiedBy + '\'' +
             '}';
   }
 }

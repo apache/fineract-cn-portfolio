@@ -20,6 +20,7 @@ public interface EventConstants {
   String SELECTOR_NAME = "action";
   String INITIALIZE = "initialize";
   String POST_PRODUCT = "post-product";
+  String PUT_PRODUCT = "put-product";
   String PUT_PRODUCT_ENABLE = "put-enable";
   String POST_CASE = "post-case";
   String PUT_CASE = "put-case";
@@ -30,6 +31,7 @@ public interface EventConstants {
   String DELETE_PRODUCT_CHARGE_DEFINITION = "delete-product-charge-definition";
   String SELECTOR_INITIALIZE = SELECTOR_NAME + " = '" + INITIALIZE + "'";
   String SELECTOR_POST_PRODUCT = SELECTOR_NAME + " = '" + POST_PRODUCT + "'";
+  String SELECTOR_PUT_PRODUCT = SELECTOR_NAME + " = '" + PUT_PRODUCT + "'";
   String SELECTOR_PUT_PRODUCT_ENABLE = SELECTOR_NAME + " = '" + PUT_PRODUCT_ENABLE + "'";
   String SELECTOR_POST_CASE = SELECTOR_NAME + " = '" + POST_CASE + "'";
   String SELECTOR_PUT_CASE = SELECTOR_NAME + " = '" + PUT_CASE + "'";

@@ -13,28 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio.api.v1.validation;
+package io.mifos.portfolio.service.internal.repository;
 
-import javax.validation.Constraint;
-import javax.validation.Payload;
-import java.lang.annotation.*;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 /**
  * @author Myrle Krantz
  */
-@SuppressWarnings("unused")
-@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-@Constraint(
-        validatedBy = {CheckPaymentCycleUnit.class}
-)
-public @interface ValidPaymentCycleUnit {
-  String message() default "Only ChronoUnits WEEK, MONTH, and YEAR are allowed for alignment.";
-
-  Class<?>[] groups() default {};
-
-  Class<? extends Payload>[] payload() default {};
-
-  int maxLength() default 32;
+@Repository
+public interface ProductAccountAssignmentRepository extends JpaRepository<ProductAccountAssignmentEntity, Long> {
 }

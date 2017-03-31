@@ -23,6 +23,7 @@ import java.lang.annotation.*;
 /**
  * @author Myrle Krantz
  */
+@SuppressWarnings("unused")
 @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented

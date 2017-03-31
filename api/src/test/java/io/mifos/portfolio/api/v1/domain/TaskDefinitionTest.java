@@ -16,10 +16,8 @@
 package io.mifos.portfolio.api.v1.domain;
 
 import io.mifos.Fixture;
+import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
@@ -29,8 +27,24 @@ import java.util.HashSet;
 /**
  * @author Myrle Krantz
  */
-@RunWith(Parameterized.class)
-public class TaskDefinitionTest {
+public class TaskDefinitionTest extends ValidationTest<TaskDefinition> {
+
+  public TaskDefinitionTest(ValidationTestCase<TaskDefinition> testCase) {
+    super(testCase);
+  }
+
+  @Override
+  protected TaskDefinition createValidTestSubject() {
+    final TaskDefinition ret = new TaskDefinition();
+    ret.setIdentifier(Fixture.generateUniqueIdentifer("task"));
+    ret.setDescription("But how do you feel about this?");
+    ret.setName("feep");
+    ret.setMandatory(false);
+    ret.setActions(new HashSet<>());
+    ret.setFourEyes(true);
+    return ret;
+  }
+
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
@@ -42,30 +56,6 @@ public class TaskDefinitionTest {
             .adjustment(x -> x.setIdentifier(null))
             .valid(false));
 
-    return ret;
-  }
-  private final ValidationTestCase<TaskDefinition> testCase;
-
-  public TaskDefinitionTest(final ValidationTestCase<TaskDefinition> testCase)
-  {
-    this.testCase = testCase;
-  }
-
-  @Test()
-  public void test(){
-    final TaskDefinition testSubject = createValidTestSubject();
-    testCase.applyAdjustment(testSubject);
-    Assert.assertTrue(testCase.toString(), testCase.check(testSubject));
-  }
-
-  private TaskDefinition createValidTestSubject() {
-    final TaskDefinition ret = new TaskDefinition();
-    ret.setIdentifier(Fixture.generateUniqueIdentifer("task"));
-    ret.setDescription("But how do you feel about this?");
-    ret.setName("feep");
-    ret.setMandatory(false);
-    ret.setActions(new HashSet<>());
-    ret.setFourEyes(true);
     return ret;
   }
 }

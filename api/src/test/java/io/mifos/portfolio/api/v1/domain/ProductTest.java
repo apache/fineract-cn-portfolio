@@ -16,12 +16,10 @@
 package io.mifos.portfolio.api.v1.domain;
 
 import io.mifos.Fixture;
+import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.math.BigDecimal;
@@ -32,9 +30,15 @@ import java.util.Collection;
 /**
  * @author Myrle Krantz
  */
-@RunWith(Parameterized.class)
-public class ProductTest {
+public class ProductTest extends ValidationTest<Product> {
+  public ProductTest(ValidationTestCase<Product> testCase) {
+    super(testCase);
+  }
 
+  @Override
+  protected Product createValidTestSubject() {
+    return Fixture.getTestProduct();
+  }
 
   @Parameterized.Parameters
   public static Collection testCases() {
@@ -102,8 +106,20 @@ public class ProductTest {
             .adjustment(product -> product.setDescription(StringUtils.repeat("x", 4097)))
             .valid(false));
     ret.add(new ValidationTestCase<Product>("tooLongAccountIdentifier")
-            .adjustment(product -> product.getAccountAssignments().add(new AccountAssignment("x", "0123456789")))
+            .adjustment(product -> product.getAccountAssignments().add(new AccountAssignment("xyz", StringUtils.repeat("0", 33))))
             .valid(false));
+    ret.add(new ValidationTestCase<Product>("duplicateAccountAssignment")
+            .adjustment(product -> {
+              product.getAccountAssignments().add(new AccountAssignment("xyz", "002-011"));
+              product.getAccountAssignments().add(new AccountAssignment("xyz", "002-012"));
+            })
+            .valid(false));
+    ret.add(new ValidationTestCase<Product>("additionalAccountAssignment")
+            .adjustment(product -> {
+              product.getAccountAssignments().add(new AccountAssignment("xyz", "002-011"));
+              product.getAccountAssignments().add(new AccountAssignment("mno", "002-012"));
+            })
+            .valid(true));
     ret.add(new ValidationTestCase<Product>("nullCurrencyCode")
             .adjustment(product -> product.setCurrencyCode(null))
             .valid(false));
@@ -121,19 +137,5 @@ public class ProductTest {
             .valid(false));
 
     return ret;
-  }
-
-  private final ValidationTestCase<Product> testCase;
-
-  public ProductTest(final ValidationTestCase<Product> testCase)
-  {
-    this.testCase = testCase;
-  }
-
-
-  @Test()
-  public void test(){
-    final Product testSubject = Fixture.createAdjustedProduct(testCase.getAdjustment());
-    Assert.assertTrue(testCase.toString(), testCase.check(testSubject));
   }
 }

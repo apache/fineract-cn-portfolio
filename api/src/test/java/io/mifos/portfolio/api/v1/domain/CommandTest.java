@@ -15,9 +15,8 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
-import org.junit.Assert;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -28,7 +27,16 @@ import java.util.Collection;
  * @author Myrle Krantz
  */
 @RunWith(Parameterized.class)
-public class CommandTest {
+public class CommandTest extends ValidationTest<Command> {
+  public CommandTest(ValidationTestCase<Command> testCase) {
+    super(testCase);
+  }
+
+  @Override
+  protected Command createValidTestSubject() {
+    return new Command("blah", null);
+  }
+
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
@@ -37,21 +45,5 @@ public class CommandTest {
             .adjustment(x -> x.setAction(null))
             .valid(false));
     return ret;
-  }
-  private final ValidationTestCase<Command> testCase;
-  public CommandTest(final ValidationTestCase<Command> testCase)
-  {
-    this.testCase = testCase;
-  }
-
-  @Test()
-  public void test(){
-    final Command testSubject = createValidTestSubject();
-    testCase.applyAdjustment(testSubject);
-    Assert.assertTrue(testCase.toString(), testCase.check(testSubject));
-  }
-
-  private Command createValidTestSubject() {
-    return new Command("blah", null);
   }
 }

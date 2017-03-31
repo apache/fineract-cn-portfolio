@@ -15,12 +15,18 @@
  */
 package io.mifos.portfolio.service.internal.mapper;
 
+import io.mifos.core.api.util.UserContextHolder;
+import io.mifos.core.lang.DateConverter;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.service.internal.repository.ProductAccountAssignmentEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -46,35 +52,46 @@ public class ProductMapper {
     product.setAccountAssignments(productEntity.getAccountAssignments()
             .stream().map(ProductMapper::map).collect(Collectors.toSet()));
     product.setParameters(productEntity.getParameters());
+    product.setCreatedBy(productEntity.getCreatedBy());
+    product.setCreatedOn(DateConverter.toIsoString(productEntity.getCreatedOn()));
+    product.setLastModifiedBy(productEntity.getLastModifiedBy());
+    product.setLastModifiedOn(DateConverter.toIsoString(productEntity.getLastModifiedOn()));
 
     return product;
   }
 
   public static ProductEntity map(final Product product, boolean enabled)
   {
-    final ProductEntity productEntity = new ProductEntity();
+    final ProductEntity ret = new ProductEntity();
 
-    productEntity.setIdentifier(product.getIdentifier());
-    productEntity.setName(product.getName());
-    productEntity.setTermRangeTemporalUnit(product.getTermRange().getTemporalUnit());
-    productEntity.setTermRangeMinimum(0);
-    productEntity.setTermRangeMaximum(product.getTermRange().getMaximum());
-    productEntity.setBalanceRangeMinimum(product.getBalanceRange().getMinimum());
-    productEntity.setBalanceRangeMaximum(product.getBalanceRange().getMaximum());
-    productEntity.setInterestRangeMinimum(product.getInterestRange().getMinimum());
-    productEntity.setInterestRangeMaximum(product.getInterestRange().getMaximum());
-    productEntity.setInterestBasis(product.getInterestBasis());
-    productEntity.setPatternPackage(product.getPatternPackage());
-    productEntity.setDescription(product.getDescription());
-    productEntity.setCurrencyCode(product.getCurrencyCode());
-    productEntity.setMinorCurrencyUnitDigits(product.getMinorCurrencyUnitDigits());
-    productEntity.setAccountAssignments(product.getAccountAssignments().stream()
-            .map(x -> ProductMapper.map(x, productEntity))
+    ret.setIdentifier(product.getIdentifier());
+    ret.setName(product.getName());
+    ret.setTermRangeTemporalUnit(product.getTermRange().getTemporalUnit());
+    ret.setTermRangeMinimum(0);
+    ret.setTermRangeMaximum(product.getTermRange().getMaximum());
+    ret.setBalanceRangeMinimum(product.getBalanceRange().getMinimum());
+    ret.setBalanceRangeMaximum(product.getBalanceRange().getMaximum());
+    ret.setInterestRangeMinimum(product.getInterestRange().getMinimum());
+    ret.setInterestRangeMaximum(product.getInterestRange().getMaximum());
+    ret.setInterestBasis(product.getInterestBasis());
+    ret.setPatternPackage(product.getPatternPackage());
+    ret.setDescription(product.getDescription());
+    ret.setCurrencyCode(product.getCurrencyCode());
+    ret.setMinorCurrencyUnitDigits(product.getMinorCurrencyUnitDigits());
+    ret.setAccountAssignments(product.getAccountAssignments().stream()
+            .map(x -> ProductMapper.map(x, ret))
             .collect(Collectors.toSet()));
-    productEntity.setParameters(product.getParameters());
-    productEntity.setEnabled(enabled);
+    ret.setParameters(product.getParameters());
+    ret.setEnabled(enabled);
 
-    return productEntity;
+    final LocalDateTime time = LocalDateTime.now(Clock.systemUTC());
+    final String user = UserContextHolder.checkedGetUser();
+    ret.setCreatedOn(time);
+    ret.setCreatedBy(user);
+    ret.setLastModifiedOn(time);
+    ret.setLastModifiedBy(user);
+
+    return ret;
   }
 
   private static ProductAccountAssignmentEntity map (final AccountAssignment accountAssignment,
@@ -109,5 +126,31 @@ public class ProductMapper {
 
   public static List<Product> map(final List<ProductEntity> productEntities) {
     return productEntities.stream().map(ProductMapper::map).collect(Collectors.toList());
+  }
+
+  public static ProductEntity mapOverOldProductEntity(final Product instance, final ProductEntity oldEntity) {
+    final ProductEntity newProductEntity = map(instance, false);
+
+    newProductEntity.setId(oldEntity.getId());
+    newProductEntity.setCreatedBy(oldEntity.getCreatedBy());
+    newProductEntity.setCreatedOn(oldEntity.getCreatedOn());
+
+    final Set<ProductAccountAssignmentEntity> accountAssignments = oldEntity.getAccountAssignments();
+    final Map<String, ProductAccountAssignmentEntity> accountAssignmentsMap
+            = accountAssignments.stream()
+            .collect(Collectors.toMap(ProductAccountAssignmentEntity::getDesignator, x -> x));
+
+    final Set<AccountAssignment> newAccountAssignments = instance.getAccountAssignments();
+    newAccountAssignments.forEach(x -> {
+      final String accountDesignator = x.getDesignator();
+      final ProductAccountAssignmentEntity accountAssignmentEntity = accountAssignmentsMap.get(accountDesignator);
+      if (accountAssignmentEntity != null)
+        accountAssignmentEntity.setIdentifier(x.getAccountIdentifier());
+      else
+        accountAssignments.add(ProductMapper.map(x, newProductEntity));
+    });
+
+    newProductEntity.setAccountAssignments(accountAssignments);
+    return newProductEntity;
   }
 }

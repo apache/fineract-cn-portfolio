@@ -13,28 +13,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio.api.v1.validation;
+package io.mifos.portfolio.service.internal.command;
 
-import javax.validation.Constraint;
-import javax.validation.Payload;
-import java.lang.annotation.*;
+import io.mifos.portfolio.api.v1.domain.Product;
 
 /**
  * @author Myrle Krantz
  */
-@SuppressWarnings("unused")
-@Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
-@Retention(RetentionPolicy.RUNTIME)
-@Documented
-@Constraint(
-        validatedBy = {CheckPaymentCycleUnit.class}
-)
-public @interface ValidPaymentCycleUnit {
-  String message() default "Only ChronoUnits WEEK, MONTH, and YEAR are allowed for alignment.";
+public class ChangeProductCommand {
+  private Product instance;
 
-  Class<?>[] groups() default {};
+  @SuppressWarnings("unused")
+  public ChangeProductCommand() {
+  }
 
-  Class<? extends Payload>[] payload() default {};
+  public ChangeProductCommand(Product instance) {
+    this.instance = instance;
+  }
 
-  int maxLength() default 32;
+  public Product getInstance() {
+    return instance;
+  }
+
+  public void setInstance(Product instance) {
+    this.instance = instance;
+  }
 }

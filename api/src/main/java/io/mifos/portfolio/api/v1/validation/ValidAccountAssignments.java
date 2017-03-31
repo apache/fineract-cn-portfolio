@@ -22,6 +22,7 @@ import java.lang.annotation.*;
 /**
  * @author Myrle Krantz
  */
+@SuppressWarnings("unused")
 @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
@@ -29,7 +30,7 @@ import java.lang.annotation.*;
         validatedBy = {CheckAccountAssignments.class}
 )
 public @interface ValidAccountAssignments {
-  String message() default "Invalid account assignmenets.";
+  String message() default "Invalid account assignments.";
 
   Class<?>[] groups() default {};
 

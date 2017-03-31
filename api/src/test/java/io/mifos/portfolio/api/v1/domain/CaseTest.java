@@ -16,11 +16,9 @@
 package io.mifos.portfolio.api.v1.domain;
 
 import io.mifos.Fixture;
+import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
 import org.apache.commons.lang.RandomStringUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
@@ -29,8 +27,17 @@ import java.util.Collection;
 /**
  * @author Myrle Krantz
  */
-@RunWith(Parameterized.class)
-public class CaseTest {
+public class CaseTest extends ValidationTest<Case> {
+
+  public CaseTest(ValidationTestCase<Case> testCase) {
+    super(testCase);
+  }
+
+  @Override
+  protected Case createValidTestSubject() {
+    return Fixture.getTestCase("blah");
+  }
+
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
@@ -59,18 +66,4 @@ public class CaseTest {
 
     return ret;
   }
-
-  private final ValidationTestCase<Case> testCase;
-
-  public CaseTest(final ValidationTestCase<Case> testCase)
-  {
-    this.testCase = testCase;
-  }
-
-  @Test()
-  public void test(){
-    final Case testSubject = Fixture.createAdjustedCase("blah", testCase.getAdjustment());
-    Assert.assertTrue(testCase.toString(), testCase.check(testSubject));
-  }
-
 }

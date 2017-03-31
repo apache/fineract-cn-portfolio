@@ -49,6 +49,10 @@ CREATE TABLE bastet_products (
   enabled                  BOOLEAN        NOT NULL,
   currency_code            VARCHAR(3)     NOT NULL,
   minor_currency_unit_digits INT          NOT NULL,
+  created_on               TIMESTAMP(3)  NOT NULL,
+  created_by               VARCHAR(32)    NOT NULL,
+  last_modified_on         TIMESTAMP(3)  NULL,
+  last_modified_by         VARCHAR(32)    NULL,
   CONSTRAINT bastet_product_pk PRIMARY KEY (id),
   CONSTRAINT bastet_product_uq UNIQUE (identifier)
 );

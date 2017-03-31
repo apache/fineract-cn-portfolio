@@ -48,8 +48,6 @@ public class TestCases extends AbstractPortfolioTest {
 
     final TimeStampChecker timeStampChecker = TimeStampChecker.roughlyNow();
     final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> {});
-    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CASE,
-            new CaseEvent(product.getIdentifier(), caseInstance.getIdentifier())));
 
     final Case caseAsSaved = portfolioManager.getCase(product.getIdentifier(), caseInstance.getIdentifier());
 
@@ -68,8 +66,6 @@ public class TestCases extends AbstractPortfolioTest {
     final CaseParameters newCaseParameters = Fixture.createAdjustedCaseParameters(x -> {});
     final String originalParameters = new Gson().toJson(newCaseParameters);
     final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> x.setParameters(originalParameters));
-    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CASE,
-            new CaseEvent(product.getIdentifier(), caseInstance.getIdentifier())));
 
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
     accountAssignments.add(new AccountAssignment(CUSTOMER_LOAN, "002-011"));
@@ -102,18 +98,13 @@ public class TestCases extends AbstractPortfolioTest {
   public void shouldRemoveCaseAccountAssignments() throws InterruptedException {
     final Product product = createProduct();
 
-    product.setAccountAssignments(Collections.emptySet());
-    portfolioManager.changeProduct(product.getIdentifier(), product);
-    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT, product.getIdentifier()));
+    final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> {});
+    caseInstance.setAccountAssignments(Collections.emptySet());
 
-    final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
-    Assert.assertTrue("Account assignments should be empty, but contain: " + productAsSaved.getAccountAssignments(),
-            productAsSaved.getAccountAssignments().isEmpty());
-    Assert.assertEquals(product, productAsSaved);
+    portfolioManager.changeCase(product.getIdentifier(), caseInstance.getIdentifier(), caseInstance);
 
-    final Set<AccountAssignment> incompleteAccountAssignmentsAfterChange
-            = portfolioManager.getIncompleteAccountAssignments(product.getIdentifier());
-    Assert.assertFalse("Incomplete account assignments should not be empty, but is. (Beware the double negative.)",
-            incompleteAccountAssignmentsAfterChange.isEmpty());
+    final Case caseAsSaved = portfolioManager.getCase(product.getIdentifier(), caseInstance.getIdentifier());
+    Assert.assertEquals(caseInstance, caseAsSaved);
+    Assert.assertTrue(caseInstance.getAccountAssignments().isEmpty());
   }
 }

@@ -197,7 +197,6 @@ public interface PortfolioManager {
   )
   CasePage getAllCasesForProduct(@PathVariable("productidentifier") final String productIdentifier,
                                  @RequestParam(value = "includeClosed", required = false) final Boolean includeClosed,
-                                 @RequestParam(value = "forCustomer", required = false) final String customerIdentifier,
                                  @RequestParam("pageIndex") final Integer pageIndex,
                                  @RequestParam("size") final Integer size);
 
@@ -296,4 +295,6 @@ public interface PortfolioManager {
   )
   CasePage getAllCases(@RequestParam("pageIndex") final Integer pageIndex,
                         @RequestParam("size") final Integer size);
+
+  //TODO: find a way to list cases by customer even though the portfolio contains products which may be associated with groups instead of customers.
 }

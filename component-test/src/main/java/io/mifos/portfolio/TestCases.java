@@ -20,6 +20,7 @@ import io.mifos.core.test.domain.TimeStampChecker;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.CasePage;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.events.CaseEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
@@ -31,6 +32,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.CUSTOMER_LOAN;
 import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.ENTRY;
@@ -141,5 +144,34 @@ public class TestCases extends AbstractPortfolioTest {
     }
     catch (final IllegalArgumentException ignored){
     }
+  }
+
+  @Test
+  public void shouldListAndPageCases() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+
+    final Set<String> expectedCaseIdentifiers = new HashSet<>();
+
+    for (int i = 0; i < 20; i++) {
+      final Case caseInstance = createCase(product.getIdentifier());
+      expectedCaseIdentifiers.add(caseInstance.getIdentifier());
+    }
+
+    final CasePage casePage1 = portfolioManager.getAllCasesForProduct(product.getIdentifier(), false, 0, 10);
+    Assert.assertEquals(casePage1.getTotalElements(), Long.valueOf(20L));
+    Assert.assertEquals(casePage1.getElements().size(), 10);
+    Assert.assertEquals(casePage1.getTotalPages(), Integer.valueOf(2));
+
+    final CasePage casePage2 = portfolioManager.getAllCasesForProduct(product.getIdentifier(), false, 1, 10);
+    Assert.assertEquals(casePage2.getTotalElements(), Long.valueOf(20L));
+    Assert.assertEquals(casePage2.getElements().size(), 10);
+    Assert.assertEquals(casePage2.getTotalPages(), Integer.valueOf(2));
+
+    final Set<String> returnedCaseIdentifiers = Stream.concat(
+            casePage1.getElements().stream().map(Case::getIdentifier),
+            casePage2.getElements().stream().map(Case::getIdentifier))
+            .collect(Collectors.toSet());
+
+    Assert.assertEquals(expectedCaseIdentifiers, returnedCaseIdentifiers);
   }
 }

@@ -17,17 +17,18 @@ package io.mifos.portfolio.service.rest;
 
 import io.mifos.anubis.annotation.AcceptedTokenType;
 import io.mifos.anubis.annotation.Permittable;
+import io.mifos.core.api.util.UserContextHolder;
+import io.mifos.core.command.gateway.CommandGateway;
+import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
 import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.CasePage;
 import io.mifos.portfolio.api.v1.domain.Command;
-import io.mifos.products.spi.ProductCommandDispatcher;
 import io.mifos.portfolio.service.internal.command.ChangeCaseCommand;
 import io.mifos.portfolio.service.internal.command.CreateCaseCommand;
 import io.mifos.portfolio.service.internal.service.CaseService;
 import io.mifos.portfolio.service.internal.service.ProductService;
-import io.mifos.core.api.util.UserContextHolder;
-import io.mifos.core.command.gateway.CommandGateway;
-import io.mifos.core.lang.ServiceException;
+import io.mifos.products.spi.ProductCommandDispatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,7 +36,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -67,15 +67,12 @@ public class CaseRestController {
           consumes = MediaType.ALL_VALUE,
           produces = MediaType.APPLICATION_JSON_VALUE
   )
-  public @ResponseBody List<Case> getAllCasesForProduct(
-          @PathVariable("productidentifier") final String productIdentifier,
-          @RequestParam(value = "includeClosed", required = false) final Boolean includeClosed,
-          @RequestParam(value = "forCustomer", required = false) final String customerIdentifier,
-          @RequestParam("page") final Integer page,
-          @RequestParam("size") final Integer size)
+  public @ResponseBody CasePage getAllCasesForProduct(@PathVariable("productidentifier") final String productIdentifier,
+                                 @RequestParam(value = "includeClosed", required = false) final Boolean includeClosed,
+                                 @RequestParam("pageIndex") final Integer pageIndex,
+                                 @RequestParam("size") final Integer size)
   {
-    //TODO: paging, parameters
-    return caseService.findAllEntities();
+    return caseService.findAllEntities(productIdentifier, includeClosed,  pageIndex, size);
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)

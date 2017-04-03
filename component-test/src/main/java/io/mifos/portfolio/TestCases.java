@@ -47,7 +47,7 @@ public class TestCases extends AbstractPortfolioTest {
     final Product product = createAndEnableProduct();
 
     final TimeStampChecker timeStampChecker = TimeStampChecker.roughlyNow();
-    final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> {});
+    final Case caseInstance = createCase(product.getIdentifier());
 
     final Case caseAsSaved = portfolioManager.getCase(product.getIdentifier(), caseInstance.getIdentifier());
 
@@ -98,7 +98,7 @@ public class TestCases extends AbstractPortfolioTest {
   public void shouldRemoveCaseAccountAssignments() throws InterruptedException {
     final Product product = createAndEnableProduct();
 
-    final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> {});
+    final Case caseInstance = createCase(product.getIdentifier());
     caseInstance.setAccountAssignments(Collections.emptySet());
 
     portfolioManager.changeCase(product.getIdentifier(), caseInstance.getIdentifier(), caseInstance);
@@ -115,7 +115,7 @@ public class TestCases extends AbstractPortfolioTest {
     final Product product = createProduct();
 
     try {
-      createAdjustedCase(product.getIdentifier(), x -> { });
+      createCase(product.getIdentifier());
       Assert.fail("This should cause an illegal argument exception.");
     }
     catch (final IllegalArgumentException ignored){
@@ -125,7 +125,7 @@ public class TestCases extends AbstractPortfolioTest {
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
 
     try {
-      final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> { });
+      final Case caseInstance = createCase(product.getIdentifier());
       Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CASE,
               new CaseEvent(product.getIdentifier(), caseInstance.getIdentifier())));
     }
@@ -136,7 +136,7 @@ public class TestCases extends AbstractPortfolioTest {
     portfolioManager.enableProduct(product.getIdentifier(), false);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
     try {
-      createAdjustedCase(product.getIdentifier(), x -> { });
+      createCase(product.getIdentifier());
       Assert.fail("This should cause an illegal argument exception.");
     }
     catch (final IllegalArgumentException ignored){

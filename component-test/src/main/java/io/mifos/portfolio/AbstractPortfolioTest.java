@@ -162,6 +162,10 @@ public class AbstractPortfolioTest {
     return product;
   }
 
+  Case createCase(final String productIdentifier) throws InterruptedException {
+    return createAdjustedCase(productIdentifier, x -> {});
+  }
+
   Case createAdjustedCase(final String productIdentifier, final Consumer<Case> adjustment) throws InterruptedException {
     final Case caseInstance = Fixture.getTestCase(productIdentifier);
     adjustment.accept(caseInstance);

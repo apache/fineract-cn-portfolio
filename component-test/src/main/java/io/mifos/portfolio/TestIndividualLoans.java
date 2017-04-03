@@ -76,7 +76,7 @@ public class TestIndividualLoans extends AbstractPortfolioTest {
   @Test
   public void shouldReturnSmallPaymentPlan() throws InterruptedException {
     final Product product = createProduct();
-    final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> {});
+    final Case caseInstance = createCase(product.getIdentifier());
 
     final IndividualLending individualLending = this.individualLending;
     final PlannedPaymentPage paymentScheduleFirstPage

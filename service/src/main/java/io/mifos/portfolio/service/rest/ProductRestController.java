@@ -66,7 +66,7 @@ public class ProductRestController {
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
   @RequestMapping(method = RequestMethod.GET) //
-  public @ResponseBody List<Product> findAllEntities() {
+  public @ResponseBody List<Product> getAllEntities() {
     return this.productService.findAllEntities();
   }
 

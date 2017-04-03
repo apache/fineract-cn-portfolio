@@ -27,7 +27,7 @@ import java.util.List;
 public class TestPatterns extends AbstractPortfolioTest {
   @Test
   public void shouldListPatterns() {
-    final List<Pattern> allPatterns = portfolioManager.findAllPatterns();
+    final List<Pattern> allPatterns = portfolioManager.getAllPatterns();
     Assert.assertNotNull(allPatterns);
     Assert.assertTrue(allPatterns.size() > 0);
   }

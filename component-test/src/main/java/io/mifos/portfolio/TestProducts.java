@@ -160,7 +160,7 @@ public class TestProducts extends AbstractPortfolioTest {
   public void shouldFailToChangeProductAfterCaseHasBeenCreated() throws InterruptedException {
     final Product product = createAndEnableProduct();
 
-    createAdjustedCase(product.getIdentifier(), x -> {});
+    createCase(product.getIdentifier());
 
     final Product slightlyChangedProduct = Fixture.createAdjustedProduct(x -> x.setDescription("changed description."));
     slightlyChangedProduct.setIdentifier(product.getIdentifier());

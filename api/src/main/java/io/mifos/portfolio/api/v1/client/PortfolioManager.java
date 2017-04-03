@@ -42,7 +42,7 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<Pattern> findAllPatterns();
+  List<Pattern> getAllPatterns();
 
   @RequestMapping(
       value = "/products/",
@@ -50,7 +50,7 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<Product> findAllProducts(@RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled);
+  List<Product> getAllProducts(@RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled);
 
   @RequestMapping(
           value = "/products",
@@ -106,7 +106,7 @@ public interface PortfolioManager {
           produces = MediaType.ALL_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<TaskDefinition> findAllTaskDefinitionsForProduct(@PathVariable("productidentifier") final String productIdentifier);
+  List<TaskDefinition> getAllTaskDefinitionsForProduct(@PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
           value = "/products/{productidentifier}/tasks/",
@@ -146,7 +146,7 @@ public interface PortfolioManager {
           produces = MediaType.ALL_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<ChargeDefinition> findAllChargeDefinitionsForProduct(@PathVariable("productidentifier") final String productIdentifier);
+  List<ChargeDefinition> getAllChargeDefinitionsForProduct(@PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
           value = "/products/{productidentifier}/charges/",
@@ -197,7 +197,6 @@ public interface PortfolioManager {
   )
   CasePage getAllCasesForProduct(@PathVariable("productidentifier") final String productIdentifier,
                                  @RequestParam(value = "includeClosed", required = false) final Boolean includeClosed,
-                                 @RequestParam(value = "forCustomer", required = false) final String customerIdentifier,
                                  @RequestParam("pageIndex") final Integer pageIndex,
                                  @RequestParam("size") final Integer size);
 
@@ -264,7 +263,7 @@ public interface PortfolioManager {
           produces = MediaType.ALL_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<TaskInstance> findAllTasksForCase(@PathVariable("productidentifier") final String productIdentifier,
+  List<TaskInstance> getAllTasksForCase(@PathVariable("productidentifier") final String productIdentifier,
                                          @PathVariable("caseidentifier") final String caseIdentifier,
                                          @RequestParam(value = "includeExecuted", required = false) final Boolean includeExecuted);
 
@@ -294,6 +293,8 @@ public interface PortfolioManager {
           produces = MediaType.ALL_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  CasePage findAllCases(@RequestParam("pageIndex") final Integer pageIndex,
+  CasePage getAllCases(@RequestParam("pageIndex") final Integer pageIndex,
                         @RequestParam("size") final Integer size);
+
+  //TODO: find a way to list cases by customer even though the portfolio contains products which may be associated with groups instead of customers.
 }

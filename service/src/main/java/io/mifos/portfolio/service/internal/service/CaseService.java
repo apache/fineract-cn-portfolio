@@ -15,23 +15,30 @@
  */
 package io.mifos.portfolio.service.internal.service;
 
+import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.CasePage;
 import io.mifos.portfolio.service.internal.mapper.CaseMapper;
+import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.CaseRepository;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
-import io.mifos.products.spi.ProductCommandDispatcher;
 import io.mifos.products.spi.PatternFactory;
-import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
-import io.mifos.core.lang.ServiceException;
+import io.mifos.products.spi.ProductCommandDispatcher;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -52,8 +59,24 @@ public class CaseService {
     this.caseRepository = caseRepository;
   }
 
-  public List<Case> findAllEntities() {
-    return caseRepository.findAll().stream()
+  public CasePage findAllEntities(final String productIdentifier,
+                                  final Boolean includeClosed,
+                                  final int pageIndex,
+                                  final int size) {
+    final Pageable pageRequest = new PageRequest(pageIndex, size, Sort.Direction.DESC, "lastModifiedOn");
+
+    Stream<Case.State> currentStatesStream = Arrays.stream(Case.State.values());
+    if (!includeClosed)
+      currentStatesStream = currentStatesStream.filter(x -> x != Case.State.CLOSED);
+    final List<String> currentStates = currentStatesStream.map(Enum::name).collect(Collectors.toList());
+
+    final Page<CaseEntity> ret = caseRepository.findByProductIdentifierAndCurrentStateIn(productIdentifier, currentStates, pageRequest);
+
+    return new CasePage(mapList(ret.getContent()), ret.getTotalPages(), ret.getTotalElements());
+  }
+
+  private List<Case> mapList(final List<CaseEntity> in) {
+    return in.stream()
             .map(this::map)
             .filter(Optional::isPresent)
             .map(Optional::get)

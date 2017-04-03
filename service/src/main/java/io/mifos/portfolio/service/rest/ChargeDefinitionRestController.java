@@ -63,7 +63,7 @@ public class ChargeDefinitionRestController {
           produces = MediaType.APPLICATION_JSON_VALUE
   )
   public @ResponseBody
-  List<ChargeDefinition> findAllChargeDefinitionsForProduct(
+  List<ChargeDefinition> getAllChargeDefinitionsForProduct(
           @PathVariable("productidentifier") final String productIdentifier)
   {
     checkProductExists(productIdentifier);

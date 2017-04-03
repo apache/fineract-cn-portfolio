@@ -51,7 +51,7 @@ public class PatternRestController {
   )
   public
   @ResponseBody
-  List<Pattern> findAllEntities() {
+  List<Pattern> getAllEntities() {
     return this.patternService.findAllEntities();
   }
 }

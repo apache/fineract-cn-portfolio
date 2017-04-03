@@ -35,7 +35,7 @@ public class TestTaskDefinitions extends AbstractPortfolioTest {
     final Product product = createProduct();
     final TaskDefinition taskDefinition = createTaskDefinition(product);
 
-    final List<TaskDefinition> tasks = portfolioManager.findAllTaskDefinitionsForProduct(product.getIdentifier());
+    final List<TaskDefinition> tasks = portfolioManager.getAllTaskDefinitionsForProduct(product.getIdentifier());
     Assert.assertFalse(tasks.isEmpty());
     Assert.assertTrue(tasks.contains(taskDefinition));
 
@@ -62,11 +62,11 @@ public class TestTaskDefinitions extends AbstractPortfolioTest {
   public void shouldAddTaskDefinition() throws InterruptedException {
     final Product product = createProduct();
 
-    final int initialTaskCount = portfolioManager.findAllTaskDefinitionsForProduct(product.getIdentifier()).size();
+    final int initialTaskCount = portfolioManager.getAllTaskDefinitionsForProduct(product.getIdentifier()).size();
 
     final TaskDefinition taskDefinition = createTaskDefinition(product);
 
-    final List<TaskDefinition> tasks = portfolioManager.findAllTaskDefinitionsForProduct(product.getIdentifier());
+    final List<TaskDefinition> tasks = portfolioManager.getAllTaskDefinitionsForProduct(product.getIdentifier());
     Assert.assertTrue(tasks.contains(taskDefinition));
     Assert.assertTrue(tasks.size() == initialTaskCount + 1);
   }

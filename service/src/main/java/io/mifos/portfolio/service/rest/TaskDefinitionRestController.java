@@ -63,7 +63,7 @@ public class TaskDefinitionRestController {
           consumes = MediaType.ALL_VALUE,
           produces = MediaType.APPLICATION_JSON_VALUE
   )
-  public @ResponseBody List<TaskDefinition> findAllTaskDefinitionsForProduct(
+  public @ResponseBody List<TaskDefinition> getAllTaskDefinitionsForProduct(
           @PathVariable("productidentifier") final String productIdentifier)
   {
     checkProductExists(productIdentifier);

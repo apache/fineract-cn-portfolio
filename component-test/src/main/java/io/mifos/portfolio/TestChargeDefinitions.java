@@ -39,7 +39,7 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
   public void shouldProvisionAndListChargeDefinitions() throws InterruptedException {
     final Product product = createProduct();
 
-    final List<ChargeDefinition> charges = portfolioManager.findAllChargeDefinitionsForProduct(product.getIdentifier());
+    final List<ChargeDefinition> charges = portfolioManager.getAllChargeDefinitionsForProduct(product.getIdentifier());
     final Set<String> chargeDefinitionIdentifiers = charges.stream().map(ChargeDefinition::getIdentifier).collect(Collectors.toSet());
     final Set<String> expectedChargeDefinitionIdentifiers = Stream.of(
             ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID,
@@ -57,7 +57,7 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
   public void shouldDeleteChargeDefinition() throws InterruptedException {
     final Product product = createProduct();
 
-    final List<ChargeDefinition> charges = portfolioManager.findAllChargeDefinitionsForProduct(product.getIdentifier());
+    final List<ChargeDefinition> charges = portfolioManager.getAllChargeDefinitionsForProduct(product.getIdentifier());
     final ChargeDefinition chargeDefinitionToDelete = charges.get(0);
     portfolioManager.deleteChargeDefinition(product.getIdentifier(), chargeDefinitionToDelete.getIdentifier());
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.DELETE_PRODUCT_CHARGE_DEFINITION,

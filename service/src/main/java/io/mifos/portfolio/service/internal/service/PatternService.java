@@ -15,6 +15,8 @@
  */
 package io.mifos.portfolio.service.internal.service;
 
+import io.mifos.core.lang.ServiceException;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.products.spi.PatternFactory;
 import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
@@ -47,5 +49,11 @@ public class PatternService {
   public Optional<Pattern> findByIdentifier(final String identifier)
   {
     return patternFactoryRegistry.getPatternFactoryForPackage(identifier).map(PatternFactory::pattern);
+  }
+
+  public List<ChargeDefinition> findDefaultChargeDefinitions(final String patternPackage) {
+    return patternFactoryRegistry.getPatternFactoryForPackage(patternPackage)
+            .orElseThrow(() -> ServiceException.notFound("Pattern with package " + patternPackage + " doesn't exist."))
+            .charges();
   }
 }

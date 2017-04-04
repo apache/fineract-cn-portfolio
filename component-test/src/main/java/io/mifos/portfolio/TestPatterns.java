@@ -15,6 +15,8 @@
  */
 package io.mifos.portfolio;
 
+import io.mifos.core.api.util.NotFoundException;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,5 +32,18 @@ public class TestPatterns extends AbstractPortfolioTest {
     final List<Pattern> allPatterns = portfolioManager.getAllPatterns();
     Assert.assertNotNull(allPatterns);
     Assert.assertTrue(allPatterns.size() > 0);
+  }
+
+  @Test
+  public void shouldReturnDefaultCharges() {
+    final List<ChargeDefinition> chargeDefinitions =
+            portfolioManager.getAllDefaultChargeDefinitionsForPattern("io.mifos.individuallending.api.v1");
+    Assert.assertNotNull(chargeDefinitions);
+    Assert.assertTrue(chargeDefinitions.size() > 0);
+  }
+
+  @Test(expected = NotFoundException.class)
+  public void shouldNotReturnDefaultChargesForNonExistentPackage() {
+    portfolioManager.getAllDefaultChargeDefinitionsForPattern("io.mifos.nonexistentproduct.api.v1");
   }
 }

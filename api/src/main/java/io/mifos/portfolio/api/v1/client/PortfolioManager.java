@@ -45,6 +45,14 @@ public interface PortfolioManager {
   List<Pattern> getAllPatterns();
 
   @RequestMapping(
+          value = "/patterns/{patternpackage}/charges/",
+          method = RequestMethod.GET,
+          produces = MediaType.ALL_VALUE,
+          consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  List<ChargeDefinition> getAllDefaultChargeDefinitionsForPattern(@PathVariable("patternpackage") final String patternPackage);
+
+  @RequestMapping(
       value = "/products/",
       method = RequestMethod.GET,
       produces = MediaType.ALL_VALUE,

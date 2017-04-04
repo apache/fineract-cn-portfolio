@@ -155,6 +155,7 @@ public class CaseRestController {
 
     this.commandGateway.process(new ChangeCaseCommand(instance));
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
+    //TODO: Make sure case can't be changed from certain states.
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)

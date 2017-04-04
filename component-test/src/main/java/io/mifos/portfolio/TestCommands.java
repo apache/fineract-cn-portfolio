@@ -149,4 +149,6 @@ public class TestCommands extends AbstractPortfolioTest {
     return event.getProductIdentifier().equals(productIdentifier) &&
             event.getCaseIdentifier().equals(caseIdentifier);
   }
+
+  //TODO: Missing test for getExecutedCommandForCase.
 }

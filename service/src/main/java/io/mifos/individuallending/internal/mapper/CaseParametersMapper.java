@@ -17,7 +17,6 @@ package io.mifos.individuallending.internal.mapper;
 
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
-import io.mifos.portfolio.api.v1.domain.BalanceRange;
 import io.mifos.portfolio.api.v1.domain.PaymentCycle;
 import io.mifos.portfolio.api.v1.domain.TermRange;
 
@@ -31,12 +30,10 @@ public class CaseParametersMapper {
 
     ret.setCaseId(caseId);
     ret.setCustomerIdentifier(instance.getCustomerIdentifier());
-    ret.setInitialBalance(instance.getInitialBalance());
     ret.setTermRangeTemporalUnit(instance.getTermRange().getTemporalUnit());
     ret.setTermRangeMinimum(0);
     ret.setTermRangeMaximum(instance.getTermRange().getMaximum());
-    ret.setBalanceRangeMinimum(instance.getBalanceRange().getMinimum());
-    ret.setBalanceRangeMaximum(instance.getBalanceRange().getMaximum());
+    ret.setBalanceRangeMaximum(instance.getMaximumBalance());
     ret.setPaymentCycleTemporalUnit(instance.getPaymentCycle().getTemporalUnit());
     ret.setPaymentCyclePeriod(instance.getPaymentCycle().getPeriod());
     ret.setPaymentCycleAlignmentDay(instance.getPaymentCycle().getAlignmentDay());
@@ -55,15 +52,6 @@ public class CaseParametersMapper {
     return ret;
   }
 
-  private static BalanceRange getBalanceRange(final CaseParametersEntity instance) {
-    final BalanceRange ret = new BalanceRange();
-
-    ret.setMinimum(instance.getBalanceRangeMinimum());
-    ret.setMaximum(instance.getBalanceRangeMaximum());
-
-    return ret;
-  }
-
   private static PaymentCycle getPaymentCycle(final CaseParametersEntity instance) {
     final PaymentCycle ret = new PaymentCycle();
 
@@ -76,12 +64,11 @@ public class CaseParametersMapper {
     return ret;
   }
 
-  public static CaseParameters mapEntity(CaseParametersEntity caseParametersEntity) {
+  public static CaseParameters mapEntity(final CaseParametersEntity caseParametersEntity) {
     final CaseParameters ret = new CaseParameters();
     ret.setCustomerIdentifier(caseParametersEntity.getCustomerIdentifier());
-    ret.setInitialBalance(caseParametersEntity.getInitialBalance());
     ret.setTermRange(getTermRange(caseParametersEntity));
-    ret.setBalanceRange(getBalanceRange(caseParametersEntity));
+    ret.setMaximumBalance(caseParametersEntity.getBalanceRangeMaximum());
     ret.setPaymentCycle(getPaymentCycle(caseParametersEntity));
     return ret;
   }

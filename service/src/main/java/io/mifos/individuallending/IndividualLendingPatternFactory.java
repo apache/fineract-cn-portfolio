@@ -178,12 +178,10 @@ public class IndividualLendingPatternFactory implements PatternFactory {
             .orElseThrow(() -> new IllegalArgumentException("Case id does not represent an individual loan: " + caseId));
 
     oldCaseParameters.setCustomerIdentifier(caseParameters.getCustomerIdentifier());
-    oldCaseParameters.setInitialBalance(caseParameters.getInitialBalance());
+    oldCaseParameters.setBalanceRangeMaximum(caseParameters.getMaximumBalance());
     oldCaseParameters.setTermRangeTemporalUnit(caseParameters.getTermRange().getTemporalUnit());
     oldCaseParameters.setTermRangeMinimum(0);
     oldCaseParameters.setTermRangeMaximum(caseParameters.getTermRange().getMaximum());
-    oldCaseParameters.setBalanceRangeMinimum(caseParameters.getBalanceRange().getMinimum());
-    oldCaseParameters.setBalanceRangeMaximum(caseParameters.getBalanceRange().getMaximum());
     oldCaseParameters.setPaymentCycleTemporalUnit(caseParameters.getPaymentCycle().getTemporalUnit());
     oldCaseParameters.setPaymentCyclePeriod(caseParameters.getPaymentCycle().getPeriod());
     oldCaseParameters.setPaymentCycleAlignmentDay(caseParameters.getPaymentCycle().getAlignmentDay());

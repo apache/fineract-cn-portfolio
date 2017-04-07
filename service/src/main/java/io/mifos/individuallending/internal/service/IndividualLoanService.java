@@ -81,9 +81,9 @@ public class IndividualLoanService {
 
     final List<ScheduledAction> scheduledActions = scheduledActionService.getScheduledActions(initialDisbursalDate, caseParameters);
 
-    final List<ScheduledCharge> scheduledCharges = getScheduledCharges(productIdentifier, minorCurrencyUnitDigits, caseParameters.getInitialBalance(), scheduledActions);
+    final List<ScheduledCharge> scheduledCharges = getScheduledCharges(productIdentifier, minorCurrencyUnitDigits, caseParameters.getMaximumBalance(), scheduledActions);
 
-    final List<PlannedPayment> plannedPaymentsElements = getPlannedPaymentsElements(caseParameters.getInitialBalance(), minorCurrencyUnitDigits, scheduledCharges);
+    final List<PlannedPayment> plannedPaymentsElements = getPlannedPaymentsElements(caseParameters.getMaximumBalance(), minorCurrencyUnitDigits, scheduledCharges);
 
     final Set<ChargeName> chargeNames = scheduledCharges.stream()
             .map(IndividualLoanService::chargeNameFromChargeDefinition)

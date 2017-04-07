@@ -36,9 +36,6 @@ public class CaseParametersEntity {
   @Column(name = "customer_identifier")
   private String customerIdentifier;
 
-  @Column(name = "initial_balance")
-  private BigDecimal initialBalance;
-
   @Enumerated(EnumType.STRING)
   @Column(name = "term_range_temporal_unit")
   private ChronoUnit termRangeTemporalUnit;
@@ -48,9 +45,6 @@ public class CaseParametersEntity {
 
   @Column(name = "term_range_maximum")
   private Integer termRangeMaximum;
-
-  @Column(name = "balance_range_minimum")
-  private BigDecimal balanceRangeMinimum;
 
   @Column(name = "balance_range_maximum")
   private BigDecimal balanceRangeMaximum;
@@ -98,14 +92,6 @@ public class CaseParametersEntity {
     this.customerIdentifier = customerIdentifier;
   }
 
-  public BigDecimal getInitialBalance() {
-    return initialBalance;
-  }
-
-  public void setInitialBalance(BigDecimal initialBalance) {
-    this.initialBalance = initialBalance;
-  }
-
   public ChronoUnit getTermRangeTemporalUnit() {
     return termRangeTemporalUnit;
   }
@@ -128,14 +114,6 @@ public class CaseParametersEntity {
 
   public void setTermRangeMaximum(Integer termRangeMaximum) {
     this.termRangeMaximum = termRangeMaximum;
-  }
-
-  public BigDecimal getBalanceRangeMinimum() {
-    return balanceRangeMinimum;
-  }
-
-  public void setBalanceRangeMinimum(BigDecimal balanceRangeMinimum) {
-    this.balanceRangeMinimum = balanceRangeMinimum;
   }
 
   public BigDecimal getBalanceRangeMaximum() {

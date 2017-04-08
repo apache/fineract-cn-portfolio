@@ -19,7 +19,7 @@ package io.mifos.portfolio.api.v1;
  * @author Myrle Krantz
  */
 public interface PermittableGroupIds {
-  String PRODUCT_OPERATIONS_MANAGEMENT = "portfolio__v1__products__enabling";
+  String PRODUCT_OPERATIONS_MANAGEMENT = "portfolio__v1__products__enable";
   String PRODUCT_MANAGEMENT = "portfolio__v1__products";
   String CASE_MANAGEMENT = "portfolio__v1__case";
 }

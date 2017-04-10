@@ -15,10 +15,9 @@
  */
 package io.mifos.individuallending.api.v1.domain.caseinstance;
 
-import io.mifos.portfolio.api.v1.domain.BalanceRange;
+import io.mifos.core.lang.validation.constraints.ValidIdentifier;
 import io.mifos.portfolio.api.v1.domain.PaymentCycle;
 import io.mifos.portfolio.api.v1.domain.TermRange;
-import io.mifos.core.lang.validation.constraints.ValidIdentifier;
 import org.hibernate.validator.constraints.Range;
 import org.hibernate.validator.constraints.ScriptAssert;
 
@@ -31,18 +30,15 @@ import java.util.Objects;
  * @author Myrle Krantz
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
-@ScriptAssert(lang = "javascript", script = "_this.initialBalance.scale() == 4")
+@ScriptAssert(lang = "javascript", script = "_this.maximumBalance !== null && _this.maximumBalance.scale() == 4")
 public final class CaseParameters {
   @ValidIdentifier
   private String customerIdentifier;
   @Range(min = 0)
-  private BigDecimal initialBalance;
+  private BigDecimal maximumBalance;
   @NotNull
   @Valid
   private TermRange termRange;
-  @NotNull
-  @Valid
-  private BalanceRange balanceRange;
   @NotNull
   @Valid
   private PaymentCycle paymentCycle;
@@ -62,12 +58,12 @@ public final class CaseParameters {
     this.customerIdentifier = customerIdentifier;
   }
 
-  public BigDecimal getInitialBalance() {
-    return initialBalance;
+  public BigDecimal getMaximumBalance() {
+    return maximumBalance;
   }
 
-  public void setInitialBalance(BigDecimal initialBalance) {
-    this.initialBalance = initialBalance;
+  public void setMaximumBalance(BigDecimal maximumBalance) {
+    this.maximumBalance = maximumBalance;
   }
 
   public TermRange getTermRange() {
@@ -76,14 +72,6 @@ public final class CaseParameters {
 
   public void setTermRange(TermRange termRange) {
     this.termRange = termRange;
-  }
-
-  public BalanceRange getBalanceRange() {
-    return balanceRange;
-  }
-
-  public void setBalanceRange(BalanceRange balanceRange) {
-    this.balanceRange = balanceRange;
   }
 
   public PaymentCycle getPaymentCycle() {
@@ -100,24 +88,22 @@ public final class CaseParameters {
     if (o == null || getClass() != o.getClass()) return false;
     CaseParameters that = (CaseParameters) o;
     return Objects.equals(customerIdentifier, that.customerIdentifier) &&
-            Objects.equals(initialBalance, that.initialBalance) &&
+            Objects.equals(maximumBalance, that.maximumBalance) &&
             Objects.equals(termRange, that.termRange) &&
-            Objects.equals(balanceRange, that.balanceRange) &&
             Objects.equals(paymentCycle, that.paymentCycle);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(customerIdentifier, initialBalance, termRange, balanceRange, paymentCycle);
+    return Objects.hash(customerIdentifier, maximumBalance, termRange, paymentCycle);
   }
 
   @Override
   public String toString() {
     return "CaseParameters{" +
             "customerIdentifier='" + customerIdentifier + '\'' +
-            ", initialBalance=" + initialBalance +
+            ", maximumBalance=" + maximumBalance +
             ", termRange=" + termRange +
-            ", balanceRange=" + balanceRange +
             ", paymentCycle=" + paymentCycle +
             '}';
   }

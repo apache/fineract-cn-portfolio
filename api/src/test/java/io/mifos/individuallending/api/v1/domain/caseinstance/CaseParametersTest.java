@@ -16,8 +16,9 @@
 package io.mifos.individuallending.api.v1.domain.caseinstance;
 
 import io.mifos.Fixture;
+import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
-import io.mifos.portfolio.api.v1.domain.BalanceRange;
+import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.TermRange;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,7 +35,18 @@ import java.util.Collection;
  * @author Myrle Krantz
  */
 @RunWith(Parameterized.class)
-public class CaseParametersTest {
+public class CaseParametersTest extends ValidationTest<CaseParameters> {
+
+  public CaseParametersTest(final ValidationTestCase<CaseParameters> testCase)
+  {
+    super(testCase);
+  }
+
+  @Override
+  protected CaseParameters createValidTestSubject() {
+    return Fixture.getTestCaseParameters();
+  }
+
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
@@ -46,13 +58,10 @@ public class CaseParametersTest {
             .adjustment(x -> x.setTermRange(new TermRange(ChronoUnit.CENTURIES, -1)))
             .valid(false));
     ret.add(new ValidationTestCase<CaseParameters>("nullBalanceRange")
-            .adjustment(x -> x.setBalanceRange(null))
+            .adjustment(x -> x.setMaximumBalance(null))
             .valid(false));
     ret.add(new ValidationTestCase<CaseParameters>("badBalanceRangeScale")
-            .adjustment(x -> x.setBalanceRange(new BalanceRange(BigDecimal.ZERO, BigDecimal.TEN.setScale(5, BigDecimal.ROUND_FLOOR))))
-            .valid(false));
-    ret.add(new ValidationTestCase<CaseParameters>("switchedBalanceRangeMinMax")
-            .adjustment(x -> x.setBalanceRange(new BalanceRange(Fixture.fixScale(BigDecimal.TEN), Fixture.fixScale(BigDecimal.ZERO))))
+            .adjustment(x -> x.setMaximumBalance(BigDecimal.TEN.setScale(5, BigDecimal.ROUND_FLOOR)))
             .valid(false));
     ret.add(new ValidationTestCase<CaseParameters>("invalid payment cycle unit")
             .adjustment(x -> x.getPaymentCycle().setTemporalUnit(ChronoUnit.SECONDS))
@@ -60,18 +69,4 @@ public class CaseParametersTest {
 
     return ret;
   }
-
-  private final ValidationTestCase<CaseParameters> testCase;
-
-  public CaseParametersTest(final ValidationTestCase<CaseParameters> testCase)
-  {
-    this.testCase = testCase;
-  }
-
-  @Test()
-  public void test(){
-    final CaseParameters testSubject = Fixture.createAdjustedCaseParameters(testCase.getAdjustment());
-    Assert.assertTrue(testCase.toString(), testCase.check(testSubject));
-  }
-
 }

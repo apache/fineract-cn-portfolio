@@ -120,9 +120,8 @@ public class Fixture {
     final CaseParameters ret = new CaseParameters(generateUniqueIdentifer("fred"));
 
     ret.setCustomerIdentifier("alice");
-    ret.setInitialBalance(fixScale(BigDecimal.valueOf(2000L)));
+    ret.setMaximumBalance(fixScale(BigDecimal.valueOf(2000L)));
     ret.setTermRange(new TermRange(ChronoUnit.MONTHS, 18));
-    ret.setBalanceRange(new BalanceRange(fixScale(BigDecimal.ZERO), fixScale(BigDecimal.valueOf(2000L))));
     ret.setPaymentCycle(new PaymentCycle(ChronoUnit.MONTHS, 1, 1, null, null));
 
     return ret;

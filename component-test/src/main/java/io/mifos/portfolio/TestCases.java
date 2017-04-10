@@ -75,7 +75,7 @@ public class TestCases extends AbstractPortfolioTest {
     accountAssignments.add(new AccountAssignment(ENTRY, "002-012"));
     caseInstance.setAccountAssignments(accountAssignments);
 
-    newCaseParameters.setInitialBalance(Fixture.fixScale(BigDecimal.TEN));
+    newCaseParameters.setMaximumBalance(Fixture.fixScale(BigDecimal.TEN));
     newCaseParameters.getPaymentCycle().setAlignmentDay(1);
     newCaseParameters.getPaymentCycle().setAlignmentWeek(2);
     final String changedParameters = new Gson().toJson(newCaseParameters);

@@ -35,6 +35,9 @@ public final class ProductParameters {
   @Range(min = 0)
   private BigDecimal maximumDispersalAmount;
 
+  @Range(min = 0)
+  private BigDecimal minimumDispersalAmount;
+
   public ProductParameters() {
   }
 
@@ -68,6 +71,14 @@ public final class ProductParameters {
     this.maximumDispersalAmount = maximumDispersalAmount;
   }
 
+  public BigDecimal getMinimumDispersalAmount() {
+    return minimumDispersalAmount;
+  }
+
+  public void setMinimumDispersalAmount(BigDecimal minimumDispersalAmount) {
+    this.minimumDispersalAmount = minimumDispersalAmount;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -75,12 +86,13 @@ public final class ProductParameters {
     ProductParameters that = (ProductParameters) o;
     return Objects.equals(moratoriums, that.moratoriums) &&
             Objects.equals(maximumDispersalCount, that.maximumDispersalCount) &&
-            Objects.equals(maximumDispersalAmount, that.maximumDispersalAmount);
+            Objects.equals(maximumDispersalAmount, that.maximumDispersalAmount) &&
+            Objects.equals(minimumDispersalAmount, that.minimumDispersalAmount);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(moratoriums, maximumDispersalCount, maximumDispersalAmount);
+    return Objects.hash(moratoriums, maximumDispersalCount, maximumDispersalAmount, minimumDispersalAmount);
   }
 
   @Override
@@ -89,6 +101,7 @@ public final class ProductParameters {
             "moratoriums=" + moratoriums +
             ", maximumDispersalCount=" + maximumDispersalCount +
             ", maximumDispersalAmount=" + maximumDispersalAmount +
+            ", minimumDispersalAmount=" + minimumDispersalAmount +
             '}';
   }
 }

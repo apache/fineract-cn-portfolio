@@ -35,7 +35,7 @@ import static io.mifos.individuallending.api.v1.events.IndividualLoanEventConsta
 public class TestCommands extends AbstractPortfolioTest {
   @Test
   public void testHappyWorkflow() throws InterruptedException {
-    final Product product = createProduct();
+    final Product product = createAndEnableProduct();
     final Case customerCase = createCase(product.getIdentifier());
 
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN);
@@ -69,7 +69,7 @@ public class TestCommands extends AbstractPortfolioTest {
 
   @Test
   public void testBadCustomerWorkflow() throws InterruptedException {
-    final Product product = createProduct();
+    final Product product = createAndEnableProduct();
     final Case customerCase = createCase(product.getIdentifier());
 
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN);
@@ -93,7 +93,7 @@ public class TestCommands extends AbstractPortfolioTest {
 
   @Test
   public void testDisburseBeforeApproval() throws InterruptedException {
-    final Product product = createProduct();
+    final Product product = createAndEnableProduct();
     final Case customerCase = createCase(product.getIdentifier());
 
     checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN, OPEN_INDIVIDUALLOAN_CASE, Case.State.PENDING);

@@ -37,7 +37,7 @@ public class TestIndividualLoans extends AbstractPortfolioTest {
 
   @Test
   public void shouldReturnIndividualLoansCases() throws InterruptedException {
-    final Product product = createProduct();
+    final Product product = createAndEnableProduct();
     final Set<String> susisCaseIdentifiers = new HashSet<>();
     final Set<String> georgeCaseIdentifiers = new HashSet<>();
     for (int i = 0; i < 101; i++) {
@@ -75,7 +75,7 @@ public class TestIndividualLoans extends AbstractPortfolioTest {
 
   @Test
   public void shouldReturnSmallPaymentPlan() throws InterruptedException {
-    final Product product = createProduct();
+    final Product product = createAndEnableProduct();
     final Case caseInstance = createCase(product.getIdentifier());
 
     final IndividualLending individualLending = this.individualLending;

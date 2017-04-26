@@ -15,8 +15,11 @@
  */
 package io.mifos.individuallending.internal.repository;
 
+import io.mifos.core.mariadb.util.LocalDateTimeConverter;
+
 import javax.persistence.*;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 /**
@@ -64,6 +67,10 @@ public class CaseParametersEntity {
 
   @Column(name = "pay_cycle_align_month")
   private Integer paymentCycleAlignmentMonth;
+
+  @Column(name = "created_on")
+  @Convert(converter = LocalDateTimeConverter.class)
+  private LocalDateTime createdOn;
 
   public CaseParametersEntity() {
   }
@@ -162,5 +169,13 @@ public class CaseParametersEntity {
 
   public void setPaymentCycleAlignmentMonth(Integer paymentCycleAlignmentMonth) {
     this.paymentCycleAlignmentMonth = paymentCycleAlignmentMonth;
+  }
+
+  public LocalDateTime getCreatedOn() {
+    return this.createdOn;
+  }
+
+  public void setCreatedOn(final LocalDateTime createdOn) {
+    this.createdOn = createdOn;
   }
 }

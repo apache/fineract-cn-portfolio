@@ -70,7 +70,7 @@ public class CaseParametersService {
           final int pageIndex,
           final int size)
   {
-    final Pageable pageRequest = new PageRequest(pageIndex, size, Sort.Direction.DESC, "balanceRangeMaximum");
+    final Pageable pageRequest = new PageRequest(pageIndex, size, Sort.Direction.DESC, "createdOn");
 
     final Page<CaseParametersEntity> ret = caseParametersRepository.findByCustomerIdentifier(customerIdentifier, pageRequest);
 

@@ -36,6 +36,8 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.web.servlet.config.annotation.PathMatchConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 
 @Configuration
 @EnableAutoConfiguration
@@ -55,7 +57,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @EntityScan(basePackages = "io.mifos.portfolio.service.internal.repository")
 @EnableFeignClients(basePackages = {"io.mifos.accounting.api.v1"})
 @Import(IndividualLendingConfiguration.class)
-public class PortfolioServiceConfiguration {
+public class PortfolioServiceConfiguration extends WebMvcConfigurerAdapter {
 
   public PortfolioServiceConfiguration() {
     super();
@@ -69,5 +71,10 @@ public class PortfolioServiceConfiguration {
   @Bean(name = ServiceConstants.GSON_NAME)
   public Gson gson() {
     return new Gson();
+  }
+
+  @Override
+  public void configurePathMatch(final PathMatchConfigurer configurer) {
+    configurer.setUseSuffixPatternMatch(Boolean.FALSE);
   }
 }

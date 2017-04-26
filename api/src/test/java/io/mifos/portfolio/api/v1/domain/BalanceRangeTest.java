@@ -54,6 +54,18 @@ public class BalanceRangeTest extends ValidationTest<BalanceRange> {
     ret.add(new ValidationTestCase<BalanceRange>("minLargerthanMax")
             .adjustment((x) -> x.setMinimum(BigDecimal.TEN.multiply(BigDecimal.TEN)))
             .valid(false));
+    ret.add(new ValidationTestCase<BalanceRange>("5 and 10")
+            .adjustment(x -> {
+              x.setMinimum(BigDecimal.valueOf(5L).setScale(2, BigDecimal.ROUND_UNNECESSARY));
+              x.setMaximum(BigDecimal.valueOf(10L).setScale(2, BigDecimal.ROUND_UNNECESSARY));
+            })
+            .valid(true));
+    ret.add(new ValidationTestCase<BalanceRange>("5 and 5")
+            .adjustment(x -> {
+              x.setMinimum(BigDecimal.valueOf(5L).setScale(2, BigDecimal.ROUND_UNNECESSARY));
+              x.setMaximum(BigDecimal.valueOf(5L).setScale(2, BigDecimal.ROUND_UNNECESSARY));
+            })
+            .valid(true));
     return ret;
   }
 }

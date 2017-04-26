@@ -25,7 +25,7 @@ import java.util.Objects;
  * @author Myrle Krantz
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
-@ScriptAssert(lang = "javascript", script = "_this.maximum > _this.minimum && _this.minimum.scale() <= 4 && _this.maximum.scale() <= 4")
+@ScriptAssert(lang = "javascript", script = "_this.maximum != null && _this.minimum != null && _this.maximum.compareTo(_this.minimum) >= 0 && _this.minimum.scale() <= 4 && _this.maximum.scale() <= 4")
 public final class BalanceRange {
   @Range(min = 0)
   private BigDecimal minimum;

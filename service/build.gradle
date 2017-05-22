@@ -40,7 +40,7 @@ dependencies {
             [group: 'io.mifos.core', name: 'async', version: versions.frameworkasync],
             [group: 'io.mifos.core', name: 'cassandra', version: versions.frameworkcassandra],
             [group: 'io.mifos.core', name: 'mariadb', version: versions.frameworkmariadb],
-            [group: 'io.mifos.core', name: 'command', version: versions.frameworkcassandra],
+            [group: 'io.mifos.core', name: 'command', version: versions.frameworkcommand],
             [group: 'org.hibernate', name: 'hibernate-validator', version: versions.validator],
             [group: 'org.javamoney.lib', name: 'javamoney-calc', version: versions.javamoneylib],
             [group: 'javax.money', name: 'money-api', version: '1.0.1'],

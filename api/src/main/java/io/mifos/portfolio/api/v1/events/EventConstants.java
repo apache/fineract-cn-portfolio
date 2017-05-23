@@ -15,6 +15,10 @@
  */
 package io.mifos.portfolio.api.v1.events;
 
+/**
+ * @author Myrle Krantz
+ */
+@SuppressWarnings("unused")
 public interface EventConstants {
   String DESTINATION = "portfolio-v1";
   String SELECTOR_NAME = "action";

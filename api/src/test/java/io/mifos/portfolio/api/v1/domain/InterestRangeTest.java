@@ -24,8 +24,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 
-import static org.junit.Assert.*;
-
 /**
  * @author Myrle Krantz
  */

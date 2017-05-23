@@ -13,14 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio.api.v1;
+package io.mifos.portfolio.service.internal.command;
+
+import io.mifos.rhythm.spi.v1.domain.BeatPublish;
 
 /**
  * @author Myrle Krantz
  */
-@SuppressWarnings("unused")
-public interface PermittableGroupIds {
-  String PRODUCT_OPERATIONS_MANAGEMENT = "portfolio__v1__products__enable";
-  String PRODUCT_MANAGEMENT = "portfolio__v1__products";
-  String CASE_MANAGEMENT = "portfolio__v1__case";
+public class CreateBeatPublishCommand {
+  private final BeatPublish instance;
+
+  public CreateBeatPublishCommand(final BeatPublish instance) {
+    this.instance = instance;
+  }
+
+  public BeatPublish getInstance() {
+    return instance;
+  }
 }

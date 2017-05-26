@@ -15,8 +15,8 @@
  */
 package io.mifos.individuallending.internal.mapper;
 
-import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
+import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.portfolio.api.v1.domain.PaymentCycle;
 import io.mifos.portfolio.api.v1.domain.TermRange;
 

@@ -16,16 +16,16 @@
 package io.mifos.individuallending.internal.service;
 
 import com.google.gson.Gson;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.CasePage;
 import io.mifos.portfolio.service.ServiceConstants;
 import io.mifos.portfolio.service.internal.mapper.CaseMapper;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.CaseRepository;
-import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
-import io.mifos.portfolio.api.v1.domain.Case;
-import io.mifos.portfolio.api.v1.domain.CasePage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
@@ -70,7 +70,7 @@ public class CaseParametersService {
           final int pageIndex,
           final int size)
   {
-    final Pageable pageRequest = new PageRequest(pageIndex, size, Sort.Direction.DESC, "balanceRangeMaximum");
+    final Pageable pageRequest = new PageRequest(pageIndex, size, Sort.Direction.DESC, "id");
 
     final Page<CaseParametersEntity> ret = caseParametersRepository.findByCustomerIdentifier(customerIdentifier, pageRequest);
 

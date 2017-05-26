@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.service;
 
+import io.mifos.portfolio.service.config.PortfolioServiceConfiguration;
 import org.springframework.boot.SpringApplication;
 
 public class PortfolioApplication {

@@ -18,8 +18,6 @@ package io.mifos.portfolio.service.internal.util;
 import io.mifos.accounting.api.v1.client.AccountNotFoundException;
 import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.accounting.api.v1.client.LedgerNotFoundException;
-import io.mifos.accounting.api.v1.domain.Account;
-import io.mifos.accounting.api.v1.domain.Ledger;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,7 +40,7 @@ public class AccountingAdapter {
   private final LedgerManager ledgerManager;
 
   @Autowired
-  public AccountingAdapter(final LedgerManager ledgerManager) {
+  public AccountingAdapter(@SuppressWarnings("SpringJavaAutowiringInspection") final LedgerManager ledgerManager) {
     this.ledgerManager = ledgerManager;
   }
 
@@ -72,7 +70,7 @@ public class AccountingAdapter {
   public boolean accountAssignmentRepresentsRealAccount(final AccountAssignment accountAssignment) {
     if (accountAssignment.getAccountIdentifier() != null) {
       try {
-        final Account account = ledgerManager.findAccount(accountAssignment.getAccountIdentifier());
+        ledgerManager.findAccount(accountAssignment.getAccountIdentifier());
         return true;
       }
       catch (final AccountNotFoundException e){
@@ -81,7 +79,7 @@ public class AccountingAdapter {
     }
     else if (accountAssignment.getLedgerIdentifier() != null) {
       try {
-        final Ledger ledger = ledgerManager.findLedger(accountAssignment.getLedgerIdentifier());
+        ledgerManager.findLedger(accountAssignment.getLedgerIdentifier());
         return true;
       }
       catch (final LedgerNotFoundException e){

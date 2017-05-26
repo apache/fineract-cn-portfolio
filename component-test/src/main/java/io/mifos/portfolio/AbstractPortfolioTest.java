@@ -30,8 +30,9 @@ import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.events.CaseEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
-import io.mifos.portfolio.service.PortfolioServiceConfiguration;
+import io.mifos.portfolio.service.config.PortfolioServiceConfiguration;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
+import io.mifos.portfolio.service.internal.util.RhythmAdapter;
 import org.junit.*;
 import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
@@ -41,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.netflix.feign.EnableFeignClients;
 import org.springframework.cloud.netflix.ribbon.RibbonClient;
 import org.springframework.context.annotation.Bean;
@@ -84,7 +86,8 @@ public class AbstractPortfolioTest {
       return LoggerFactory.getLogger("test-logger");
     }
     @Bean()
-    public AccountingAdapter accountingAdapter(final LedgerManager ledgerManager)
+    public AccountingAdapter accountingAdapter(@SuppressWarnings("SpringJavaAutowiringInspection")
+                                                   final LedgerManager ledgerManager)
     {
       final AccountingAdapter spy = Mockito.spy(new AccountingAdapter(ledgerManager));
       doReturn(true).when(spy).accountAssignmentRepresentsRealAccount(any());
@@ -120,6 +123,10 @@ public class AbstractPortfolioTest {
 
   @Autowired
   IndividualLending individualLending;
+
+  @SuppressWarnings("unused")
+  @MockBean
+  RhythmAdapter rhythmAdapter;
 
   @Before
   public void prepTest() {

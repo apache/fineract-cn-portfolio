@@ -22,6 +22,7 @@ import io.mifos.core.command.annotation.Aggregate;
 import io.mifos.core.command.annotation.CommandHandler;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.mariadb.domain.FlywayFactoryBean;
+import io.mifos.portfolio.service.internal.util.RhythmAdapter;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -37,15 +38,18 @@ public class InitializeCommandHandler {
   private final Logger logger;
   private final DataSource dataSource;
   private final FlywayFactoryBean flywayFactoryBean;
+  private final RhythmAdapter rhythmAdapter;
 
   @Autowired
   public InitializeCommandHandler(@Qualifier(ServiceConstants.LOGGER_NAME) final Logger logger,
-                            final DataSource dataSource,
-                            final FlywayFactoryBean flywayFactoryBean) {
+                                  final DataSource dataSource,
+                                  final FlywayFactoryBean flywayFactoryBean,
+                                  final RhythmAdapter rhythmAdapter) {
     super();
     this.logger = logger;
     this.dataSource = dataSource;
     this.flywayFactoryBean = flywayFactoryBean;
+    this.rhythmAdapter = rhythmAdapter;
   }
 
   @CommandHandler
@@ -53,6 +57,7 @@ public class InitializeCommandHandler {
   public String initialize(final InitializeServiceCommand initializeServiceCommand) {
     this.logger.debug("Start service migration.");
     this.flywayFactoryBean.create(this.dataSource).migrate();
+    rhythmAdapter.request24Beats();
     return EventConstants.INITIALIZE;
   }
 }

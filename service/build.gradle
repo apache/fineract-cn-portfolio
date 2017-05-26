@@ -33,6 +33,7 @@ dependencies {
             [group: 'org.springframework.boot', name: 'spring-boot-starter-jetty'],
             [group: 'io.mifos.portfolio', name: 'api', version: project.version],
             [group: 'io.mifos.rhythm', name: 'spi', version: versions.mifosrhythm],
+            [group: 'io.mifos.rhythm', name: 'api', version: versions.mifosrhythm],
             [group: 'io.mifos.accounting', name: 'api', version: versions.frameworkaccounting],
             [group: 'io.mifos.anubis', name: 'library', version: versions.frameworkanubis],
             [group: 'com.google.code.gson', name: 'gson'],

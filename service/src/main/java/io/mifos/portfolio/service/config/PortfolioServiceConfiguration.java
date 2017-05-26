@@ -13,17 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio.service;
+package io.mifos.portfolio.service.config;
 
 import com.google.gson.Gson;
+import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.anubis.config.EnableAnubis;
-import io.mifos.individuallending.IndividualLendingConfiguration;
 import io.mifos.core.async.config.EnableAsync;
 import io.mifos.core.cassandra.config.EnableCassandra;
 import io.mifos.core.command.config.EnableCommandProcessing;
+import io.mifos.core.lang.config.EnableApplicationName;
 import io.mifos.core.lang.config.EnableServiceException;
 import io.mifos.core.lang.config.EnableTenantContext;
 import io.mifos.core.mariadb.config.EnableMariaDB;
+import io.mifos.individuallending.IndividualLendingConfiguration;
+import io.mifos.portfolio.service.ServiceConstants;
+import io.mifos.rhythm.api.v1.client.RhythmManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -50,10 +54,13 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 @ComponentScan({
     "io.mifos.portfolio.service.rest",
     "io.mifos.portfolio.service.internal",
+    "io.mifos.portfolio.service.config",
 })
 @EnableJpaRepositories(basePackages = "io.mifos.portfolio.service.internal.repository")
 @EntityScan(basePackages = "io.mifos.portfolio.service.internal.repository")
-@EnableFeignClients(basePackages = {"io.mifos.accounting.api.v1"})
+@EnableFeignClients(clients = {LedgerManager.class, RhythmManager.class})
+@RibbonClient(name = "portfolio-v1")
+@EnableApplicationName
 @Import(IndividualLendingConfiguration.class)
 public class PortfolioServiceConfiguration {
 

@@ -131,7 +131,7 @@ public class IndividualLoanServiceTest {
     final CaseParameters caseParameters = Fixture.getTestCaseParameters();
     caseParameters.setTermRange(new TermRange(ChronoUnit.YEARS, 1));
     caseParameters.setPaymentCycle(new PaymentCycle(ChronoUnit.MONTHS, 1, 0, null, null));
-    caseParameters.setInitialBalance(BigDecimal.valueOf(200000));
+    caseParameters.setMaximumBalance(BigDecimal.valueOf(200000));
 
     final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
     chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST, getInterestChargeDefinition(0.10, ChronoUnit.YEARS));
@@ -149,7 +149,7 @@ public class IndividualLoanServiceTest {
     final CaseParameters caseParameters = Fixture.getTestCaseParameters();
     caseParameters.setTermRange(new TermRange(ChronoUnit.MONTHS, 6));
     caseParameters.setPaymentCycle(new PaymentCycle(ChronoUnit.WEEKS, 1, 1, 0, 0));
-    caseParameters.setInitialBalance(BigDecimal.valueOf(2000));
+    caseParameters.setMaximumBalance(BigDecimal.valueOf(2000));
 
     final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
     chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST, getInterestChargeDefinition(0.05, ChronoUnit.YEARS));

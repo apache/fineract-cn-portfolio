@@ -70,7 +70,7 @@ public class AccountingAdapter {
   public boolean accountAssignmentRepresentsRealAccount(final AccountAssignment accountAssignment) {
     if (accountAssignment.getAccountIdentifier() != null) {
       try {
-        //ledgerManager.findAccount(accountAssignment.getAccountIdentifier());
+        ledgerManager.findAccount(accountAssignment.getAccountIdentifier());
         return true;
       }
       catch (final AccountNotFoundException e){
@@ -79,7 +79,7 @@ public class AccountingAdapter {
     }
     else if (accountAssignment.getLedgerIdentifier() != null) {
       try {
-        //ledgerManager.findLedger(accountAssignment.getLedgerIdentifier());
+        ledgerManager.findLedger(accountAssignment.getLedgerIdentifier());
         return true;
       }
       catch (final LedgerNotFoundException e){

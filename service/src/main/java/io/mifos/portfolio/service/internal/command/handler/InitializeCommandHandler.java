@@ -40,6 +40,7 @@ public class InitializeCommandHandler {
   private final FlywayFactoryBean flywayFactoryBean;
   private final RhythmAdapter rhythmAdapter;
 
+  @SuppressWarnings("SpringJavaAutowiringInspection")
   @Autowired
   public InitializeCommandHandler(@Qualifier(ServiceConstants.LOGGER_NAME) final Logger logger,
                                   final DataSource dataSource,
@@ -55,7 +56,7 @@ public class InitializeCommandHandler {
   @CommandHandler
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.INITIALIZE)
   public String initialize(final InitializeServiceCommand initializeServiceCommand) {
-    this.logger.debug("Start service migration.");
+    this.logger.info("Start service migration.");
     this.flywayFactoryBean.create(this.dataSource).migrate();
     rhythmAdapter.request24Beats();
     return EventConstants.INITIALIZE;

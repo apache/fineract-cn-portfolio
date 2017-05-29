@@ -15,13 +15,12 @@
  */
 package io.mifos.individuallending.internal.service;
 
-import io.mifos.portfolio.api.v1.domain.BalanceRange;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.api.v1.domain.PaymentCycle;
-import io.mifos.portfolio.api.v1.domain.TermRange;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.api.v1.domain.PaymentCycle;
+import io.mifos.portfolio.api.v1.domain.TermRange;
 import org.junit.Assert;
 
 import java.math.BigDecimal;
@@ -42,8 +41,7 @@ class Fixture {
   {
     final CaseParameters ret = new CaseParameters(generateRandomIdentifier("fred"));
 
-    ret.setInitialBalance(fixScale(BigDecimal.valueOf(2000L)));
-    ret.setBalanceRange(new BalanceRange(fixScale(BigDecimal.ZERO), fixScale(BigDecimal.valueOf(2000L))));
+    ret.setMaximumBalance(fixScale(BigDecimal.valueOf(2000L)));
     ret.setTermRange(new TermRange(ChronoUnit.DAYS, 2));
     ret.setPaymentCycle(new PaymentCycle(ChronoUnit.DAYS, 1, 1, null, null));
 

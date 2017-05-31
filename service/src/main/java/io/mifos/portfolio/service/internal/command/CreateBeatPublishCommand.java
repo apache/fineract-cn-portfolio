@@ -30,4 +30,11 @@ public class CreateBeatPublishCommand {
   public BeatPublish getInstance() {
     return instance;
   }
+
+  @Override
+  public String toString() {
+    return "CreateBeatPublishCommand{" +
+            "instance=" + instance.getIdentifier() +
+            '}';
+  }
 }

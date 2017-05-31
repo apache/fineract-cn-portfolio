@@ -17,6 +17,7 @@ package io.mifos.portfolio.service.internal.command.handler;
 
 import io.mifos.core.command.annotation.Aggregate;
 import io.mifos.core.command.annotation.CommandHandler;
+import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.lang.ApplicationName;
 import io.mifos.rhythm.spi.v1.domain.BeatPublish;
@@ -41,7 +42,7 @@ public class BeatPublishCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.POST_PUBLISHEDBEAT)
   public BeatPublishEvent process(final CreateBeatPublishCommand createBeatPublishCommand) {
     final BeatPublish instance = createBeatPublishCommand.getInstance();

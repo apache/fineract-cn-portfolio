@@ -34,4 +34,12 @@ public class DeleteProductChargeDefinitionCommand {
   public String getChargeDefinitionIdentifier() {
     return chargeDefinitionIdentifier;
   }
+
+  @Override
+  public String toString() {
+    return "DeleteProductChargeDefinitionCommand{" +
+            "productIdentifier='" + productIdentifier + '\'' +
+            ", chargeDefinitionIdentifier='" + chargeDefinitionIdentifier + '\'' +
+            '}';
+  }
 }

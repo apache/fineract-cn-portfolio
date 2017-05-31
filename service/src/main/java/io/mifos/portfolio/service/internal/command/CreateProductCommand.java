@@ -38,4 +38,11 @@ public class CreateProductCommand {
   public void setInstance(Product instance) {
     this.instance = instance;
   }
+
+  @Override
+  public String toString() {
+    return "CreateProductCommand{" +
+            "instance=" + instance.getIdentifier() +
+            '}';
+  }
 }

@@ -34,4 +34,12 @@ public class ApproveCommand {
   public String getCaseIdentifier() {
     return caseIdentifier;
   }
+
+  @Override
+  public String toString() {
+    return "ApproveCommand{" +
+            "productIdentifier='" + productIdentifier + '\'' +
+            ", caseIdentifier='" + caseIdentifier + '\'' +
+            '}';
+  }
 }

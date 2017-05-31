@@ -34,4 +34,12 @@ public class OpenCommand {
   public String getCaseIdentifier() {
     return caseIdentifier;
   }
+
+  @Override
+  public String toString() {
+    return "OpenCommand{" +
+            "productIdentifier='" + productIdentifier + '\'' +
+            ", caseIdentifier='" + caseIdentifier + '\'' +
+            '}';
+  }
 }

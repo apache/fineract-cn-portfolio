@@ -34,4 +34,12 @@ public class DenyCommand {
   public String getCaseIdentifier() {
     return caseIdentifier;
   }
+
+  @Override
+  public String toString() {
+    return "DenyCommand{" +
+            "productIdentifier='" + productIdentifier + '\'' +
+            ", caseIdentifier='" + caseIdentifier + '\'' +
+            '}';
+  }
 }

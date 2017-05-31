@@ -30,4 +30,11 @@ public class CreateCaseCommand {
   public Case getCase() {
     return instance;
   }
+
+  @Override
+  public String toString() {
+    return "CreateCaseCommand{" +
+            "instance=" + instance.getIdentifier() +
+            '}';
+  }
 }

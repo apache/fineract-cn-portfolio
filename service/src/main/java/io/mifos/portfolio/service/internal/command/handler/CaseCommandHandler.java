@@ -17,6 +17,7 @@ package io.mifos.portfolio.service.internal.command.handler;
 
 import io.mifos.core.command.annotation.Aggregate;
 import io.mifos.core.command.annotation.CommandHandler;
+import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.Case;
@@ -54,7 +55,7 @@ public class CaseCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.POST_CASE)
   public CaseEvent process(final CreateCaseCommand createCaseCommand) {
     //TODO: Check that all designators are assigned to existing accounts.
@@ -82,7 +83,7 @@ public class CaseCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.PUT_CASE)
   public CaseEvent process(final ChangeCaseCommand changeCaseCommand) {
     final Case instance = changeCaseCommand.getInstance();

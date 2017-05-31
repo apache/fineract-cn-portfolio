@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
+import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.portfolio.api.v1.domain.TaskDefinition;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.api.v1.events.TaskDefinitionEvent;
@@ -48,7 +49,7 @@ public class TaskDefinitionCommandHandler {
     this.taskDefinitionRepository = taskDefinitionRepository;
   }
 
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.POST_TASK_DEFINITION)
   public TaskDefinitionEvent process(final CreateTaskDefinitionCommand createTaskDefinitionCommand) {
     final TaskDefinition taskDefinition = createTaskDefinitionCommand.getInstance();
@@ -67,7 +68,7 @@ public class TaskDefinitionCommandHandler {
             createTaskDefinitionCommand.getInstance().getIdentifier());
   }
 
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.PUT_TASK_DEFINITION)
   public TaskDefinitionEvent process(final ChangeTaskDefinitionCommand changeTaskDefinitionCommand) {
     final TaskDefinition taskDefinition = changeTaskDefinitionCommand.getInstance();

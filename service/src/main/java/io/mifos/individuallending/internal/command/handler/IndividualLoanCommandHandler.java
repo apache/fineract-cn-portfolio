@@ -16,6 +16,7 @@
 package io.mifos.individuallending.internal.command.handler;
 
 
+import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
@@ -47,7 +48,7 @@ public class IndividualLoanCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final OpenCommand command) {
     final CaseEntity customerCase = getCaseOrThrow(command.getProductIdentifier(), command.getCaseIdentifier());
@@ -58,7 +59,7 @@ public class IndividualLoanCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.DENY_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final DenyCommand command) {
     final CaseEntity customerCase = getCaseOrThrow(command.getProductIdentifier(), command.getCaseIdentifier());
@@ -68,7 +69,7 @@ public class IndividualLoanCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.APPROVE_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final ApproveCommand command) {
     final CaseEntity customerCase = getCaseOrThrow(command.getProductIdentifier(), command.getCaseIdentifier());
@@ -78,7 +79,7 @@ public class IndividualLoanCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final DisburseCommand command) {
     final CaseEntity customerCase = getCaseOrThrow(command.getProductIdentifier(), command.getCaseIdentifier());
@@ -88,7 +89,7 @@ public class IndividualLoanCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final AcceptPaymentCommand command) {
     final CaseEntity customerCase = getCaseOrThrow(command.getProductIdentifier(), command.getCaseIdentifier());
@@ -98,7 +99,7 @@ public class IndividualLoanCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.WRITE_OFF_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final WriteOffCommand command) {
     final CaseEntity customerCase = getCaseOrThrow(command.getProductIdentifier(), command.getCaseIdentifier());
@@ -108,7 +109,7 @@ public class IndividualLoanCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.CLOSE_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final CloseCommand command) {
     final CaseEntity customerCase = getCaseOrThrow(command.getProductIdentifier(), command.getCaseIdentifier());
@@ -118,7 +119,7 @@ public class IndividualLoanCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.RECOVER_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final RecoverCommand command) {
     final CaseEntity customerCase = getCaseOrThrow(command.getProductIdentifier(), command.getCaseIdentifier());

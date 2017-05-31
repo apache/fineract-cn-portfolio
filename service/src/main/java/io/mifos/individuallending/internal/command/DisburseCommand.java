@@ -34,4 +34,12 @@ public class DisburseCommand {
   public String getCaseIdentifier() {
     return caseIdentifier;
   }
+
+  @Override
+  public String toString() {
+    return "DisburseCommand{" +
+            "productIdentifier='" + productIdentifier + '\'' +
+            ", caseIdentifier='" + caseIdentifier + '\'' +
+            '}';
+  }
 }

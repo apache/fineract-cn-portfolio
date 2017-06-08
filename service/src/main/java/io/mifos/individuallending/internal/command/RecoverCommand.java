@@ -34,4 +34,12 @@ public class RecoverCommand {
   public String getCaseIdentifier() {
     return caseIdentifier;
   }
+
+  @Override
+  public String toString() {
+    return "RecoverCommand{" +
+            "productIdentifier='" + productIdentifier + '\'' +
+            ", caseIdentifier='" + caseIdentifier + '\'' +
+            '}';
+  }
 }

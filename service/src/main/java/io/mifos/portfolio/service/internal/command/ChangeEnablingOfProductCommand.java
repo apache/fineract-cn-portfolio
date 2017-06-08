@@ -34,4 +34,12 @@ public class ChangeEnablingOfProductCommand {
   public Boolean getEnabled() {
     return enabled;
   }
+
+  @Override
+  public String toString() {
+    return "ChangeEnablingOfProductCommand{" +
+            "productIdentifier='" + productIdentifier + '\'' +
+            ", enabled=" + enabled +
+            '}';
+  }
 }

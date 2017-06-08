@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
+import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
@@ -31,6 +32,7 @@ import io.mifos.core.command.annotation.CommandHandler;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.lang.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author Myrle Krantz
@@ -49,7 +51,8 @@ public class ChargeDefinitionCommandHandler {
   }
 
   @SuppressWarnings("unused")
-  @CommandHandler
+  @Transactional
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.POST_CHARGE_DEFINITION)
   public ChargeDefinitionEvent process(final CreateChargeDefinitionCommand command) {
     final ChargeDefinition chargeDefinition = command.getInstance();
@@ -69,7 +72,8 @@ public class ChargeDefinitionCommandHandler {
   }
 
   @SuppressWarnings("unused")
-  @CommandHandler
+  @Transactional
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.PUT_CHARGE_DEFINITION)
   public ChargeDefinitionEvent process(final ChangeChargeDefinitionCommand command) {
     final ChargeDefinition chargeDefinition = command.getInstance();
@@ -91,7 +95,8 @@ public class ChargeDefinitionCommandHandler {
   }
 
   @SuppressWarnings("unused")
-  @CommandHandler
+  @Transactional
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.DELETE_PRODUCT_CHARGE_DEFINITION)
   public ChargeDefinitionEvent process(final DeleteProductChargeDefinitionCommand command) {
     final ChargeDefinitionEntity toDelete = chargeDefinitionRepository.findByProductIdAndChargeDefinitionIdentifier(

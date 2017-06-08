@@ -36,4 +36,12 @@ public class CreateTaskDefinitionCommand {
   public TaskDefinition getInstance() {
     return instance;
   }
+
+  @Override
+  public String toString() {
+    return "CreateTaskDefinitionCommand{" +
+            "productIdentifier='" + productIdentifier + '\'' +
+            ", instance=" + instance.getIdentifier() +
+            '}';
+  }
 }

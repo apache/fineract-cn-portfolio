@@ -36,4 +36,12 @@ public class CreateChargeDefinitionCommand {
   public ChargeDefinition getInstance() {
     return instance;
   }
+
+  @Override
+  public String toString() {
+    return "CreateChargeDefinitionCommand{" +
+            "productIdentifier='" + productIdentifier + '\'' +
+            ", instance=" + instance.getIdentifier() +
+            '}';
+  }
 }

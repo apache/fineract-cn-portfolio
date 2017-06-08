@@ -17,6 +17,7 @@ package io.mifos.portfolio.service.internal.command.handler;
 
 import io.mifos.core.command.annotation.Aggregate;
 import io.mifos.core.command.annotation.CommandHandler;
+import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
@@ -67,7 +68,7 @@ public class ProductCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.POST_PRODUCT)
   public String process(final CreateProductCommand createProductCommand) {
     final PatternFactory patternFactory = patternFactoryRegistry
@@ -88,7 +89,7 @@ public class ProductCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.PUT_PRODUCT)
   public String process(final ChangeProductCommand changeProductCommand) {
     final Product instance = changeProductCommand.getInstance();
@@ -108,7 +109,7 @@ public class ProductCommandHandler {
   }
 
   @Transactional
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue =  EventConstants.PUT_PRODUCT_ENABLE)
   public String process(final ChangeEnablingOfProductCommand changeEnablingOfProductCommand)
   {

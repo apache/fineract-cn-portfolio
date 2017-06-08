@@ -38,4 +38,11 @@ public class ChangeCaseCommand {
   public void setInstance(Case instance) {
     this.instance = instance;
   }
+
+  @Override
+  public String toString() {
+    return "ChangeCaseCommand{" +
+            "instance=" + instance.getIdentifier() +
+            '}';
+  }
 }

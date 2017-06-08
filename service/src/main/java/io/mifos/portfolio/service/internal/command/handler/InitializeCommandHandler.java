@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
+import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.service.ServiceConstants;
 import io.mifos.portfolio.service.internal.command.InitializeServiceCommand;
@@ -35,28 +36,24 @@ import javax.sql.DataSource;
 @Aggregate
 public class InitializeCommandHandler {
 
-  private final Logger logger;
   private final DataSource dataSource;
   private final FlywayFactoryBean flywayFactoryBean;
   private final RhythmAdapter rhythmAdapter;
 
   @SuppressWarnings("SpringJavaAutowiringInspection")
   @Autowired
-  public InitializeCommandHandler(@Qualifier(ServiceConstants.LOGGER_NAME) final Logger logger,
-                                  final DataSource dataSource,
+  public InitializeCommandHandler(final DataSource dataSource,
                                   final FlywayFactoryBean flywayFactoryBean,
                                   final RhythmAdapter rhythmAdapter) {
     super();
-    this.logger = logger;
     this.dataSource = dataSource;
     this.flywayFactoryBean = flywayFactoryBean;
     this.rhythmAdapter = rhythmAdapter;
   }
 
-  @CommandHandler
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.INITIALIZE)
   public String initialize(final InitializeServiceCommand initializeServiceCommand) {
-    this.logger.info("Start service migration.");
     this.flywayFactoryBean.create(this.dataSource).migrate();
     rhythmAdapter.request24Beats();
     return EventConstants.INITIALIZE;

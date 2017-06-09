@@ -24,6 +24,7 @@ import io.mifos.portfolio.api.v1.PermittableGroupIds;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
 import io.mifos.portfolio.api.v1.domain.Command;
+import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.service.internal.command.ChangeCaseCommand;
 import io.mifos.portfolio.service.internal.command.CreateCaseCommand;
 import io.mifos.portfolio.service.internal.service.CaseService;
@@ -36,6 +37,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -176,22 +179,41 @@ public class CaseRestController {
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)
   @RequestMapping(
-          value = "{caseidentifier}/commands/",
+          value = "{caseidentifier}/actions/{actionidentifier}/costcomponents",
+          method = RequestMethod.GET,
+          consumes = MediaType.ALL_VALUE,
+          produces = MediaType.APPLICATION_JSON_VALUE
+  )
+  @ResponseBody
+  List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
+                                                 @PathVariable("caseidentifier") final String caseIdentifier,
+                                                 @PathVariable("actionidentifier") final String actionIdentifier)
+  {
+    checkThatCaseExists(productIdentifier, caseIdentifier);
+
+    return Collections.emptyList();
+    //return caseService.getActionCostComponentsForCase(productIdentifier, caseIdentifier);
+  }
+
+  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)
+  @RequestMapping(
+          value = "{caseidentifier}/commands/{actionidentifier}",
           method = RequestMethod.POST,
           produces = MediaType.APPLICATION_JSON_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
   public @ResponseBody ResponseEntity<Void> executeCaseCommand(@PathVariable("productidentifier") final String productIdentifier,
                                                                @PathVariable("caseidentifier") final String caseIdentifier,
+                                                               @PathVariable("actionidentifier") final String actionIdentifier,
                                                                @RequestBody @Valid final Command command)
   {
     checkThatCaseExists(productIdentifier, caseIdentifier);
     final Set<String> nextActions = caseService.getNextActionsForCase(productIdentifier, caseIdentifier);
-    if (!nextActions.contains(command.getAction()))
-      throw ServiceException.badRequest("Action " + command.getAction() + " cannot be taken from current state.");
+    if (!nextActions.contains(actionIdentifier))
+      throw ServiceException.badRequest("Action " + actionIdentifier + " cannot be taken from current state.");
 
     final ProductCommandDispatcher productCommandDispatcher = caseService.getProductCommandDispatcher(productIdentifier);
-    productCommandDispatcher.dispatch(productIdentifier, caseIdentifier, command);
+    productCommandDispatcher.dispatch(productIdentifier, caseIdentifier, actionIdentifier, command);
 
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
   }

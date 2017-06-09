@@ -38,8 +38,8 @@ public class IndividualLendingCommandDispatcher implements ProductCommandDispatc
   }
 
   @Override
-  public void dispatch(final String productIdentifier, final String caseIdentifier, final Command command) {
-    final Action action = Action.valueOf(command.getAction());
+  public void dispatch(final String productIdentifier, final String caseIdentifier, final String actionIdentifier, final Command command) {
+    final Action action = Action.valueOf(actionIdentifier);
     switch (action) {
       case OPEN:
         this.commandGateway.process(new OpenCommand(productIdentifier, caseIdentifier));
@@ -66,7 +66,7 @@ public class IndividualLendingCommandDispatcher implements ProductCommandDispatc
         this.commandGateway.process(new RecoverCommand(productIdentifier, caseIdentifier));
         break;
       default:
-        throw ServiceException.badRequest("Action " + command.getAction() + " cannot be taken from current state.");
+        throw ServiceException.badRequest("Action ''{0}'' cannot be taken from current state.", actionIdentifier);
     }
   }
 }

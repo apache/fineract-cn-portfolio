@@ -17,40 +17,19 @@ package io.mifos.portfolio.api.v1.domain;
 
 import org.hibernate.validator.constraints.NotBlank;
 
+import java.util.List;
+
 /**
  * @author Myrle Krantz
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
 public final class Command {
-  @NotBlank
-  private String action;
-  private String parameters;
+  private List<AccountAssignment> oneTimeAccountAssignments;
   private String comment;
   private String createdOn;
   private String createdBy;
 
   public Command() {
-  }
-
-  public Command(String action, String parameters) {
-    this.action = action;
-    this.parameters = parameters;
-  }
-
-  public String getAction() {
-    return action;
-  }
-
-  public void setAction(String action) {
-    this.action = action;
-  }
-
-  public String getParameters() {
-    return parameters;
-  }
-
-  public void setParameters(String parameters) {
-    this.parameters = parameters;
   }
 
   public String getComment() {

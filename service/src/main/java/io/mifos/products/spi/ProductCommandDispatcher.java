@@ -21,5 +21,5 @@ import io.mifos.portfolio.api.v1.domain.Command;
  * @author Myrle Krantz
  */
 public interface ProductCommandDispatcher {
-  void dispatch(String productIdentifier, String caseIdentifier, Command command);
+  void dispatch(String productIdentifier, String caseIdentifier, final String actionIdentifier, Command command);
 }

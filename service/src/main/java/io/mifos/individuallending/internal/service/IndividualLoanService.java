@@ -15,6 +15,7 @@
  */
 package io.mifos.individuallending.internal.service;
 
+import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
 import io.mifos.portfolio.service.internal.service.ProductService;
 import io.mifos.core.lang.DateConverter;
@@ -181,14 +182,14 @@ public class IndividualLoanService {
     final List<PlannedPayment> plannedPayments = new ArrayList<>();
     for (final Period repaymentPeriod : sortedRepaymentPeriods)
     {
-      final Map<String, PlannedPayment.CostComponent> costComponentMap = new HashMap<>();
+      final Map<String, CostComponent> costComponentMap = new HashMap<>();
       final SortedSet<ScheduledCharge> scheduledChargesInPeriod = orderedScheduledChargesGroupedByPeriod.get(repaymentPeriod);
       for (final ScheduledCharge scheduledCharge : scheduledChargesInPeriod)
       {
-        final PlannedPayment.CostComponent costComponent = costComponentMap
+        final CostComponent costComponent = costComponentMap
                 .computeIfAbsent(scheduledCharge.getChargeDefinition().getIdentifier(),
                 chargeIdentifier -> {
-                  final PlannedPayment.CostComponent ret = new PlannedPayment.CostComponent();
+                  final CostComponent ret = new CostComponent();
                   ret.setChargeIdentifier(scheduledCharge.getChargeDefinition().getIdentifier());
                   ret.setAmount(BigDecimal.ZERO);
                   return ret;
@@ -210,7 +211,7 @@ public class IndividualLoanService {
     if (balance.compareTo(BigDecimal.ZERO) != 0)
     {
       final PlannedPayment lastPayment = plannedPayments.get(plannedPayments.size() - 1);
-      final Optional<PlannedPayment.CostComponent> lastPaymentPayment = lastPayment.getCostComponents().stream()
+      final Optional<CostComponent> lastPaymentPayment = lastPayment.getCostComponents().stream()
               .filter(x -> x.getChargeIdentifier().equals(PAYMENT_ID)).findAny();
       lastPaymentPayment.ifPresent(x -> {
         x.setAmount(x.getAmount().subtract(lastPayment.getRemainingPrincipal()));

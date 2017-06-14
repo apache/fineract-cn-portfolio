@@ -31,6 +31,7 @@ import io.mifos.portfolio.api.v1.validation.ValidSortDirection;
 import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
 import io.mifos.portfolio.service.internal.command.ChangeProductCommand;
 import io.mifos.portfolio.service.internal.command.CreateProductCommand;
+import io.mifos.portfolio.service.internal.command.DeleteProductCommand;
 import io.mifos.portfolio.service.internal.service.CaseService;
 import io.mifos.portfolio.service.internal.service.PatternService;
 import io.mifos.portfolio.service.internal.service.ProductService;
@@ -150,6 +151,28 @@ public class ProductRestController {
     return ResponseEntity.accepted().build();
   }
 
+  @RequestMapping(
+          value = "/{productidentifier}",
+          method = RequestMethod.DELETE,
+          consumes = MediaType.ALL_VALUE,
+          produces = MediaType.APPLICATION_JSON_VALUE
+  )
+  public @ResponseBody ResponseEntity<Void> deleteProduct(@PathVariable("productidentifier") final String productIdentifier)
+  {
+    final boolean enabled = productService.findEnabledByIdentifier(productIdentifier)
+            .orElseThrow(() -> ServiceException.notFound("Instance with identifier ''{0}'' doesn''t exist.", productIdentifier));
+
+    if (enabled)
+      throw ServiceException.conflict("Cannot delete product with identifier ''{0}'', because it is enabled.", productIdentifier);
+
+    if (caseService.existsByProductIdentifier(productIdentifier))
+      throw ServiceException.conflict("Cannot delete product with identifier ''{0}'', because there are already cases defined on it.", productIdentifier);
+
+    commandGateway.process(new DeleteProductCommand(productIdentifier));
+
+    return ResponseEntity.accepted().build();
+  }
+
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_OPERATIONS_MANAGEMENT)
   @RequestMapping(
           value = "/{productidentifier}/incompleteaccountassignments",
@@ -159,7 +182,7 @@ public class ProductRestController {
   public @ResponseBody ResponseEntity<Set<AccountAssignment>> getIncompleteAccountAssignments(@PathVariable("productidentifier") final String productIdentifier)
   {
     productService.findByIdentifier(productIdentifier)
-            .orElseThrow(() -> ServiceException.notFound("Instance with identifier " + productIdentifier + " doesn't exist."));
+            .orElseThrow(() -> ServiceException.notFound("Instance with identifier ''{0}'' doesn''t exist.", productIdentifier));
 
     return ResponseEntity.ok(productService.getIncompleteAccountAssignments(productIdentifier));
   }
@@ -175,7 +198,7 @@ public class ProductRestController {
           @RequestBody final Boolean enabled)
   {
     productService.findByIdentifier(productIdentifier)
-            .orElseThrow(() -> ServiceException.notFound("Instance with identifier " + productIdentifier + " doesn't exist."));
+            .orElseThrow(() -> ServiceException.notFound("Instance with identifier ''{0}'' doesn''t exist.", productIdentifier));
 
     if (enabled) {
       if (!productService.areChargeDefinitionsCoveredByAccountAssignments(productIdentifier))
@@ -197,7 +220,7 @@ public class ProductRestController {
   public  @ResponseBody ResponseEntity<Boolean> getProductEnabled(@PathVariable("productidentifier") final String productIdentifier)
   {
     return ResponseEntity.ok(productService.findEnabledByIdentifier(productIdentifier)
-            .orElseThrow(() -> ServiceException.notFound("Instance with identifier " + productIdentifier + " doesn't exist.")));
+            .orElseThrow(() -> ServiceException.notFound("Instance with identifier ''{0}'' doesn''t exist.", productIdentifier)));
 
   }
 }

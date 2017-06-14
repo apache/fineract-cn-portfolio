@@ -61,6 +61,16 @@ public class ProductEventListener {
   @JmsListener(
           subscription = EventConstants.DESTINATION,
           destination = EventConstants.DESTINATION,
+          selector = EventConstants.SELECTOR_DELETE_PRODUCT
+  )
+  public void onDeleteProduct(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,
+                              final String payload) {
+    this.eventRecorder.event(tenant, EventConstants.DELETE_PRODUCT, payload, String.class);
+  }
+
+  @JmsListener(
+          subscription = EventConstants.DESTINATION,
+          destination = EventConstants.DESTINATION,
           selector = EventConstants.SELECTOR_PUT_PRODUCT_ENABLE
   )
   public void onEnableProduct(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,

@@ -87,6 +87,12 @@ public class ProductEntity {
   @OneToMany(targetEntity = ProductAccountAssignmentEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "product")
   private Set<ProductAccountAssignmentEntity> accountAssignments;
 
+  @OneToMany(targetEntity = ChargeDefinitionEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "product")
+  private Set<ChargeDefinitionEntity> chargeDefinitions;
+
+  @OneToMany(targetEntity = TaskDefinitionEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "product")
+  private Set<TaskDefinitionEntity> taskDefinitions;
+
   @Column(name = "parameters")
   private String parameters;
 
@@ -244,6 +250,22 @@ public class ProductEntity {
 
   public void setAccountAssignments(Set<ProductAccountAssignmentEntity> accountAssignments) {
     this.accountAssignments = accountAssignments;
+  }
+
+  public Set<ChargeDefinitionEntity> getChargeDefinitions() {
+    return chargeDefinitions;
+  }
+
+  public void setChargeDefinitions(Set<ChargeDefinitionEntity> chargeDefinitions) {
+    this.chargeDefinitions = chargeDefinitions;
+  }
+
+  public Set<TaskDefinitionEntity> getTaskDefinitions() {
+    return taskDefinitions;
+  }
+
+  public void setTaskDefinitions(Set<TaskDefinitionEntity> taskDefinitions) {
+    this.taskDefinitions = taskDefinitions;
   }
 
   public String getParameters() {

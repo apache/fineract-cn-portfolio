@@ -16,6 +16,7 @@
 package io.mifos.portfolio;
 
 import com.google.gson.Gson;
+import io.mifos.core.api.util.NotFoundException;
 import io.mifos.core.test.domain.TimeStampChecker;
 import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
@@ -269,6 +270,43 @@ public class TestProducts extends AbstractPortfolioTest {
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
 
     Assert.assertFalse(portfolioManager.getProductEnabled(product.getIdentifier()));
+  }
+
+  @Test(expected = ProductInUseException.class)
+  public void shouldFailToDeleteProductAfterCaseHasBeenCreated() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+
+    createCase(product.getIdentifier());
+
+    portfolioManager.deleteProduct(product.getIdentifier());
+  }
+
+  @Test(expected = NotFoundException.class)
+  public void shouldFailToDeleteNonExistentProduct() throws InterruptedException {
+    portfolioManager.deleteProduct("habberdash");
+  }
+
+  @Test
+  public void shouldDeleteProduct() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+
+    try {
+      portfolioManager.deleteProduct(product.getIdentifier());
+      Assert.fail("Product is enabled.  It shouldn't be possible to delete it.");
+    }
+    catch (final ProductInUseException ignored) {}
+
+    portfolioManager.enableProduct(product.getIdentifier(), false);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
+
+    portfolioManager.deleteProduct(product.getIdentifier());
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.DELETE_PRODUCT, product.getIdentifier()));
+
+    try {
+      portfolioManager.getProduct(product.getIdentifier());
+      Assert.fail("product should not be found after delete.");
+    }
+    catch (final NotFoundException ignored) {}
   }
 
   private Product getTestProductWithMaximumLengthEverything()

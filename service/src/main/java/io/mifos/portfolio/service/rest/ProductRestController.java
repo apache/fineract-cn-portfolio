@@ -24,6 +24,7 @@ import io.mifos.portfolio.api.v1.PermittableGroupIds;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.domain.ProductPage;
 import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
 import io.mifos.portfolio.service.internal.command.ChangeProductCommand;
 import io.mifos.portfolio.service.internal.command.CreateProductCommand;
@@ -37,7 +38,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -66,8 +66,11 @@ public class ProductRestController {
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
   @RequestMapping(method = RequestMethod.GET) //
-  public @ResponseBody List<Product> getAllEntities() {
-    return this.productService.findAllEntities();
+  public @ResponseBody
+  ProductPage getAllProducts(@RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled,
+                             @RequestParam("pageIndex") final Integer pageIndex,
+                             @RequestParam("size") final Integer size) {
+    return this.productService.findAllEntities(includeDisabled, pageIndex, size);
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)

@@ -18,11 +18,16 @@ package io.mifos.portfolio.service.internal.service;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.domain.ProductPage;
 import io.mifos.portfolio.service.internal.mapper.ProductMapper;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -48,8 +53,19 @@ public class ProductService {
     this.accountingAdapter = accountingAdapter;
   }
 
-  public List<Product> findAllEntities() {
-    return ProductMapper.map(this.productRepository.findAll());
+  public ProductPage findAllEntities(final boolean includeDisabled,
+                                     final int pageIndex,
+                                     final int size) {
+
+    final Pageable pageRequest = new PageRequest(pageIndex, size, Sort.Direction.DESC, "lastModifiedOn");
+
+    final Page<ProductEntity> ret;
+    if (includeDisabled)
+      ret = productRepository.findAll(pageRequest);
+    else
+      ret = productRepository.findByEnabled(true, pageRequest);
+
+    return new ProductPage(ProductMapper.map(ret.getContent()), ret.getTotalPages(), ret.getTotalElements());
   }
 
   public Optional<Product> findByIdentifier(final String identifier)

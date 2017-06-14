@@ -52,10 +52,22 @@ public class TestProducts extends AbstractPortfolioTest {
 
     Assert.assertFalse(portfolioManager.getProductEnabled(product.getIdentifier()));
 
+    final ProductPage productsPage = portfolioManager.getAllProducts(true, 0, 100);
+    Assert.assertTrue(productsPage.getElements().contains(productAsSaved));
+    {
+      final ProductPage productsPageWithoutEnabled = portfolioManager.getAllProducts(false, 0, 100);
+      Assert.assertFalse(productsPageWithoutEnabled.getElements().contains(productAsSaved));
+    }
+
     portfolioManager.enableProduct(product.getIdentifier(), true);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
 
     Assert.assertTrue(portfolioManager.getProductEnabled(product.getIdentifier()));
+
+    {
+      final ProductPage productsPageWithoutEnabled = portfolioManager.getAllProducts(false, 0, 100);
+      Assert.assertTrue(productsPageWithoutEnabled.getElements().contains(productAsSaved));
+    }
   }
 
   @Test

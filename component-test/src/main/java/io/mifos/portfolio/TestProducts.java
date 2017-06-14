@@ -52,10 +52,98 @@ public class TestProducts extends AbstractPortfolioTest {
 
     Assert.assertFalse(portfolioManager.getProductEnabled(product.getIdentifier()));
 
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(true, null, 0, 100, null, null);
+      Assert.assertTrue(productsPage.getElements().contains(productAsSaved));
+    }
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(true, product.getIdentifier().substring(2, 5), 0, 100, null, null);
+      Assert.assertTrue(productsPage.getElements().contains(productAsSaved));
+    }
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(false, null, 0, 100, null, null);
+      Assert.assertFalse(productsPage.getElements().contains(productAsSaved));
+    }
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(false, product.getIdentifier().substring(2, 5), 0, 100, null, null);
+      Assert.assertFalse(productsPage.getElements().contains(productAsSaved));
+    }
+
     portfolioManager.enableProduct(product.getIdentifier(), true);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
 
     Assert.assertTrue(portfolioManager.getProductEnabled(product.getIdentifier()));
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(false, null, 0, 100, null, null);
+      Assert.assertTrue(productsPage.getElements().contains(productAsSaved));
+    }
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(false, product.getIdentifier().substring(2, 5), 0, 100, null, null);
+      Assert.assertTrue(productsPage.getElements().contains(productAsSaved));
+    }
+  }
+
+  @Test
+  public void shouldCorrectlyOrderProducts() throws InterruptedException {
+
+    final Product productA = createAdjustedProduct(x -> {
+      x.setIdentifier("aaaaaaaa");
+      x.setName("ZZZZZZZ");
+    });
+    final Product productZ = createAdjustedProduct(x -> {
+      x.setIdentifier("zzzzzzzz");
+      x.setName("AAAAAAA");
+    });
+
+    final Product productASaved = portfolioManager.getProduct(productA.getIdentifier());
+    final Product productZSaved = portfolioManager.getProduct(productZ.getIdentifier());
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(true, null, 0, 100, null, null);
+      Assert.assertEquals(productZSaved, productsPage.getElements().get(0)); //Modified by ordering.
+    }
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(true, null, 0, 100, "identifier", "ASC");
+      Assert.assertEquals(productASaved, productsPage.getElements().get(0)); //Alphabetic ordering by identifier
+    }
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(true, null, 0, 100, "name", "DESC");
+      Assert.assertEquals(productASaved, productsPage.getElements().get(0)); //Alphabetic ordering by name. Descending.
+    }
+  }
+
+  @Test
+  public void badArgumentsToSortOrderAndDirectionShouldThrow() throws InterruptedException {
+    try {
+      portfolioManager.getProducts(true, null, 0, 100, null, "asc");
+      Assert.fail("Should've thrown");
+    }
+    catch (final IllegalArgumentException ignored) { }
+
+    try {
+      portfolioManager.getProducts(true, null, 0, 100, null, "ACS");
+      Assert.fail("Should've thrown");
+    }
+    catch (final IllegalArgumentException ignored) { }
+
+    try {
+      portfolioManager.getProducts(true, null, 0, 100, "non-existent-column", null);
+      Assert.fail("Should've thrown");
+    }
+    catch (final IllegalArgumentException ignored) { }
+
+    try {
+      portfolioManager.getProducts(true, null, 0, 100, "", null);
+      Assert.fail("Should've thrown");
+    }
+    catch (final IllegalArgumentException ignored) { }
   }
 
   @Test

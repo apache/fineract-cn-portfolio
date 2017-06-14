@@ -35,6 +35,4 @@ public @interface ValidAccountAssignments {
   Class<?>[] groups() default {};
 
   Class<? extends Payload>[] payload() default {};
-
-  int maxLength() default 32;
 }

@@ -18,13 +18,20 @@ package io.mifos.portfolio.service.internal.service;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.domain.ProductPage;
 import io.mifos.portfolio.service.internal.mapper.ProductMapper;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -48,8 +55,48 @@ public class ProductService {
     this.accountingAdapter = accountingAdapter;
   }
 
-  public List<Product> findAllEntities() {
-    return ProductMapper.map(this.productRepository.findAll());
+  public ProductPage findEntities(final boolean includeDisabled,
+                                  final @Nullable String term,
+                                  final int pageIndex,
+                                  final int size,
+                                  final @Nullable String sortColumn,
+                                  final @Nullable String sortDirection) {
+    final Pageable pageRequest = new PageRequest(pageIndex,
+            size,
+            translateSortDirection(sortDirection),
+            translateSortColumn(sortColumn));
+
+    final Page<ProductEntity> ret;
+    if (includeDisabled) {
+      if (term == null)
+        ret = productRepository.findAll(pageRequest);
+      else
+        ret = productRepository.findByIdentifierContaining(term, pageRequest);
+    }
+    else {
+      if (term == null)
+        ret = productRepository.findByEnabled(true, pageRequest);
+      else
+        ret = productRepository.findByEnabledAndIdentifierContaining(true, term, pageRequest);
+    }
+
+    return new ProductPage(ProductMapper.map(ret.getContent()), ret.getTotalPages(), ret.getTotalElements());
+  }
+
+  private Sort.Direction translateSortDirection(@Nullable final String sortDirection) {
+    return sortDirection == null ? Sort.Direction.DESC :
+          Sort.Direction.valueOf(sortDirection);
+  }
+
+  private @Nonnull
+  String translateSortColumn(@Nullable final String sortColumn) {
+    if (sortColumn == null)
+      return "lastModifiedOn";
+
+    if (!sortColumn.equals("name") && !sortColumn.equals("identifier") && !sortColumn.equals("lastModifiedOn"))
+      throw new IllegalStateException("Illegal input for Sort Column should've been blocked in Rest Controller.");
+
+    return sortColumn;
   }
 
   public Optional<Product> findByIdentifier(final String identifier)

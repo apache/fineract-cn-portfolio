@@ -27,6 +27,7 @@ import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
 import io.mifos.portfolio.service.internal.command.ChangeProductCommand;
 import io.mifos.portfolio.service.internal.command.CreateProductCommand;
+import io.mifos.portfolio.service.internal.command.DeleteProductCommand;
 import io.mifos.portfolio.service.internal.mapper.ChargeDefinitionMapper;
 import io.mifos.portfolio.service.internal.mapper.ProductMapper;
 import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
@@ -106,6 +107,25 @@ public class ProductCommandHandler {
     productRepository.save(newEntity);
 
     return changeProductCommand.getInstance().getIdentifier();
+  }
+
+  @Transactional
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
+  @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.DELETE_PRODUCT)
+  public String process(final DeleteProductCommand deleteProductCommand) {
+    final String productIdentifier = deleteProductCommand.getProductIdentifier();
+    final ProductEntity product = productRepository.findByIdentifier(productIdentifier)
+            .orElseThrow(() -> ServiceException.notFound("Instance with identifier ''{0}'' doesn''t exist.", productIdentifier));
+
+    if (product.getEnabled())
+      throw ServiceException.conflict("Cannot delete product with identifier ''{0}'', because it is enabled.", productIdentifier);
+
+    if (caseRepository.existsByProductIdentifier(productIdentifier))
+      throw ServiceException.conflict("Cannot delete product with identifier ''{0}'', because there are already cases defined on it.", productIdentifier);
+
+    productRepository.delete(product);
+
+    return deleteProductCommand.getProductIdentifier();
   }
 
   @Transactional

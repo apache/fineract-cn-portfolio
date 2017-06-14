@@ -93,6 +93,15 @@ public interface PortfolioManager {
                      final Product product);
 
   @RequestMapping(
+          value = "/products/{productidentifier}",
+          method = RequestMethod.DELETE,
+          produces = MediaType.ALL_VALUE,
+          consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
+  void deleteProduct(@PathVariable("productidentifier") final String productIdentifier);
+
+  @RequestMapping(
           value = "/products/{productidentifier}/incompleteaccountassignments",
           method = RequestMethod.GET,
           produces = MediaType.APPLICATION_JSON_VALUE,

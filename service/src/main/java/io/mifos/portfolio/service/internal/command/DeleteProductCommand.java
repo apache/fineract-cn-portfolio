@@ -13,27 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio.api.v1.validation;
-
-import javax.validation.ConstraintValidator;
-import javax.validation.ConstraintValidatorContext;
+package io.mifos.portfolio.service.internal.command;
 
 /**
  * @author Myrle Krantz
  */
-@SuppressWarnings("WeakerAccess")
-public class CheckValidSortDirection implements ConstraintValidator<ValidSortDirection, String> {
-  @Override
-  public void initialize(ValidSortDirection constraintAnnotation) {
+public class DeleteProductCommand {
+  private final String productIdentifier;
 
+  public DeleteProductCommand(final String productIdentifier) {
+    this.productIdentifier = productIdentifier;
+  }
+
+  public String getProductIdentifier() {
+    return productIdentifier;
   }
 
   @Override
-  public boolean isValid(String value, ConstraintValidatorContext context) {
-    return validate(value);
-  }
-
-  public static boolean validate(String value) {
-    return (value == null) || (value.equals("ASC") || (value.equals("DESC")));
+  public String toString() {
+    return "DeleteProductCommand{" +
+            "productIdentifier='" + productIdentifier + '\'' +
+            '}';
   }
 }

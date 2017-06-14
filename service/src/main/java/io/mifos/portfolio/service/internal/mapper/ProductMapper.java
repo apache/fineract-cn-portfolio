@@ -149,6 +149,8 @@ public class ProductMapper {
 
       return newAccountAssignmentEntity;
     }).collect(Collectors.toSet());
+    newEntity.setChargeDefinitions(oldEntity.getChargeDefinitions());
+    newEntity.setTaskDefinitions(oldEntity.getTaskDefinitions());
 
 
     newEntity.setAccountAssignments(newAccountAssignmentEntities);

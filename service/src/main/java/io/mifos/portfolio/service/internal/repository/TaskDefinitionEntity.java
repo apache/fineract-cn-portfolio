@@ -34,7 +34,7 @@ public class TaskDefinitionEntity {
   private String identifier;
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "product_id")
+  @JoinColumn(name = "product_id", nullable = false)
   private ProductEntity product;
 
   @Column(name = "a_name")

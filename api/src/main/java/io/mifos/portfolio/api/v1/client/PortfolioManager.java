@@ -246,24 +246,25 @@ public interface PortfolioManager {
                                 @PathVariable("caseidentifier") final String caseIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/{caseidentifier}/commands/",
+          value = "/products/{productidentifier}/cases/{caseidentifier}/actions/{actionidentifier}/costcomponents",
+          method = RequestMethod.GET,
+          produces = MediaType.ALL_VALUE,
+          consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
+                                                 @PathVariable("caseidentifier") final String caseIdentifier,
+                                                 @PathVariable("actionidentifier") final String actionIdentifier);
+
+  @RequestMapping(
+          value = "/products/{productidentifier}/cases/{caseidentifier}/commands/{actionidentifier}",
           method = RequestMethod.POST,
           produces = MediaType.APPLICATION_JSON_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
   void executeCaseCommand(@PathVariable("productidentifier") final String productIdentifier,
                           @PathVariable("caseidentifier") final String caseIdentifier,
+                          @PathVariable("actionidentifier") final String actionIdentifier,
                           final Command command);
-
-  @RequestMapping(
-          value = "/products/{productidentifier}/cases/{caseidentifier}/commands/{commandidentifier}",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
-  )
-  Command getExecutedCommandForCase(@PathVariable("productidentifier") final String productIdentifier,
-                                    @PathVariable("caseidentifier") final String caseIdentifier,
-                                    @PathVariable("commandidentifier") final String commandIdentifier);
 
   @RequestMapping(
           value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/",

@@ -106,8 +106,8 @@ public class TestCommands extends AbstractPortfolioTest {
                                  final Action action,
                                  final String event,
                                  final Case.State nextState) throws InterruptedException {
-    final Command command = new Command(action.name(), null);
-    portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, command);
+    final Command command = new Command();
+    portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, action.name(), command);
 
     Assert.assertTrue(eventRecorder.waitForMatch(event,
             (IndividualLoanCommandEvent x) -> individualLoanCommandEventMatches(x, productIdentifier, caseIdentifier)));
@@ -121,9 +121,9 @@ public class TestCommands extends AbstractPortfolioTest {
                                  final Action action,
                                  final String event,
                                  final Case.State initialState) throws InterruptedException {
-    final Command command = new Command(action.name(), null);
+    final Command command = new Command();
     try {
-      portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, command);
+      portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, action.name(), command);
       Assert.fail();
     }
     catch (final IllegalArgumentException ignored) {}

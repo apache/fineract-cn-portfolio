@@ -25,6 +25,9 @@ import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.domain.ProductPage;
+import io.mifos.portfolio.api.v1.validation.CheckValidSortColumn;
+import io.mifos.portfolio.api.v1.validation.CheckValidSortDirection;
+import io.mifos.portfolio.api.v1.validation.ValidSortDirection;
 import io.mifos.portfolio.service.internal.command.ChangeEnablingOfProductCommand;
 import io.mifos.portfolio.service.internal.command.ChangeProductCommand;
 import io.mifos.portfolio.service.internal.command.CreateProductCommand;
@@ -39,6 +42,8 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Nullable;
 import javax.validation.Valid;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -48,6 +53,7 @@ import java.util.Set;
 @RestController //
 @RequestMapping("/products") //
 public class ProductRestController {
+  private final static Set<String> VALID_SORT_COLUMNS = new HashSet<>(Arrays.asList("lastModifiedOn", "identifier", "name"));
 
   private final CommandGateway commandGateway;
   private final CaseService caseService;
@@ -63,6 +69,7 @@ public class ProductRestController {
     this.caseService = caseService;
     this.productService = productService;
     this.patternService = patternService;
+
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
@@ -70,9 +77,15 @@ public class ProductRestController {
   public @ResponseBody
   ProductPage getProducts(@RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled,
                           @RequestParam(value = "term", required = false) final @Nullable String term,
-                          @RequestParam("pageIndex") final Integer pageIndex,
-                          @RequestParam("size") final Integer size) {
-    return this.productService.findEntities(includeDisabled, term, pageIndex, size);
+                          @RequestParam(value = "pageIndex") final Integer pageIndex,
+                          @RequestParam(value = "size") final Integer size,
+                          @RequestParam(value = "sortColumn", required = false) final String sortColumn,
+                          @RequestParam(value = "sortDirection", required = false) final @Valid @ValidSortDirection String sortDirection) {
+    if (!CheckValidSortColumn.validate(sortColumn, VALID_SORT_COLUMNS))
+      throw ServiceException.badRequest("Invalid sort column ''{0}''.  Valid inputs are ''{1}''.", sortColumn, VALID_SORT_COLUMNS);
+    if (!CheckValidSortDirection.validate(sortDirection))
+      throw ServiceException.badRequest("Invalid sort direction ''{0}''.", sortDirection);
+    return this.productService.findEntities(includeDisabled, term, pageIndex, size, sortColumn, sortDirection);
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)

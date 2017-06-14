@@ -30,6 +30,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -57,9 +58,13 @@ public class ProductService {
   public ProductPage findEntities(final boolean includeDisabled,
                                   final @Nullable String term,
                                   final int pageIndex,
-                                  final int size) {
-
-    final Pageable pageRequest = new PageRequest(pageIndex, size, Sort.Direction.DESC, "lastModifiedOn");
+                                  final int size,
+                                  final @Nullable String sortColumn,
+                                  final @Nullable String sortDirection) {
+    final Pageable pageRequest = new PageRequest(pageIndex,
+            size,
+            translateSortDirection(sortDirection),
+            translateSortColumn(sortColumn));
 
     final Page<ProductEntity> ret;
     if (includeDisabled) {
@@ -76,6 +81,22 @@ public class ProductService {
     }
 
     return new ProductPage(ProductMapper.map(ret.getContent()), ret.getTotalPages(), ret.getTotalElements());
+  }
+
+  private Sort.Direction translateSortDirection(@Nullable final String sortDirection) {
+    return sortDirection == null ? Sort.Direction.DESC :
+          Sort.Direction.valueOf(sortDirection);
+  }
+
+  private @Nonnull
+  String translateSortColumn(@Nullable final String sortColumn) {
+    if (sortColumn == null)
+      return "lastModifiedOn";
+
+    if (!sortColumn.equals("name") && !sortColumn.equals("identifier") && !sortColumn.equals("lastModifiedOn"))
+      throw new IllegalStateException("Illegal input for Sort Column should've been blocked in Rest Controller.");
+
+    return sortColumn;
   }
 
   public Optional<Product> findByIdentifier(final String identifier)

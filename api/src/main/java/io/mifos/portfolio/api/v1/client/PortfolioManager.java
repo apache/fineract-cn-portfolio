@@ -18,6 +18,8 @@ package io.mifos.portfolio.api.v1.client;
 import io.mifos.core.api.annotation.ThrowsException;
 import io.mifos.core.api.util.CustomFeignClientsConfiguration;
 import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.api.v1.validation.ValidSortColumn;
+import io.mifos.portfolio.api.v1.validation.ValidSortDirection;
 import org.springframework.cloud.netflix.feign.FeignClient;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -60,8 +62,10 @@ public interface PortfolioManager {
   )
   ProductPage getProducts(@RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled,
                           @RequestParam(value = "term", required = false) final String term,
-                          @RequestParam("pageIndex") final Integer pageIndex,
-                          @RequestParam("size") final Integer size);
+                          @RequestParam(value = "pageIndex") final Integer pageIndex,
+                          @RequestParam(value = "size") final Integer size,
+                          @RequestParam(value = "sortColumn", required = false) @ValidSortColumn(value = {"lastModifiedOn", "identifier", "name"}) final String sortColumn,
+                          @RequestParam(value = "sortDirection", required = false) @ValidSortDirection final String sortDirection);
 
   @RequestMapping(
           value = "/products",

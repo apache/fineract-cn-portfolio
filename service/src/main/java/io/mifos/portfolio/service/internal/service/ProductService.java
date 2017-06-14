@@ -30,6 +30,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -53,17 +54,26 @@ public class ProductService {
     this.accountingAdapter = accountingAdapter;
   }
 
-  public ProductPage findAllEntities(final boolean includeDisabled,
-                                     final int pageIndex,
-                                     final int size) {
+  public ProductPage findEntities(final boolean includeDisabled,
+                                  final @Nullable String term,
+                                  final int pageIndex,
+                                  final int size) {
 
     final Pageable pageRequest = new PageRequest(pageIndex, size, Sort.Direction.DESC, "lastModifiedOn");
 
     final Page<ProductEntity> ret;
-    if (includeDisabled)
-      ret = productRepository.findAll(pageRequest);
-    else
-      ret = productRepository.findByEnabled(true, pageRequest);
+    if (includeDisabled) {
+      if (term == null)
+        ret = productRepository.findAll(pageRequest);
+      else
+        ret = productRepository.findByIdentifierContaining(term, pageRequest);
+    }
+    else {
+      if (term == null)
+        ret = productRepository.findByEnabled(true, pageRequest);
+      else
+        ret = productRepository.findByEnabledAndIdentifierContaining(true, term, pageRequest);
+    }
 
     return new ProductPage(ProductMapper.map(ret.getContent()), ret.getTotalPages(), ret.getTotalElements());
   }

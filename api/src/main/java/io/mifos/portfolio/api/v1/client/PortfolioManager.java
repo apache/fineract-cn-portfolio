@@ -58,9 +58,10 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  ProductPage getAllProducts(@RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled,
-                             @RequestParam("pageIndex") final Integer pageIndex,
-                             @RequestParam("size") final Integer size);
+  ProductPage getProducts(@RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled,
+                          @RequestParam(value = "term", required = false) final String term,
+                          @RequestParam("pageIndex") final Integer pageIndex,
+                          @RequestParam("size") final Integer size);
 
   @RequestMapping(
           value = "/products",

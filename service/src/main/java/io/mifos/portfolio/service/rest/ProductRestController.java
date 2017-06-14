@@ -37,6 +37,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.Nullable;
 import javax.validation.Valid;
 import java.util.Set;
 
@@ -67,10 +68,11 @@ public class ProductRestController {
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
   @RequestMapping(method = RequestMethod.GET) //
   public @ResponseBody
-  ProductPage getAllProducts(@RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled,
-                             @RequestParam("pageIndex") final Integer pageIndex,
-                             @RequestParam("size") final Integer size) {
-    return this.productService.findAllEntities(includeDisabled, pageIndex, size);
+  ProductPage getProducts(@RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled,
+                          @RequestParam(value = "term", required = false) final @Nullable String term,
+                          @RequestParam("pageIndex") final Integer pageIndex,
+                          @RequestParam("size") final Integer size) {
+    return this.productService.findEntities(includeDisabled, term, pageIndex, size);
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)

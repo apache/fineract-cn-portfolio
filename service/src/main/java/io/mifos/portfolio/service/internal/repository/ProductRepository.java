@@ -29,4 +29,6 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<ProductEntity, Long> {
   Optional<ProductEntity> findByIdentifier(String identifier);
   Page<ProductEntity> findByEnabled(boolean enabled, Pageable pageable);
+  Page<ProductEntity> findByIdentifierContaining(final String term, final Pageable pageable);
+  Page<ProductEntity> findByEnabledAndIdentifierContaining(boolean enabled, final String term, final Pageable pageable);
 }

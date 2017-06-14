@@ -52,11 +52,24 @@ public class TestProducts extends AbstractPortfolioTest {
 
     Assert.assertFalse(portfolioManager.getProductEnabled(product.getIdentifier()));
 
-    final ProductPage productsPage = portfolioManager.getAllProducts(true, 0, 100);
-    Assert.assertTrue(productsPage.getElements().contains(productAsSaved));
     {
-      final ProductPage productsPageWithoutEnabled = portfolioManager.getAllProducts(false, 0, 100);
-      Assert.assertFalse(productsPageWithoutEnabled.getElements().contains(productAsSaved));
+      final ProductPage productsPage = portfolioManager.getProducts(true, null, 0, 100);
+      Assert.assertTrue(productsPage.getElements().contains(productAsSaved));
+    }
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(true, product.getIdentifier().substring(2, 5), 0, 100);
+      Assert.assertTrue(productsPage.getElements().contains(productAsSaved));
+    }
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(false, null, 0, 100);
+      Assert.assertFalse(productsPage.getElements().contains(productAsSaved));
+    }
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(false, product.getIdentifier().substring(2, 5), 0, 100);
+      Assert.assertFalse(productsPage.getElements().contains(productAsSaved));
     }
 
     portfolioManager.enableProduct(product.getIdentifier(), true);
@@ -65,8 +78,13 @@ public class TestProducts extends AbstractPortfolioTest {
     Assert.assertTrue(portfolioManager.getProductEnabled(product.getIdentifier()));
 
     {
-      final ProductPage productsPageWithoutEnabled = portfolioManager.getAllProducts(false, 0, 100);
-      Assert.assertTrue(productsPageWithoutEnabled.getElements().contains(productAsSaved));
+      final ProductPage productsPage = portfolioManager.getProducts(false, null, 0, 100);
+      Assert.assertTrue(productsPage.getElements().contains(productAsSaved));
+    }
+
+    {
+      final ProductPage productsPage = portfolioManager.getProducts(false, product.getIdentifier().substring(2, 5), 0, 100);
+      Assert.assertTrue(productsPage.getElements().contains(productAsSaved));
     }
   }
 

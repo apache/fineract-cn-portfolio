@@ -24,6 +24,7 @@ import org.hibernate.validator.constraints.ScriptAssert;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -34,8 +35,14 @@ import java.util.Objects;
 public final class CaseParameters {
   @ValidIdentifier
   private String customerIdentifier;
+
+  @NotNull
+  @Valid
+  private List<CreditWorthinessSnapshot> creditWorthinessSnapshots;
+
   @Range(min = 0)
   private BigDecimal maximumBalance;
+
   @NotNull
   @Valid
   private TermRange termRange;
@@ -56,6 +63,14 @@ public final class CaseParameters {
 
   public void setCustomerIdentifier(String customerIdentifier) {
     this.customerIdentifier = customerIdentifier;
+  }
+
+  public List<CreditWorthinessSnapshot> getCreditWorthinessSnapshots() {
+    return creditWorthinessSnapshots;
+  }
+
+  public void setCreditWorthinessSnapshots(List<CreditWorthinessSnapshot> creditWorthinessSnapshots) {
+    this.creditWorthinessSnapshots = creditWorthinessSnapshots;
   }
 
   public BigDecimal getMaximumBalance() {
@@ -88,6 +103,7 @@ public final class CaseParameters {
     if (o == null || getClass() != o.getClass()) return false;
     CaseParameters that = (CaseParameters) o;
     return Objects.equals(customerIdentifier, that.customerIdentifier) &&
+            Objects.equals(creditWorthinessSnapshots, that.creditWorthinessSnapshots) &&
             Objects.equals(maximumBalance, that.maximumBalance) &&
             Objects.equals(termRange, that.termRange) &&
             Objects.equals(paymentCycle, that.paymentCycle);
@@ -95,13 +111,14 @@ public final class CaseParameters {
 
   @Override
   public int hashCode() {
-    return Objects.hash(customerIdentifier, maximumBalance, termRange, paymentCycle);
+    return Objects.hash(customerIdentifier, creditWorthinessSnapshots, maximumBalance, termRange, paymentCycle);
   }
 
   @Override
   public String toString() {
     return "CaseParameters{" +
             "customerIdentifier='" + customerIdentifier + '\'' +
+            ", creditWorthinessSnapshots=" + creditWorthinessSnapshots +
             ", maximumBalance=" + maximumBalance +
             ", termRange=" + termRange +
             ", paymentCycle=" + paymentCycle +

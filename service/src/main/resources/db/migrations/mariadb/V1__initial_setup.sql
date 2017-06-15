@@ -126,3 +126,17 @@ CREATE TABLE bastet_il_cases (
   CONSTRAINT bastet_il_cases_uq UNIQUE (case_id),
   CONSTRAINT bastet_il_cases_par_fk FOREIGN KEY (case_id) REFERENCES bastet_cases (id)
 );
+
+CREATE TABLE bastet_il_c_credit_facts (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  case_id                  BIGINT         NOT NULL,
+  customer_identifier      VARCHAR(32)    NOT NULL,
+  position_in_factor       INT            NOT NULL,
+  position_in_customers    INT            NOT NULL,
+  fact_type                VARCHAR(32)    NOT NULL,
+  description              VARCHAR(4096)  NOT NULL,
+  amount                   DECIMAL(19,4)  NOT NULL,
+  CONSTRAINT bastet_il_c_credit_facts_pk PRIMARY KEY (id),
+  CONSTRAINT bastet_il_c_credit_facts_uq UNIQUE (case_id, customer_identifier, position_in_factor, fact_type),
+  CONSTRAINT bastet_il_c_credit_facts_par_fk FOREIGN KEY (case_id) REFERENCES bastet_il_cases (id)
+);

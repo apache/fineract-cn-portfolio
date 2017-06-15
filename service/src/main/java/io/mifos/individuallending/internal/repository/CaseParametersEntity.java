@@ -15,16 +15,11 @@
  */
 package io.mifos.individuallending.internal.repository;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.EnumType;
-import javax.persistence.Enumerated;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
+import java.util.Set;
 
 /**
  * @author Myrle Krantz
@@ -71,6 +66,9 @@ public class CaseParametersEntity {
 
   @Column(name = "pay_cycle_align_month")
   private Integer paymentCycleAlignmentMonth;
+
+  @OneToMany(targetEntity = CaseCreditWorthinessFactorEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "caseId")
+  private Set<CaseCreditWorthinessFactorEntity> creditWorthinessFactors;
 
   public CaseParametersEntity() {
   }
@@ -169,5 +167,26 @@ public class CaseParametersEntity {
 
   public void setPaymentCycleAlignmentMonth(Integer paymentCycleAlignmentMonth) {
     this.paymentCycleAlignmentMonth = paymentCycleAlignmentMonth;
+  }
+
+  public Set<CaseCreditWorthinessFactorEntity> getCreditWorthinessFactors() {
+    return creditWorthinessFactors;
+  }
+
+  public void setCreditWorthinessFactors(Set<CaseCreditWorthinessFactorEntity> creditWorthinessFactors) {
+    this.creditWorthinessFactors = creditWorthinessFactors;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    CaseParametersEntity that = (CaseParametersEntity) o;
+    return Objects.equals(caseId, that.caseId);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(caseId);
   }
 }

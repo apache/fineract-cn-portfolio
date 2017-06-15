@@ -17,11 +17,14 @@ package io.mifos;
 
 import com.google.gson.Gson;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessFactor;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessSnapshot;
 import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
 import io.mifos.portfolio.api.v1.domain.*;
 
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -123,6 +126,18 @@ public class Fixture {
     ret.setMaximumBalance(fixScale(BigDecimal.valueOf(2000L)));
     ret.setTermRange(new TermRange(ChronoUnit.MONTHS, 18));
     ret.setPaymentCycle(new PaymentCycle(ChronoUnit.MONTHS, 1, 1, null, null));
+
+    final CreditWorthinessSnapshot customerCreditWorthinessSnapshot = new CreditWorthinessSnapshot();
+    customerCreditWorthinessSnapshot.setForCustomer("alice");
+    customerCreditWorthinessSnapshot.setDebts(Collections.singletonList(new CreditWorthinessFactor("some debt", fixScale(BigDecimal.valueOf(300)))));
+    customerCreditWorthinessSnapshot.setAssets(Collections.singletonList(new CreditWorthinessFactor("some asset", fixScale(BigDecimal.valueOf(500)))));
+    customerCreditWorthinessSnapshot.setIncomeSources(Collections.singletonList(new CreditWorthinessFactor("some income source", fixScale(BigDecimal.valueOf(300)))));
+    final CreditWorthinessSnapshot cosignerCreditWorthinessSnapshot = new CreditWorthinessSnapshot();
+    cosignerCreditWorthinessSnapshot.setForCustomer("seema");
+    cosignerCreditWorthinessSnapshot.setDebts(Collections.emptyList());
+    cosignerCreditWorthinessSnapshot.setAssets(Collections.singletonList(new CreditWorthinessFactor("a house", fixScale(BigDecimal.valueOf(50000)))));
+    cosignerCreditWorthinessSnapshot.setIncomeSources(Collections.singletonList(new CreditWorthinessFactor("retirement", fixScale(BigDecimal.valueOf(200)))));
+    ret.setCreditWorthinessSnapshots(Arrays.asList(customerCreditWorthinessSnapshot, cosignerCreditWorthinessSnapshot));
 
     return ret;
   }

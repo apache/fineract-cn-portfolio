@@ -34,16 +34,13 @@ public class CommandTest extends ValidationTest<Command> {
 
   @Override
   protected Command createValidTestSubject() {
-    return new Command("blah", null);
+    return new Command();
   }
 
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
     ret.add(new ValidationTestCase<Command>("valid"));
-    ret.add(new ValidationTestCase<Command>("nullAction")
-            .adjustment(x -> x.setAction(null))
-            .valid(false));
     return ret;
   }
 }

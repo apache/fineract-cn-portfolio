@@ -18,6 +18,7 @@ package io.mifos.portfolio;
 import com.google.gson.Gson;
 import io.mifos.core.test.domain.TimeStampChecker;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessFactor;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
@@ -28,9 +29,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -78,6 +77,9 @@ public class TestCases extends AbstractPortfolioTest {
     newCaseParameters.setMaximumBalance(Fixture.fixScale(BigDecimal.TEN));
     newCaseParameters.getPaymentCycle().setAlignmentDay(1);
     newCaseParameters.getPaymentCycle().setAlignmentWeek(2);
+
+    newCaseParameters.setCreditWorthinessSnapshots(Collections.emptyList());
+
     final String changedParameters = new Gson().toJson(newCaseParameters);
     caseInstance.setParameters(changedParameters);
 
@@ -95,6 +97,52 @@ public class TestCases extends AbstractPortfolioTest {
     Assert.assertEquals(TEST_USER, caseAsSaved.getLastModifiedBy());
     timeStampChecker.assertCorrect(caseAsSaved.getLastModifiedOn());
     Assert.assertEquals(Case.State.CREATED.name(), caseAsSaved.getCurrentState());
+  }
+
+  @Test
+  public void shouldRemoveCosigner() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+
+    final CaseParameters caseParameters = Fixture.createAdjustedCaseParameters(x -> {});
+    final String caseParametersAsString = new Gson().toJson(caseParameters);
+    final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> x.setParameters(caseParametersAsString));
+
+    caseParameters.setCreditWorthinessSnapshots(Collections.singletonList(caseParameters.getCreditWorthinessSnapshots().get(0)));
+    final String changedParameters = new Gson().toJson(caseParameters);
+    caseInstance.setParameters(changedParameters);
+
+    portfolioManager.changeCase(product.getIdentifier(), caseInstance.getIdentifier(), caseInstance);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CASE,
+            new CaseEvent(product.getIdentifier(), caseInstance.getIdentifier())));
+
+    final Case caseAsSaved = portfolioManager.getCase(product.getIdentifier(), caseInstance.getIdentifier());
+
+    Assert.assertEquals(caseInstance, caseAsSaved);
+  }
+
+  @Test
+  public void shouldAddDebt() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+
+    final CaseParameters caseParameters = Fixture.createAdjustedCaseParameters(x -> {});
+    final String caseParametersAsString = new Gson().toJson(caseParameters);
+    final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> x.setParameters(caseParametersAsString));
+
+    final List<CreditWorthinessFactor> debts = caseParameters.getCreditWorthinessSnapshots().get(0).getDebts();
+    final ArrayList<CreditWorthinessFactor> newDebts = new ArrayList<>();
+    newDebts.addAll(debts);
+    newDebts.add(new CreditWorthinessFactor("boop", BigDecimal.valueOf(5, 4)));
+    caseParameters.getCreditWorthinessSnapshots().get(0).setDebts(newDebts);
+    final String changedParameters = new Gson().toJson(caseParameters);
+    caseInstance.setParameters(changedParameters);
+
+    portfolioManager.changeCase(product.getIdentifier(), caseInstance.getIdentifier(), caseInstance);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CASE,
+            new CaseEvent(product.getIdentifier(), caseInstance.getIdentifier())));
+
+    final Case caseAsSaved = portfolioManager.getCase(product.getIdentifier(), caseInstance.getIdentifier());
+
+    Assert.assertEquals(caseInstance, caseAsSaved);
   }
 
   @Test

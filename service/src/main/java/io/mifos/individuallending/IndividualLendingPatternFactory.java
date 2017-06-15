@@ -16,17 +16,19 @@
 package io.mifos.individuallending;
 
 import com.google.gson.Gson;
-import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
-import io.mifos.individuallending.internal.repository.CaseParametersEntity;
-import io.mifos.individuallending.internal.repository.CaseParametersRepository;
-import io.mifos.products.spi.ProductCommandDispatcher;
-import io.mifos.products.spi.PatternFactory;
-import io.mifos.portfolio.service.ServiceConstants;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
+import io.mifos.individuallending.internal.repository.CaseCreditWorthinessFactorEntity;
+import io.mifos.individuallending.internal.repository.CaseParametersEntity;
+import io.mifos.individuallending.internal.repository.CaseParametersRepository;
+import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Pattern;
+import io.mifos.portfolio.service.ServiceConstants;
+import io.mifos.products.spi.PatternFactory;
+import io.mifos.products.spi.ProductCommandDispatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -170,6 +172,33 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     caseParametersRepository.save(caseParametersEntity);
   }
 
+  private static class CaseCreditWorthinessFactorUniquenessCriteria {
+    String customerId;
+    CreditWorthinessFactorType factorType;
+    int position;
+
+    CaseCreditWorthinessFactorUniquenessCriteria(final CaseCreditWorthinessFactorEntity entity) {
+      this.customerId = entity.getCustomerIdentifier();
+      this.factorType = entity.getFactorType();
+      this.position = entity.getPositionInFactor();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      CaseCreditWorthinessFactorUniquenessCriteria that = (CaseCreditWorthinessFactorUniquenessCriteria) o;
+      return position == that.position &&
+              Objects.equals(customerId, that.customerId) &&
+              factorType == that.factorType;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(customerId, factorType, position);
+    }
+  }
+
   @Transactional
   @Override
   public void changeParameters(Long caseId, String parameters) {
@@ -187,6 +216,20 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     oldCaseParameters.setPaymentCycleAlignmentDay(caseParameters.getPaymentCycle().getAlignmentDay());
     oldCaseParameters.setPaymentCycleAlignmentWeek(caseParameters.getPaymentCycle().getAlignmentWeek());
     oldCaseParameters.setPaymentCycleAlignmentMonth(caseParameters.getPaymentCycle().getAlignmentMonth());
+
+
+
+    final Set<CaseCreditWorthinessFactorEntity> oldCreditWorthinessFactorEntities = oldCaseParameters.getCreditWorthinessFactors();
+    final Map<CaseCreditWorthinessFactorUniquenessCriteria, CaseCreditWorthinessFactorEntity> forFindingThings = oldCreditWorthinessFactorEntities.stream()
+            .collect(Collectors.toMap(CaseCreditWorthinessFactorUniquenessCriteria::new, x -> x));
+
+    final Set<CaseCreditWorthinessFactorEntity> newCreditWorthinessFactorEntities = CaseParametersMapper.mapSnapshotsToFactors(caseParameters.getCreditWorthinessSnapshots(),oldCaseParameters);
+    newCreditWorthinessFactorEntities.forEach(x -> {
+      final CaseCreditWorthinessFactorEntity existingThing = forFindingThings.get(new CaseCreditWorthinessFactorUniquenessCriteria(x));
+      if (existingThing != null) x.setId(existingThing.getId());
+    });
+    oldCaseParameters.getCreditWorthinessFactors().clear();
+    oldCaseParameters.getCreditWorthinessFactors().addAll(newCreditWorthinessFactorEntities);
 
     caseParametersRepository.save(oldCaseParameters);
   }

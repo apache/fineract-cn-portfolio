@@ -164,6 +164,7 @@ public class TestProducts extends AbstractPortfolioTest {
   public void shouldChangeProductAccountAssignments() throws InterruptedException {
     final Product product = createAdjustedProduct(x -> x.setAccountAssignments(Collections.emptySet()));
 
+    //Add account assignments
     final Set<AccountAssignment> incompleteAccountAssignments = portfolioManager.getIncompleteAccountAssignments(product.getIdentifier());
 
     final Set<AccountAssignment> accountAssignments = incompleteAccountAssignments.stream()
@@ -178,11 +179,24 @@ public class TestProducts extends AbstractPortfolioTest {
     portfolioManager.changeProduct(product.getIdentifier(), product);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT, product.getIdentifier()));
 
-    final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
+    {
+      final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
 
-    Assert.assertEquals(product, productAsSaved);
-    Assert.assertEquals(TEST_USER, productAsSaved.getLastModifiedBy());
-    timeStampChecker.assertCorrect(productAsSaved.getLastModifiedOn());
+      Assert.assertEquals(product, productAsSaved);
+      Assert.assertEquals(TEST_USER, productAsSaved.getLastModifiedBy());
+      timeStampChecker.assertCorrect(productAsSaved.getLastModifiedOn());
+    }
+
+    //Remove account assignments
+    product.setAccountAssignments(Collections.emptySet());
+    portfolioManager.changeProduct(product.getIdentifier(), product);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT, product.getIdentifier()));
+
+    {
+      final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
+
+      Assert.assertEquals(product, productAsSaved);
+    }
   }
 
   @Test

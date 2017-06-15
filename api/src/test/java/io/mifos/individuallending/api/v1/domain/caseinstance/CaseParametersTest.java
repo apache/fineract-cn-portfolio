@@ -18,10 +18,7 @@ package io.mifos.individuallending.api.v1.domain.caseinstance;
 import io.mifos.Fixture;
 import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
-import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.TermRange;
-import org.junit.Assert;
-import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -51,6 +48,7 @@ public class CaseParametersTest extends ValidationTest<CaseParameters> {
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
 
+    ret.add(new ValidationTestCase<CaseParameters>("valid"));
     ret.add(new ValidationTestCase<CaseParameters>("nullTermRange")
             .adjustment(x -> x.setTermRange(null))
             .valid(false));
@@ -65,6 +63,9 @@ public class CaseParametersTest extends ValidationTest<CaseParameters> {
             .valid(false));
     ret.add(new ValidationTestCase<CaseParameters>("invalid payment cycle unit")
             .adjustment(x -> x.getPaymentCycle().setTemporalUnit(ChronoUnit.SECONDS))
+            .valid(false));
+    ret.add(new ValidationTestCase<CaseParameters>("null CreditWorthinessFactor list")
+            .adjustment(x -> x.setCreditWorthinessSnapshots(null))
             .valid(false));
 
     return ret;

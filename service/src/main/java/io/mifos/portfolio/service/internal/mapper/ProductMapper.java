@@ -149,11 +149,12 @@ public class ProductMapper {
 
       return newAccountAssignmentEntity;
     }).collect(Collectors.toSet());
+    newEntity.setAccountAssignments(newAccountAssignmentEntities);
+
     newEntity.setChargeDefinitions(oldEntity.getChargeDefinitions());
     newEntity.setTaskDefinitions(oldEntity.getTaskDefinitions());
 
 
-    newEntity.setAccountAssignments(newAccountAssignmentEntities);
     return newEntity;
   }
 }

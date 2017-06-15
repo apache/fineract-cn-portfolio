@@ -16,6 +16,7 @@
 package io.mifos.portfolio.service.internal.repository;
 
 import javax.persistence.*;
+import java.util.Objects;
 
 /**
  * @author Myrle Krantz
@@ -69,5 +70,19 @@ public class CaseAccountAssignmentEntity {
 
   public void setIdentifier(String identifier) {
     this.identifier = identifier;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    CaseAccountAssignmentEntity that = (CaseAccountAssignmentEntity) o;
+    return Objects.equals(caseEntity, that.caseEntity) &&
+            Objects.equals(designator, that.designator);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(caseEntity, designator);
   }
 }

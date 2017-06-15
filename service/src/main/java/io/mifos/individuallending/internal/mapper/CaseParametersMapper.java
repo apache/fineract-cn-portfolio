@@ -16,9 +16,20 @@
 package io.mifos.individuallending.internal.mapper;
 
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessFactor;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessSnapshot;
+import io.mifos.individuallending.internal.repository.CaseCreditWorthinessFactorEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
+import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType;
 import io.mifos.portfolio.api.v1.domain.PaymentCycle;
 import io.mifos.portfolio.api.v1.domain.TermRange;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -39,8 +50,48 @@ public class CaseParametersMapper {
     ret.setPaymentCycleAlignmentDay(instance.getPaymentCycle().getAlignmentDay());
     ret.setPaymentCycleAlignmentWeek(instance.getPaymentCycle().getAlignmentWeek());
     ret.setPaymentCycleAlignmentMonth(instance.getPaymentCycle().getAlignmentMonth());
+    ret.setCreditWorthinessFactors(mapSnapshotsToFactors(instance.getCreditWorthinessSnapshots(), ret));
 
     return ret;
+  }
+
+  public static Set<CaseCreditWorthinessFactorEntity> mapSnapshotsToFactors(
+          final List<CreditWorthinessSnapshot> creditWorthinessSnapshots,
+          final CaseParametersEntity caseParametersEntity) {
+    return Stream.iterate(0, i -> i+1).limit(creditWorthinessSnapshots.size())
+            .flatMap(i -> {
+      final String customerId = creditWorthinessSnapshots.get(i).getForCustomer();
+      return Stream.concat(Stream.concat(
+              mapSnapshotPartToFactors(customerId, i,
+                      CreditWorthinessFactorType.ASSET, creditWorthinessSnapshots.get(i).getAssets(),
+                      caseParametersEntity),
+              mapSnapshotPartToFactors(customerId, i,
+                      CreditWorthinessFactorType.INCOME_SOURCE, creditWorthinessSnapshots.get(i).getIncomeSources(),
+                      caseParametersEntity)),
+              mapSnapshotPartToFactors(customerId, i,
+                      CreditWorthinessFactorType.DEBT, creditWorthinessSnapshots.get(i).getDebts(),
+                      caseParametersEntity));
+    }).collect(Collectors.toSet());
+  }
+
+  private static Stream<CaseCreditWorthinessFactorEntity> mapSnapshotPartToFactors(
+          final String forCustomer,
+          final int i,
+          final CreditWorthinessFactorType factorType,
+          final List<CreditWorthinessFactor> part,
+          final CaseParametersEntity caseParametersEntity) {
+    return Stream.iterate(0, j -> j+1).limit(part.size())
+            .map(j -> {
+              final CaseCreditWorthinessFactorEntity ret = new CaseCreditWorthinessFactorEntity();
+              ret.setAmount(part.get(j).getAmount());
+              ret.setDescription(part.get(j).getDescription());
+              ret.setCaseId(caseParametersEntity);
+              ret.setCustomerIdentifier(forCustomer);
+              ret.setFactorType(factorType);
+              ret.setPositionInFactor(j);
+              ret.setPositionInCustomers(i);
+              return ret;
+            });
   }
 
   private static TermRange getTermRange(final CaseParametersEntity instance) {
@@ -67,9 +118,64 @@ public class CaseParametersMapper {
   public static CaseParameters mapEntity(final CaseParametersEntity caseParametersEntity) {
     final CaseParameters ret = new CaseParameters();
     ret.setCustomerIdentifier(caseParametersEntity.getCustomerIdentifier());
+    ret.setCreditWorthinessSnapshots(mapFactorsToSnapshots(caseParametersEntity.getCreditWorthinessFactors()));
     ret.setTermRange(getTermRange(caseParametersEntity));
     ret.setMaximumBalance(caseParametersEntity.getBalanceRangeMaximum());
     ret.setPaymentCycle(getPaymentCycle(caseParametersEntity));
+    return ret;
+  }
+
+  private static List<CreditWorthinessSnapshot> mapFactorsToSnapshots(
+          final Set<CaseCreditWorthinessFactorEntity> creditWorthinessFactors) {
+    final Map<Integer, Set<CaseCreditWorthinessFactorEntity>> groupedByCustomerId
+            = creditWorthinessFactors.stream()
+            .collect(Collectors.groupingBy(CaseCreditWorthinessFactorEntity::getPositionInCustomers, Collectors.toSet()));
+
+    return groupedByCustomerId.entrySet().stream()
+            .sorted((x, y) -> Integer.compare(x.getKey(), y.getKey()))
+            .map(CaseParametersMapper::mapEntryToSnapshot).collect(Collectors.toList());
+  }
+
+  private static CreditWorthinessSnapshot mapEntryToSnapshot(
+          final Map.Entry<Integer, Set<CaseCreditWorthinessFactorEntity>> customerEntry) {
+    final CreditWorthinessSnapshot ret = new CreditWorthinessSnapshot();
+
+    final Map<CreditWorthinessFactorType, Set<CaseCreditWorthinessFactorEntity>> groupedByFactorType
+            = customerEntry.getValue().stream()
+            .collect(Collectors.groupingBy(CaseCreditWorthinessFactorEntity::getFactorType, Collectors.toSet()));
+    ret.setAssets(getFactorsByType(groupedByFactorType, CreditWorthinessFactorType.ASSET));
+    ret.setDebts(getFactorsByType(groupedByFactorType, CreditWorthinessFactorType.DEBT));
+    ret.setIncomeSources(getFactorsByType(groupedByFactorType, CreditWorthinessFactorType.INCOME_SOURCE));
+
+    final String customerId = customerEntry.getValue().stream()
+            .findFirst()
+            .map(CaseCreditWorthinessFactorEntity::getCustomerIdentifier)
+            .orElse("");
+    ret.setForCustomer(customerId);
+
+    return ret;
+  }
+
+  private static List<CreditWorthinessFactor> getFactorsByType(
+          final Map<CreditWorthinessFactorType, Set<CaseCreditWorthinessFactorEntity>> groupedByFactorType,
+          final CreditWorthinessFactorType factorType) {
+    final Set<CaseCreditWorthinessFactorEntity> byFactorType = groupedByFactorType.get(factorType);
+    if (byFactorType == null)
+      return Collections.emptyList();
+    else {
+      return byFactorType.stream()
+              .sorted((x, y) -> Integer.compare(x.getPositionInFactor(), y.getPositionInFactor()))
+              .map(CaseParametersMapper::mapEntryToFactor)
+              .collect(Collectors.toList());
+
+    }
+  }
+
+  private static CreditWorthinessFactor mapEntryToFactor(
+          final CaseCreditWorthinessFactorEntity caseCreditWorthinessFactorEntity) {
+    final CreditWorthinessFactor ret = new CreditWorthinessFactor();
+    ret.setDescription(caseCreditWorthinessFactorEntity.getDescription());
+    ret.setAmount(caseCreditWorthinessFactorEntity.getAmount());
     return ret;
   }
 }

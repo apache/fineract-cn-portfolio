@@ -42,7 +42,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.CONSUMER_LOAN_LEDGER;
+import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.PENDING_DISBURSAL;
 import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.CUSTOMER_LOAN;
 import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PAYMENT_ID;
 import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PAYMENT_NAME;
@@ -141,7 +141,7 @@ public class IndividualLoanService {
     ret.setIdentifier(PAYMENT_ID);
     ret.setName(PAYMENT_NAME);
     ret.setFromAccountDesignator(CUSTOMER_LOAN);
-    ret.setToAccountDesignator(CONSUMER_LOAN_LEDGER);
+    ret.setToAccountDesignator(PENDING_DISBURSAL);
     ret.setChargeMethod(FIXED);
     return ret;
   }

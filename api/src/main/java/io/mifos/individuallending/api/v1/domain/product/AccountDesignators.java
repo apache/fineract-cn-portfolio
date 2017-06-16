@@ -21,7 +21,7 @@ package io.mifos.individuallending.api.v1.domain.product;
 @SuppressWarnings("unused")
 public interface AccountDesignators {
   String CUSTOMER_LOAN = "customer-loan";
-  String CONSUMER_LOAN_LEDGER = "consumer-loan-ledger";
+  String PENDING_DISBURSAL = "pending-disbursal";
   String LOAN_FUNDS_SOURCE = "loan-funds-source";
   String PROCESSING_FEE_INCOME = "processing-fee-income";
   String ORIGINATION_FEE_INCOME = "origination-fee-income";

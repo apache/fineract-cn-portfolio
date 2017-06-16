@@ -52,7 +52,7 @@ public class Fixture {
     product.setMinorCurrencyUnitDigits(2);
 
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
-    accountAssignments.add(new AccountAssignment(CONSUMER_LOAN_LEDGER, "001-003"));
+    accountAssignments.add(new AccountAssignment(PENDING_DISBURSAL, "001-003"));
     accountAssignments.add(new AccountAssignment(PROCESSING_FEE_INCOME, "001-004"));
     accountAssignments.add(new AccountAssignment(ORIGINATION_FEE_INCOME, "001-004"));
     accountAssignments.add(new AccountAssignment(DISBURSEMENT_FEE_INCOME, "001-004"));

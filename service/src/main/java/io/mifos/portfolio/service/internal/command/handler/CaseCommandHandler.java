@@ -60,7 +60,6 @@ public class CaseCommandHandler {
   public CaseEvent process(final CreateCaseCommand createCaseCommand) {
     //TODO: Check that all designators are assigned to existing accounts.
     //TODO: Create accounts if necessary.
-    //TODO: save parameters into their own table.
 
     final Case caseInstance = createCaseCommand.getCase();
 

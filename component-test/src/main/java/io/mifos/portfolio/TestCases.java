@@ -19,6 +19,7 @@ import com.google.gson.Gson;
 import io.mifos.core.test.domain.TimeStampChecker;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessFactor;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessSnapshot;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
@@ -159,6 +160,25 @@ public class TestCases extends AbstractPortfolioTest {
     final Case caseAsSaved = portfolioManager.getCase(product.getIdentifier(), caseInstance.getIdentifier());
     Assert.assertEquals(caseInstance, caseAsSaved);
     Assert.assertTrue(caseInstance.getAccountAssignments().isEmpty());
+  }
+
+  @Test
+  public void shouldCreateCosignerWithoutDetails() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+
+    final CaseParameters caseParameters = Fixture.createAdjustedCaseParameters(x -> {
+      final CreditWorthinessSnapshot bob = new CreditWorthinessSnapshot("bob");
+      bob.setDebts(Collections.emptyList());
+      bob.setAssets(Collections.emptyList());
+      bob.setIncomeSources(Collections.emptyList());
+      x.getCreditWorthinessSnapshots().add(bob);
+    });
+    final String caseParametersAsString = new Gson().toJson(caseParameters);
+    final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> x.setParameters(caseParametersAsString));
+
+    final Case caseAsSaved = portfolioManager.getCase(product.getIdentifier(), caseInstance.getIdentifier());
+
+    Assert.assertEquals(caseInstance, caseAsSaved);
   }
 
   @Test

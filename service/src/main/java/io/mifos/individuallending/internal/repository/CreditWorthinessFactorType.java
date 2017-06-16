@@ -19,5 +19,5 @@ package io.mifos.individuallending.internal.repository;
  * @author Myrle Krantz
  */
 public enum CreditWorthinessFactorType {
-  INCOME_SOURCE, ASSET, DEBT
+  INCOME_SOURCE, ASSET, DEBT, PLACE_HOLDER
 }

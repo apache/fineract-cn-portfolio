@@ -24,6 +24,7 @@ import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType
 import io.mifos.portfolio.api.v1.domain.PaymentCycle;
 import io.mifos.portfolio.api.v1.domain.TermRange;
 
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -59,19 +60,42 @@ public class CaseParametersMapper {
           final List<CreditWorthinessSnapshot> creditWorthinessSnapshots,
           final CaseParametersEntity caseParametersEntity) {
     return Stream.iterate(0, i -> i+1).limit(creditWorthinessSnapshots.size())
-            .flatMap(i -> {
-      final String customerId = creditWorthinessSnapshots.get(i).getForCustomer();
-      return Stream.concat(Stream.concat(
-              mapSnapshotPartToFactors(customerId, i,
-                      CreditWorthinessFactorType.ASSET, creditWorthinessSnapshots.get(i).getAssets(),
-                      caseParametersEntity),
-              mapSnapshotPartToFactors(customerId, i,
-                      CreditWorthinessFactorType.INCOME_SOURCE, creditWorthinessSnapshots.get(i).getIncomeSources(),
-                      caseParametersEntity)),
-              mapSnapshotPartToFactors(customerId, i,
-                      CreditWorthinessFactorType.DEBT, creditWorthinessSnapshots.get(i).getDebts(),
-                      caseParametersEntity));
-    }).collect(Collectors.toSet());
+            .flatMap(i -> mapSnapshotToFactors(
+                    creditWorthinessSnapshots.get(i), i, caseParametersEntity)).collect(Collectors.toSet());
+  }
+
+  private static Stream<? extends CaseCreditWorthinessFactorEntity> mapSnapshotToFactors(
+          final CreditWorthinessSnapshot creditWorthinessSnapshot,
+          final int i,
+          final CaseParametersEntity caseParametersEntity) {
+    final String customerId = creditWorthinessSnapshot.getForCustomer();
+    return Stream.concat(Stream.concat(Stream.concat(
+            mapSnapshotPartToFactors(customerId, i,
+                    CreditWorthinessFactorType.ASSET, creditWorthinessSnapshot.getAssets(),
+                    caseParametersEntity),
+            mapSnapshotPartToFactors(customerId, i,
+                    CreditWorthinessFactorType.INCOME_SOURCE, creditWorthinessSnapshot.getIncomeSources(),
+                    caseParametersEntity)),
+            mapSnapshotPartToFactors(customerId, i,
+                    CreditWorthinessFactorType.DEBT, creditWorthinessSnapshot.getDebts(),
+                    caseParametersEntity)),
+            createPlaceHolder(customerId, i, caseParametersEntity)
+    );
+  }
+
+  private static Stream<CaseCreditWorthinessFactorEntity> createPlaceHolder(
+          final String customerIdentifier,
+          final int positionInCustomers,
+          final CaseParametersEntity caseParametersEntity) {
+    final CaseCreditWorthinessFactorEntity placeHolder = new CaseCreditWorthinessFactorEntity();
+    placeHolder.setFactorType(CreditWorthinessFactorType.PLACE_HOLDER);
+    placeHolder.setCustomerIdentifier(customerIdentifier);
+    placeHolder.setPositionInCustomers(positionInCustomers);
+    placeHolder.setPositionInFactor(0);
+    placeHolder.setCaseId(caseParametersEntity);
+    placeHolder.setAmount(BigDecimal.ZERO);
+    placeHolder.setDescription("placeholder");
+    return Stream.of(placeHolder);
   }
 
   private static Stream<CaseCreditWorthinessFactorEntity> mapSnapshotPartToFactors(

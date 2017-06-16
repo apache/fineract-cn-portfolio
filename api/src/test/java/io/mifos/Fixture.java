@@ -24,10 +24,7 @@ import io.mifos.portfolio.api.v1.domain.*;
 
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 
 import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.*;
@@ -137,7 +134,12 @@ public class Fixture {
     cosignerCreditWorthinessSnapshot.setDebts(Collections.emptyList());
     cosignerCreditWorthinessSnapshot.setAssets(Collections.singletonList(new CreditWorthinessFactor("a house", fixScale(BigDecimal.valueOf(50000)))));
     cosignerCreditWorthinessSnapshot.setIncomeSources(Collections.singletonList(new CreditWorthinessFactor("retirement", fixScale(BigDecimal.valueOf(200)))));
-    ret.setCreditWorthinessSnapshots(Arrays.asList(customerCreditWorthinessSnapshot, cosignerCreditWorthinessSnapshot));
+
+    final List<CreditWorthinessSnapshot> creditWorthinessSnapshots = new ArrayList<>();
+    creditWorthinessSnapshots.add(customerCreditWorthinessSnapshot);
+    creditWorthinessSnapshots.add(cosignerCreditWorthinessSnapshot);
+
+    ret.setCreditWorthinessSnapshots(creditWorthinessSnapshots);
 
     return ret;
   }

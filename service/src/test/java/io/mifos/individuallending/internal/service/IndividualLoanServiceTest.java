@@ -15,10 +15,7 @@
  */
 package io.mifos.individuallending.internal.service;
 
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.api.v1.domain.PaymentCycle;
-import io.mifos.portfolio.api.v1.domain.Product;
-import io.mifos.portfolio.api.v1.domain.TermRange;
+import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
@@ -211,7 +208,7 @@ public class IndividualLoanServiceTest {
     Stream.iterate(0, x -> x+1).limit(allPlannedPayments.size()-2).forEach(x ->
             {
               final BigDecimal costComponentSum = allPlannedPayments.get(x+1).getCostComponents().stream()
-                      .map(PlannedPayment.CostComponent::getAmount)
+                      .map(CostComponent::getAmount)
                       .reduce(BigDecimal::add)
                       .orElse(BigDecimal.ZERO)
                       .negate();
@@ -256,7 +253,7 @@ public class IndividualLoanServiceTest {
   }
 
   private BigDecimal getCustomerPayment(final PlannedPayment plannedPayment) {
-    final Optional<PlannedPayment.CostComponent> ret = plannedPayment.getCostComponents().stream()
+    final Optional<CostComponent> ret = plannedPayment.getCostComponents().stream()
             .filter(y -> y.getChargeIdentifier().equals(ChargeIdentifiers.PAYMENT_ID))
             .findAny();
 

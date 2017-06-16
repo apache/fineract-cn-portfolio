@@ -69,7 +69,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
 
     final Set<String> individualLendingRequiredAccounts = new HashSet<>();
     individualLendingRequiredAccounts.add(CUSTOMER_LOAN);
-    individualLendingRequiredAccounts.add(CONSUMER_LOAN_LEDGER);
+    individualLendingRequiredAccounts.add(PENDING_DISBURSAL);
     individualLendingRequiredAccounts.add(LOAN_FUNDS_SOURCE);
     individualLendingRequiredAccounts.add(PROCESSING_FEE_INCOME);
     individualLendingRequiredAccounts.add(ORIGINATION_FEE_INCOME);
@@ -109,7 +109,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
             Action.APPROVE,
             BigDecimal.valueOf(1.00),
             LOAN_FUNDS_SOURCE,
-            CONSUMER_LOAN_LEDGER);
+            PENDING_DISBURSAL);
 
     final ChargeDefinition disbursementFee = charge(
             DISBURSEMENT_FEE_NAME,
@@ -133,7 +133,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
             ALLOW_FOR_WRITE_OFF_NAME,
             Action.MARK_LATE,
             BigDecimal.valueOf(0.30),
-            CONSUMER_LOAN_LEDGER,
+            PENDING_DISBURSAL,
             ARREARS_ALLOWANCE);
 
     final ChargeDefinition interestCharge = charge(
@@ -141,7 +141,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
             Action.ACCEPT_PAYMENT,
             BigDecimal.valueOf(0.05),
             CUSTOMER_LOAN,
-            CONSUMER_LOAN_LEDGER);
+            PENDING_DISBURSAL);
     interestCharge.setForCycleSizeUnit(ChronoUnit.YEARS);
     interestCharge.setAccrueAction(Action.APPLY_INTEREST.name());
     interestCharge.setAccrualAccountDesignator(INTEREST_ACCRUAL);
@@ -150,7 +150,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
             RETURN_DISBURSEMENT_NAME,
             Action.CLOSE,
             BigDecimal.valueOf(1.0),
-            CONSUMER_LOAN_LEDGER,
+            PENDING_DISBURSAL,
             LOAN_FUNDS_SOURCE);
 
     ret.add(processingFee);

@@ -151,6 +151,7 @@ public class ProductRestController {
     return ResponseEntity.accepted().build();
   }
 
+  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
   @RequestMapping(
           value = "/{productidentifier}",
           method = RequestMethod.DELETE,

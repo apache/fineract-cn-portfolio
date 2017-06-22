@@ -16,7 +16,6 @@
 package io.mifos.portfolio.service.internal.service;
 
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.service.internal.mapper.ChargeDefinitionMapper;
 import io.mifos.portfolio.service.internal.repository.ChargeDefinitionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,25 +45,26 @@ public class ChargeDefinitionService {
             .collect(Collectors.toList());
   }
 
-  @Nonnull public Map<Action, List<ChargeDefinition>> getChargeDefinitionsMappedByChargeAction(
+  @Nonnull
+  public Map<String, List<ChargeDefinition>> getChargeDefinitionsMappedByChargeAction(
           final String productIdentifier)
   {
     final List<ChargeDefinition> chargeDefinitions = findAllEntities(productIdentifier);
 
     return chargeDefinitions.stream()
-            .collect(Collectors.groupingBy(x -> Action.valueOf(x.getChargeAction()),
+            .collect(Collectors.groupingBy(ChargeDefinition::getChargeAction,
                     Collectors.mapping(x -> x, Collectors.toList())));
   }
 
   @Nonnull
-  public Map<Action, List<ChargeDefinition>> getChargeDefinitionsMappedByAccrueAction(
+  public Map<String, List<ChargeDefinition>> getChargeDefinitionsMappedByAccrueAction(
           final String productIdentifier)
   {
     final List<ChargeDefinition> chargeDefinitions = findAllEntities(productIdentifier);
 
     return chargeDefinitions.stream()
             .filter(x -> x.getAccrueAction() != null)
-            .collect(Collectors.groupingBy(x -> Action.valueOf(x.getAccrueAction()),
+            .collect(Collectors.groupingBy(ChargeDefinition::getAccrueAction,
                     Collectors.mapping(x -> x, Collectors.toList())));
   }
 

@@ -28,9 +28,10 @@ import java.util.Objects;
 public final class AccountAssignment {
   @ValidIdentifier
   private String designator;
-  @ValidIdentifier(optional = true)
+  @ValidIdentifier(maxLength = 34, optional = true)
   private String accountIdentifier;
-  @ValidIdentifier(optional = true)
+  @SuppressWarnings("DefaultAnnotationParam")
+  @ValidIdentifier(maxLength = 32, optional = true)
   private String ledgerIdentifier;
 
   public AccountAssignment() {

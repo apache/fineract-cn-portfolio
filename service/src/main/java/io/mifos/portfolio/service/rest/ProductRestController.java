@@ -203,7 +203,7 @@ public class ProductRestController {
 
     if (enabled) {
       if (!productService.areChargeDefinitionsCoveredByAccountAssignments(productIdentifier))
-        throw ServiceException.conflict("Product with identifier " + productIdentifier + " is not ready to be enabled.");
+        throw ServiceException.conflict("Product with identifier ''{0}'' is not ready to be enabled.", productIdentifier);
     }
 
     commandGateway.process(new ChangeEnablingOfProductCommand(productIdentifier, enabled));

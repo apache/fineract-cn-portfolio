@@ -113,10 +113,10 @@ public class IndividualLoanService {
           final int minorCurrencyUnitDigits,
           final BigDecimal initialBalance,
           final @Nonnull List<ScheduledAction> scheduledActions) {
-    final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction
+    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction
             = chargeDefinitionService.getChargeDefinitionsMappedByChargeAction(productIdentifier);
 
-    final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction
+    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction
             = chargeDefinitionService.getChargeDefinitionsMappedByAccrueAction(productIdentifier);
 
     final ChargeDefinition acceptPaymentDefinition = getPaymentChargeDefinition();
@@ -255,8 +255,8 @@ public class IndividualLoanService {
   }
 
   private List<ScheduledCharge> getScheduledCharges(final List<ScheduledAction> scheduledActions,
-                                                    final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction,
-                                                    final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
+                                                    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction,
+                                                    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
                                                     final ChargeDefinition acceptPaymentDefinition) {
     return scheduledActions.stream()
             .flatMap(scheduledAction -> getChargeDefinitionStream(chargeDefinitionsMappedByChargeAction, chargeDefinitionsMappedByAccrueAction, acceptPaymentDefinition, scheduledAction)
@@ -265,18 +265,18 @@ public class IndividualLoanService {
   }
 
   private Stream<ChargeDefinition> getChargeDefinitionStream(
-          final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction,
-          final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
+          final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction,
+          final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
           final ChargeDefinition acceptPaymentDefinition,
           final ScheduledAction scheduledAction) {
-    List<ChargeDefinition> chargeMapping = chargeDefinitionsMappedByChargeAction.get(scheduledAction.action);
+    List<ChargeDefinition> chargeMapping = chargeDefinitionsMappedByChargeAction.get(scheduledAction.action.name());
     if ((chargeMapping == null) && (scheduledAction.action == Action.valueOf(acceptPaymentDefinition.getChargeAction())))
       chargeMapping = Collections.singletonList(acceptPaymentDefinition);
 
     if (chargeMapping == null)
       chargeMapping = Collections.emptyList();
 
-    List<ChargeDefinition> accrueMapping = chargeDefinitionsMappedByAccrueAction.get(scheduledAction.action);
+    List<ChargeDefinition> accrueMapping = chargeDefinitionsMappedByAccrueAction.get(scheduledAction.action.name());
     if ((accrueMapping == null) && (scheduledAction.action == Action.valueOf(acceptPaymentDefinition.getChargeAction())))
       accrueMapping = Collections.singletonList(acceptPaymentDefinition);
 

@@ -50,7 +50,7 @@ public class IndividualLoanServiceTest {
     private int minorCurrencyUnitDigits = 2;
     private CaseParameters caseParameters;
     private LocalDate initialDisbursementDate;
-    private Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByAction;
+    private Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAction;
     private Set<String> expectedChargeIdentifiers = new HashSet<>(Arrays.asList(ChargeIdentifiers.INTEREST_ID, ChargeIdentifiers.PAYMENT_ID));
 
     TestCase(final String description) {
@@ -72,7 +72,7 @@ public class IndividualLoanServiceTest {
       return this;
     }
 
-    TestCase chargeDefinitionsMappedByAction(final Map<Action, List<ChargeDefinition>> newVal) {
+    TestCase chargeDefinitionsMappedByAction(final Map<String, List<ChargeDefinition>> newVal) {
       this.chargeDefinitionsMappedByAction = newVal;
       return this;
     }
@@ -111,8 +111,8 @@ public class IndividualLoanServiceTest {
 
     //I know: this is cheating in a unit test.  But I really didn't want to put this data together by hand.
 
-    final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
-    chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST, getInterestChargeDefinition(0.01, ChronoUnit.YEARS));
+    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
+    chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST.name(), getInterestChargeDefinition(0.01, ChronoUnit.YEARS));
 
     return new TestCase("simpleCase")
             .minorCurrencyUnitDigits(2)
@@ -130,8 +130,8 @@ public class IndividualLoanServiceTest {
     caseParameters.setPaymentCycle(new PaymentCycle(ChronoUnit.MONTHS, 1, 0, null, null));
     caseParameters.setMaximumBalance(BigDecimal.valueOf(200000));
 
-    final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
-    chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST, getInterestChargeDefinition(0.10, ChronoUnit.YEARS));
+    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
+    chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST.name(), getInterestChargeDefinition(0.10, ChronoUnit.YEARS));
 
     return new TestCase("yearLoanTestCase")
             .minorCurrencyUnitDigits(2)
@@ -148,11 +148,11 @@ public class IndividualLoanServiceTest {
     caseParameters.setPaymentCycle(new PaymentCycle(ChronoUnit.WEEKS, 1, 1, 0, 0));
     caseParameters.setMaximumBalance(BigDecimal.valueOf(2000));
 
-    final Map<Action, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
-    chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST, getInterestChargeDefinition(0.05, ChronoUnit.YEARS));
+    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
+    chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST.name(), getInterestChargeDefinition(0.05, ChronoUnit.YEARS));
 
     final List<ChargeDefinition> defaultLoanCharges = IndividualLendingPatternFactory.defaultIndividualLoanCharges();
-    defaultLoanCharges.forEach(x -> chargeDefinitionsMappedByAction.put(Action.valueOf(x.getChargeAction()), Collections.singletonList(x)));
+    defaultLoanCharges.forEach(x -> chargeDefinitionsMappedByAction.put(x.getChargeAction(), Collections.singletonList(x)));
 
     return new TestCase("chargeDefaultsCase")
             .minorCurrencyUnitDigits(2)

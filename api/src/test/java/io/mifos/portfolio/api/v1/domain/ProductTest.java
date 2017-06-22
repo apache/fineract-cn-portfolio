@@ -106,7 +106,7 @@ public class ProductTest extends ValidationTest<Product> {
             .adjustment(product -> product.setDescription(StringUtils.repeat("x", 4097)))
             .valid(false));
     ret.add(new ValidationTestCase<Product>("tooLongAccountIdentifier")
-            .adjustment(product -> product.getAccountAssignments().add(new AccountAssignment("xyz", StringUtils.repeat("0", 33))))
+            .adjustment(product -> product.getAccountAssignments().add(new AccountAssignment("xyz", StringUtils.repeat("0", 35))))
             .valid(false));
     ret.add(new ValidationTestCase<Product>("duplicateAccountAssignment")
             .adjustment(product -> {

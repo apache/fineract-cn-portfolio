@@ -45,7 +45,7 @@ CREATE TABLE bastet_products (
 CREATE TABLE bastet_p_acct_assigns (
   id BIGINT NOT NULL AUTO_INCREMENT,
   designator               VARCHAR(32)    NOT NULL,
-  identifier               VARCHAR(32)    NOT NULL,
+  identifier               VARCHAR(34)    NOT NULL,
   product_id               BIGINT         NOT NULL,
   thoth_type               VARCHAR(32)    NOT NULL,
   CONSTRAINT bastet_p_acct_assign_pk PRIMARY KEY (id),
@@ -102,7 +102,7 @@ CREATE TABLE bastet_cases (
 CREATE TABLE bastet_c_acct_assigns (
   id BIGINT NOT NULL AUTO_INCREMENT,
   designator               VARCHAR(32)    NOT NULL,
-  identifier               VARCHAR(32)    NOT NULL,
+  identifier               VARCHAR(34)    NOT NULL,
   case_id                  BIGINT         NOT NULL,
   CONSTRAINT bastet_c_acct_assign_pk PRIMARY KEY (id),
   CONSTRAINT bastet_c_acct_assign_uq UNIQUE (case_id, designator),

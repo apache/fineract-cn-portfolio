@@ -15,18 +15,15 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
-import io.mifos.core.command.annotation.CommandLogLevel;
-import io.mifos.portfolio.api.v1.events.EventConstants;
-import io.mifos.portfolio.service.ServiceConstants;
-import io.mifos.portfolio.service.internal.command.InitializeServiceCommand;
 import io.mifos.core.command.annotation.Aggregate;
 import io.mifos.core.command.annotation.CommandHandler;
+import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.mariadb.domain.FlywayFactoryBean;
+import io.mifos.portfolio.api.v1.events.EventConstants;
+import io.mifos.portfolio.service.internal.command.InitializeServiceCommand;
 import io.mifos.portfolio.service.internal.util.RhythmAdapter;
-import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 
 import javax.sql.DataSource;
 

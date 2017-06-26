@@ -23,14 +23,24 @@ package io.mifos.individuallending.api.v1.domain.workflow;
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
 public enum Action {
-  OPEN,
-  DENY,
-  APPROVE,
-  DISBURSE,
-  APPLY_INTEREST,
-  ACCEPT_PAYMENT,
-  MARK_LATE,
-  WRITE_OFF,
-  CLOSE,
-  RECOVER
+  OPEN("CHRG"),
+  DENY("CHRG"),
+  APPROVE("ACCO"),
+  DISBURSE("CDIS"),
+  APPLY_INTEREST("INTR"),
+  ACCEPT_PAYMENT("PPAY"),
+  MARK_LATE("ICCT"),
+  WRITE_OFF("ICCT"),
+  CLOSE("ICCT"),
+  RECOVER("ICCT");
+
+  private final String transactionType;
+
+  Action(final String transactionType) {
+    this.transactionType = transactionType;
+  }
+
+  public String getTransactionType() {
+    return transactionType;
+  }
 }

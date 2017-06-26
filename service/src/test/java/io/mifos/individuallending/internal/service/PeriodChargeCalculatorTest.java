@@ -154,7 +154,7 @@ public class PeriodChargeCalculatorTest {
   public void test()
   {
     final PeriodChargeCalculator testSubject = new PeriodChargeCalculator();
-    final Map<Period, BigDecimal> periodRates = testSubject.getPeriodRates(testCase.scheduledCharges, testCase.precision);
+    final Map<Period, BigDecimal> periodRates = testSubject.getPeriodAccrualRates(testCase.scheduledCharges, testCase.precision);
     Assert.assertEquals(testCase.expectedPeriodRates, periodRates);
   }
 }

@@ -15,16 +15,20 @@
  */
 package io.mifos.individuallending.internal.command;
 
+import io.mifos.portfolio.api.v1.domain.Command;
+
 /**
  * @author Myrle Krantz
  */
 public class DisburseCommand {
   private final String productIdentifier;
   private final String caseIdentifier;
+  private final Command command;
 
-  public DisburseCommand(final String productIdentifier, final String caseIdentifier) {
+  public DisburseCommand(final String productIdentifier, final String caseIdentifier, final Command command) {
     this.productIdentifier = productIdentifier;
     this.caseIdentifier = caseIdentifier;
+    this.command = command;
   }
 
   public String getProductIdentifier() {
@@ -33,6 +37,10 @@ public class DisburseCommand {
 
   public String getCaseIdentifier() {
     return caseIdentifier;
+  }
+
+  public Command getCommand() {
+    return command;
   }
 
   @Override

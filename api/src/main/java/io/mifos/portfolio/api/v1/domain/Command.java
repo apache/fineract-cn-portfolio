@@ -15,29 +15,39 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
-import org.hibernate.validator.constraints.NotBlank;
-
+import javax.validation.Valid;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * @author Myrle Krantz
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
 public final class Command {
+  @Valid
   private List<AccountAssignment> oneTimeAccountAssignments;
-  private String comment;
+
+  private String note;
   private String createdOn;
   private String createdBy;
 
   public Command() {
   }
 
-  public String getComment() {
-    return comment;
+  public List<AccountAssignment> getOneTimeAccountAssignments() {
+    return oneTimeAccountAssignments;
   }
 
-  public void setComment(String comment) {
-    this.comment = comment;
+  public void setOneTimeAccountAssignments(List<AccountAssignment> oneTimeAccountAssignments) {
+    this.oneTimeAccountAssignments = oneTimeAccountAssignments;
+  }
+
+  public String getNote() {
+    return note;
+  }
+
+  public void setNote(String note) {
+    this.note = note;
   }
 
   public String getCreatedOn() {
@@ -54,5 +64,31 @@ public final class Command {
 
   public void setCreatedBy(String createdBy) {
     this.createdBy = createdBy;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    Command command = (Command) o;
+    return Objects.equals(oneTimeAccountAssignments, command.oneTimeAccountAssignments) &&
+            Objects.equals(note, command.note) &&
+            Objects.equals(createdOn, command.createdOn) &&
+            Objects.equals(createdBy, command.createdBy);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(oneTimeAccountAssignments, note, createdOn, createdBy);
+  }
+
+  @Override
+  public String toString() {
+    return "Command{" +
+            "oneTimeAccountAssignments=" + oneTimeAccountAssignments +
+            ", note='" + note + '\'' +
+            ", createdOn='" + createdOn + '\'' +
+            ", createdBy='" + createdBy + '\'' +
+            '}';
   }
 }

@@ -28,9 +28,9 @@ class Period implements Comparable<Period> {
   final private LocalDate beginDate;
   final private LocalDate endDate;
 
-  Period(final LocalDate beginDate, final LocalDate endDate) {
+  Period(final LocalDate beginDate, final LocalDate endDateExclusive) {
     this.beginDate = beginDate;
-    this.endDate = endDate;
+    this.endDate = endDateExclusive;
   }
 
   Period(final LocalDate beginDate, final int periodLength) {
@@ -49,6 +49,10 @@ class Period implements Comparable<Period> {
   Duration getDuration() {
     long days = beginDate.until(endDate, ChronoUnit.DAYS);
     return ChronoUnit.DAYS.getDuration().multipliedBy(days);
+  }
+
+  boolean containsDate(final LocalDate date) {
+    return this.getBeginDate().compareTo(date) <= 0 && this.getEndDate().compareTo(date) > 0;
   }
 
   @Override

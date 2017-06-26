@@ -42,31 +42,31 @@ public class IndividualLendingCommandDispatcher implements ProductCommandDispatc
     final Action action = Action.valueOf(actionIdentifier);
     switch (action) {
       case OPEN:
-        this.commandGateway.process(new OpenCommand(productIdentifier, caseIdentifier));
+        this.commandGateway.process(new OpenCommand(productIdentifier, caseIdentifier, command));
         break;
       case DENY:
-        this.commandGateway.process(new DenyCommand(productIdentifier, caseIdentifier));
+        this.commandGateway.process(new DenyCommand(productIdentifier, caseIdentifier, command));
         break;
       case APPROVE:
-        this.commandGateway.process(new ApproveCommand(productIdentifier, caseIdentifier));
+        this.commandGateway.process(new ApproveCommand(productIdentifier, caseIdentifier, command));
         break;
       case DISBURSE:
-        this.commandGateway.process(new DisburseCommand(productIdentifier, caseIdentifier));
+        this.commandGateway.process(new DisburseCommand(productIdentifier, caseIdentifier, command));
         break;
       case ACCEPT_PAYMENT:
-        this.commandGateway.process(new AcceptPaymentCommand(productIdentifier, caseIdentifier));
+        this.commandGateway.process(new AcceptPaymentCommand(productIdentifier, caseIdentifier, command));
         break;
       case WRITE_OFF:
-        this.commandGateway.process(new WriteOffCommand(productIdentifier, caseIdentifier));
+        this.commandGateway.process(new WriteOffCommand(productIdentifier, caseIdentifier, command));
         break;
       case CLOSE:
-        this.commandGateway.process(new CloseCommand(productIdentifier, caseIdentifier));
+        this.commandGateway.process(new CloseCommand(productIdentifier, caseIdentifier, command));
         break;
       case RECOVER:
-        this.commandGateway.process(new RecoverCommand(productIdentifier, caseIdentifier));
+        this.commandGateway.process(new RecoverCommand(productIdentifier, caseIdentifier, command));
         break;
       default:
-        throw ServiceException.badRequest("Action ''{0}'' cannot be taken from current state.", actionIdentifier);
+        throw ServiceException.badRequest("Action ''{0}'' is not implemented for individual loans.", actionIdentifier);
     }
   }
 }

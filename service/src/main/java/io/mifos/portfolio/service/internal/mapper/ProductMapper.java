@@ -50,7 +50,7 @@ public class ProductMapper {
     product.setCurrencyCode(productEntity.getCurrencyCode());
     product.setMinorCurrencyUnitDigits(productEntity.getMinorCurrencyUnitDigits());
     product.setAccountAssignments(productEntity.getAccountAssignments()
-            .stream().map(ProductMapper::map).collect(Collectors.toSet()));
+            .stream().map(ProductMapper::mapAccountAssignmentEntity).collect(Collectors.toSet()));
     product.setParameters(productEntity.getParameters());
     product.setCreatedBy(productEntity.getCreatedBy());
     product.setCreatedOn(DateConverter.toIsoString(productEntity.getCreatedOn()));
@@ -111,7 +111,7 @@ public class ProductMapper {
     return ret;
   }
 
-  private static AccountAssignment map (final ProductAccountAssignmentEntity productAccountAssignmentEntity)
+  public static AccountAssignment mapAccountAssignmentEntity (final ProductAccountAssignmentEntity productAccountAssignmentEntity)
   {
     final AccountAssignment ret = new AccountAssignment();
     ret.setDesignator(productAccountAssignmentEntity.getDesignator());

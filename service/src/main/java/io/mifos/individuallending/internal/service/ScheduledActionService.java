@@ -38,8 +38,14 @@ import java.util.stream.Stream;
 @Service
 public class ScheduledActionService {
 
-  List<ScheduledAction> getScheduledActions(final @Nonnull LocalDate initialDisbursalDate,
-                                            final @Nonnull CaseParameters caseParameters)
+  List<ScheduledAction> getHypotheticalScheduledActions(final @Nonnull LocalDate initialDisbursalDate,
+                                                                final @Nonnull CaseParameters caseParameters)
+  {
+    return getHypotheticalScheduledActionsHelper(initialDisbursalDate, caseParameters).collect(Collectors.toList());
+  }
+
+  private Stream<ScheduledAction> getHypotheticalScheduledActionsHelper(final @Nonnull LocalDate initialDisbursalDate,
+                                                        final @Nonnull CaseParameters caseParameters)
   {
     //'Rough' end date, because if the repayment period takes the last period after that end date, then the repayment
     // period will 'win'.
@@ -49,10 +55,11 @@ public class ScheduledActionService {
     final Period firstPeriod = repaymentPeriods.first();
     final Period lastPeriod = repaymentPeriods.last();
 
-    return Stream.concat(Stream.of(new ScheduledAction(Action.APPROVE, initialDisbursalDate, firstPeriod, firstPeriod)),
+    return Stream.concat(Stream.of(
+            new ScheduledAction(Action.OPEN, initialDisbursalDate, firstPeriod, firstPeriod),
+            new ScheduledAction(Action.APPROVE, initialDisbursalDate, firstPeriod, firstPeriod)),
             Stream.concat(repaymentPeriods.stream().flatMap(this::generateScheduledActionsForRepaymentPeriod),
-                    Stream.of(new ScheduledAction(Action.CLOSE, lastPeriod.getEndDate(), lastPeriod, lastPeriod))))
-            .collect(Collectors.toList());
+                    Stream.of(new ScheduledAction(Action.CLOSE, lastPeriod.getEndDate(), lastPeriod, lastPeriod))));
   }
 
   private LocalDate getEndDate(final @Nonnull CaseParameters caseParameters,
@@ -237,5 +244,15 @@ public class ScheduledActionService {
   private LocalDate alignInDaysOfMonth(final LocalDate paymentDate, final Integer alignmentDay) {
     final int maxDay = YearMonth.of(paymentDate.getYear(), paymentDate.getMonth()).lengthOfMonth()-1;
     return paymentDate.plusDays(Math.min(maxDay, alignmentDay));
+  }
+
+  public List<ScheduledAction> getScheduledActions(final @Nonnull LocalDate initialDisbursalDate,
+                                                   final CaseParameters caseParameters,
+                                                   final Action action,
+                                                   final LocalDate time) {
+    return getHypotheticalScheduledActionsHelper(initialDisbursalDate, caseParameters)
+            .filter(x -> x.actionPeriod.containsDate(time))
+            .filter(x -> x.action.equals(action))
+            .collect(Collectors.toList());
   }
 }

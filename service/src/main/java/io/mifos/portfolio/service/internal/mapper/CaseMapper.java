@@ -48,7 +48,7 @@ public class CaseMapper {
     return ret;
   }
 
-  private static AccountAssignment mapAccountAssignmentEntity(final CaseAccountAssignmentEntity instance) {
+  public static AccountAssignment mapAccountAssignmentEntity(final CaseAccountAssignmentEntity instance) {
     final AccountAssignment ret = new AccountAssignment();
 
     ret.setDesignator(instance.getDesignator());

@@ -37,7 +37,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -191,8 +190,7 @@ public class CaseRestController {
   {
     checkThatCaseExists(productIdentifier, caseIdentifier);
 
-    return Collections.emptyList();
-    //return caseService.getActionCostComponentsForCase(productIdentifier, caseIdentifier);
+    return caseService.getActionCostComponentsForCase(productIdentifier, caseIdentifier, actionIdentifier);
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)

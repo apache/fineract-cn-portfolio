@@ -22,6 +22,9 @@ import org.junit.runners.Parameterized;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+
+import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PROCESSING_FEE_ID;
 
 /**
  * @author Myrle Krantz
@@ -34,13 +37,21 @@ public class CommandTest extends ValidationTest<Command> {
 
   @Override
   protected Command createValidTestSubject() {
-    return new Command();
+    final Command ret = new Command();
+    ret.setOneTimeAccountAssignments(Collections.emptyList());
+    return ret;
   }
 
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
     ret.add(new ValidationTestCase<Command>("valid"));
+    ret.add(new ValidationTestCase<Command>("invalidAccountAssignment")
+            .adjustment(x -> x.setOneTimeAccountAssignments(Collections.singletonList(new AccountAssignment("", ""))))
+            .valid(false));
+    ret.add(new ValidationTestCase<Command>("validAccountAssignment")
+            .adjustment(x -> x.setOneTimeAccountAssignments(Collections.singletonList(new AccountAssignment(PROCESSING_FEE_ID, "7534"))))
+            .valid(true));
     return ret;
   }
 }

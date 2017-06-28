@@ -58,9 +58,12 @@ public class CaseParametersTest extends ValidationTest<CaseParameters> {
     ret.add(new ValidationTestCase<CaseParameters>("nullBalanceRange")
             .adjustment(x -> x.setMaximumBalance(null))
             .valid(false));
-    ret.add(new ValidationTestCase<CaseParameters>("badBalanceRangeScale")
+    ret.add(new ValidationTestCase<CaseParameters>("tooLargeBalanceRangeScale")
             .adjustment(x -> x.setMaximumBalance(BigDecimal.TEN.setScale(5, BigDecimal.ROUND_FLOOR)))
             .valid(false));
+    ret.add(new ValidationTestCase<CaseParameters>("smallerBalanceRangeScale")
+            .adjustment(x -> x.setMaximumBalance(BigDecimal.TEN.setScale(3, BigDecimal.ROUND_FLOOR)))
+            .valid(true));
     ret.add(new ValidationTestCase<CaseParameters>("invalid payment cycle unit")
             .adjustment(x -> x.getPaymentCycle().setTemporalUnit(ChronoUnit.SECONDS))
             .valid(false));

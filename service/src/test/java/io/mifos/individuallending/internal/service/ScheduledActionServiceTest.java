@@ -363,7 +363,7 @@ public class ScheduledActionServiceTest {
   @Test
   public void getScheduledActions() throws Exception {
     final ScheduledActionService testSubject = new ScheduledActionService();
-    final List<ScheduledAction> result = testSubject.getScheduledActions(testCase.initialDisbursementDate, testCase.caseParameters);
+    final List<ScheduledAction> result = testSubject.getHypotheticalScheduledActions(testCase.initialDisbursementDate, testCase.caseParameters);
 
     Assert.assertTrue(testCase.description, result.containsAll(testCase.expectedResultContents));
     result.forEach(x -> {

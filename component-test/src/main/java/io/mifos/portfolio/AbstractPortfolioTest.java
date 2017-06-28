@@ -25,9 +25,10 @@ import io.mifos.core.test.fixture.mariadb.MariaDBInitializer;
 import io.mifos.core.test.listener.EnableEventRecording;
 import io.mifos.core.test.listener.EventRecorder;
 import io.mifos.individuallending.api.v1.client.IndividualLending;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.portfolio.api.v1.client.PortfolioManager;
-import io.mifos.portfolio.api.v1.domain.Case;
-import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.api.v1.events.CaseEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.service.config.PortfolioServiceConfiguration;
@@ -55,8 +56,12 @@ import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.doReturn;
@@ -128,10 +133,13 @@ public class AbstractPortfolioTest {
   @MockBean
   RhythmAdapter rhythmAdapter;
 
+  @MockBean
+  LedgerManager ledgerManager;
+
   @Before
   public void prepTest() {
     userContext = this.tenantApplicationSecurityEnvironment.createAutoUserContext(TEST_USER);
-    setupMockAccountingAdapter();
+    AccountingFixture.mockAccountingPrereqs(ledgerManager);
   }
 
   @After
@@ -146,9 +154,6 @@ public class AbstractPortfolioTest {
     } catch (final InterruptedException e) {
       throw new IllegalStateException(e);
     }
-  }
-
-  private void setupMockAccountingAdapter() {
   }
 
   Product createProduct() throws InterruptedException {
@@ -187,5 +192,47 @@ public class AbstractPortfolioTest {
             new CaseEvent(productIdentifier, caseInstance.getIdentifier())));
 
     return caseInstance;
+  }
+
+  void checkStateTransfer(final String productIdentifier,
+                          final String caseIdentifier,
+                          final Action action,
+                          final List<AccountAssignment> oneTimeAccountAssignments,
+                          final String event,
+                          final Case.State nextState) throws InterruptedException {
+    final Command command = new Command();
+    command.setOneTimeAccountAssignments(oneTimeAccountAssignments);
+    portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, action.name(), command);
+
+    Assert.assertTrue(eventRecorder.waitForMatch(event,
+            (IndividualLoanCommandEvent x) -> individualLoanCommandEventMatches(x, productIdentifier, caseIdentifier)));
+
+    final Case customerCase = portfolioManager.getCase(productIdentifier, caseIdentifier);
+    Assert.assertEquals(customerCase.getCurrentState(), nextState.name());
+  }
+
+  boolean individualLoanCommandEventMatches(
+          final IndividualLoanCommandEvent event,
+          final String productIdentifier,
+          final String caseIdentifier)
+  {
+    return event.getProductIdentifier().equals(productIdentifier) &&
+            event.getCaseIdentifier().equals(caseIdentifier);
+  }
+
+  void checkNextActionsCorrect(final String productIdentifier, final String customerCaseIdentifier, final Action... nextActions)
+  {
+    final Set<String> actionList = Arrays.stream(nextActions).map(Enum::name).collect(Collectors.toSet());
+    Assert.assertEquals(actionList, portfolioManager.getActionsForCase(productIdentifier, customerCaseIdentifier));
+  }
+
+  void checkCostComponentForActionCorrect(final String productIdentifier,
+                                          final String customerCaseIdentifier,
+                                          final Action action,
+                                          final CostComponent... expectedCostComponents) {
+    final List<CostComponent> costComponents = portfolioManager.getCostComponentsForAction(productIdentifier, customerCaseIdentifier, action.name());
+    final Set<CostComponent> setOfCostComponents = new HashSet<>(costComponents);
+    final Set<CostComponent> setOfExpectedCostComponents = new HashSet<>(Arrays.asList(expectedCostComponents));
+    Assert.assertEquals(setOfExpectedCostComponents, setOfCostComponents);
   }
 }

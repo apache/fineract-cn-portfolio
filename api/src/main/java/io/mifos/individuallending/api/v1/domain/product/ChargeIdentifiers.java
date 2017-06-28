@@ -41,6 +41,9 @@ public interface ChargeIdentifiers {
   String PAYMENT_NAME = "Payment";
   String PAYMENT_ID = nameToIdentifier(PAYMENT_NAME);
 
+  String MAXIMUM_BALANCE_DESIGNATOR = "{maximumbalance}";
+  String RUNNING_BALANCE_DESIGNATOR = "{runningbalance}";
+
   static String nameToIdentifier(String name) {
     return name.toLowerCase(Locale.US).replace(" ", "-");
   }

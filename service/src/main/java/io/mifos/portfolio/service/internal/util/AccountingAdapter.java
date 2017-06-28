@@ -18,10 +18,7 @@ package io.mifos.portfolio.service.internal.util;
 import io.mifos.accounting.api.v1.client.AccountNotFoundException;
 import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.accounting.api.v1.client.LedgerNotFoundException;
-import io.mifos.accounting.api.v1.domain.Account;
-import io.mifos.accounting.api.v1.domain.Creditor;
-import io.mifos.accounting.api.v1.domain.Debtor;
-import io.mifos.accounting.api.v1.domain.JournalEntry;
+import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.lang.DateConverter;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
@@ -107,6 +104,24 @@ public class AccountingAdapter {
   public BigDecimal getCurrentBalance(final String accountIdentifier) {
     final Account account = ledgerManager.findAccount(accountIdentifier);
     return BigDecimal.valueOf(account.getBalance());
+  }
+
+  public String createAccountForLedgerAssignment(final String customerIdentifier, final AccountAssignment ledgerAssignment) {
+    final Ledger ledger = ledgerManager.findLedger(ledgerAssignment.getLedgerIdentifier());
+    final AccountPage accountsOfLedger = ledgerManager.fetchAccountsOfLedger(ledger.getIdentifier(), null, null, null, null);
+
+    final Account generatedAccount = new Account();
+    generatedAccount.setBalance(0.0);
+    generatedAccount.setType(ledger.getType());
+    generatedAccount.setState(Account.State.OPEN.name());
+    final String accountNumber = customerIdentifier + "." + ledgerAssignment.getDesignator()
+            + "." + String.format("%05d", accountsOfLedger.getTotalElements() + 1);
+    generatedAccount.setIdentifier(accountNumber);
+    generatedAccount.setLedger(ledger.getIdentifier());
+    generatedAccount.setName(accountNumber);
+    ledgerManager.createAccount(generatedAccount);
+
+    return accountNumber;
   }
 
 

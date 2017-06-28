@@ -63,7 +63,10 @@ public class Fixture {
     product.setMinorCurrencyUnitDigits(2);
 
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
-    accountAssignments.add(new AccountAssignment(PENDING_DISBURSAL, PENDING_DISBURSAL_LEDGER_IDENTIFIER));
+    final AccountAssignment pendingDisbursalAccountAssignment = new AccountAssignment();
+    pendingDisbursalAccountAssignment.setDesignator(PENDING_DISBURSAL);
+    pendingDisbursalAccountAssignment.setLedgerIdentifier(PENDING_DISBURSAL_LEDGER_IDENTIFIER);
+    accountAssignments.add(pendingDisbursalAccountAssignment);
     accountAssignments.add(new AccountAssignment(PROCESSING_FEE_INCOME, PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(ORIGINATION_FEE_INCOME, LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(DISBURSEMENT_FEE_INCOME, "001-004"));

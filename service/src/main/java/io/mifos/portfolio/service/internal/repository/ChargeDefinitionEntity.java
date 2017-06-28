@@ -20,6 +20,7 @@ import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 
 /**
  * @author Myrle Krantz
@@ -58,6 +59,9 @@ public class ChargeDefinitionEntity {
   @Enumerated(EnumType.STRING)
   @Column(name = "charge_method")
   private ChargeDefinition.ChargeMethod chargeMethod;
+
+  @Column(name = "proportional_to")
+  private String proportionalTo;
 
   @Column(name = "from_account_designator")
   private String fromAccountDesignator;
@@ -147,6 +151,14 @@ public class ChargeDefinitionEntity {
     this.chargeMethod = chargeMethod;
   }
 
+  public String getProportionalTo() {
+    return proportionalTo;
+  }
+
+  public void setProportionalTo(String proportionalTo) {
+    this.proportionalTo = proportionalTo;
+  }
+
   public String getFromAccountDesignator() {
     return fromAccountDesignator;
   }
@@ -177,5 +189,19 @@ public class ChargeDefinitionEntity {
 
   public void setForCycleSizeUnit(ChronoUnit forCycleSizeUnit) {
     this.forCycleSizeUnit = forCycleSizeUnit;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    ChargeDefinitionEntity that = (ChargeDefinitionEntity) o;
+    return Objects.equals(identifier, that.identifier) &&
+            Objects.equals(product, that.product);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(identifier, product);
   }
 }

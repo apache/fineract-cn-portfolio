@@ -31,7 +31,7 @@ import java.util.Objects;
  * @author Myrle Krantz
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
-@ScriptAssert(lang = "javascript", script = "_this.maximumBalance !== null && _this.maximumBalance.scale() == 4")
+@ScriptAssert(lang = "javascript", script = "_this.maximumBalance !== null && _this.maximumBalance.scale() <= 4")
 public final class CaseParameters {
   @ValidIdentifier
   private String customerIdentifier;

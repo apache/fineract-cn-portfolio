@@ -66,7 +66,14 @@ public class InterestRangeTest extends ValidationTest<InterestRange> {
               x.setMaximum(BigDecimal.valueOf(5L).setScale(2, BigDecimal.ROUND_UNNECESSARY));
             })
             .valid(false));
+    ret.add(new ValidationTestCase<InterestRange>("too large scale")
+            .adjustment(x ->
+                    x.setMinimum(x.getMinimum().setScale(3, BigDecimal.ROUND_UNNECESSARY)))
+            .valid(false));
+    ret.add(new ValidationTestCase<InterestRange>("smaller scale")
+            .adjustment(x ->
+                    x.setMinimum(x.getMinimum().setScale(1, BigDecimal.ROUND_HALF_EVEN)))
+            .valid(true));
     return ret;
   }
-
 }

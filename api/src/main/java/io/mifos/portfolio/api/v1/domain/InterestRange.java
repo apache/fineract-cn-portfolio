@@ -25,7 +25,7 @@ import java.math.BigDecimal;
  * @author Myrle Krantz
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
-@ScriptAssert(lang = "javascript", script = "_this.maximum != null && _this.minimum != null && _this.maximum.compareTo(_this.minimum) >= 0 && _this.minimum.scale() == 2 && _this.maximum.scale() == 2")
+@ScriptAssert(lang = "javascript", script = "_this.maximum != null && _this.minimum != null && _this.maximum.compareTo(_this.minimum) >= 0 && _this.minimum.scale() <= 2 && _this.maximum.scale() <= 2")
 public class InterestRange {
   @DecimalMin(value = "0.00")
   @DecimalMax(value = "999.99")

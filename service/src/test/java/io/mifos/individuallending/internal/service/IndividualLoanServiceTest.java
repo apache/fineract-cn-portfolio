@@ -40,7 +40,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PROCESSING_FEE_ID;
+import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.*;
 
 /**
  * @author Myrle Krantz
@@ -98,6 +98,9 @@ public class IndividualLoanServiceTest {
     private Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAction;
     private Set<String> expectedChargeIdentifiers = new HashSet<>(Arrays.asList(ChargeIdentifiers.INTEREST_ID, ChargeIdentifiers.PAYMENT_ID));
     private Map<ActionDatePair, List<ChargeInstance>> chargeInstancesForActions = new HashMap<>();
+    //This is an abuse of the ChargeInstance since everywhere else it's intended to contain account identifiers and not
+    //account designators.  Don't copy the code around charge instances in this test without thinking about what you're
+    //doing carefully first.
 
     TestCase(final String description) {
       this.description = description;
@@ -175,7 +178,12 @@ public class IndividualLoanServiceTest {
     final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
     chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST.name(), getInterestChargeDefinition(0.01, ChronoUnit.YEARS));
     chargeDefinitionsMappedByAction.put(Action.OPEN.name(),
-            getFixedSingleChargeDefinition(10.0, Action.OPEN, PROCESSING_FEE_ID, AccountDesignators.PROCESSING_FEE_INCOME));
+            Collections.singletonList(
+                    getFixedSingleChargeDefinition(10.0, Action.OPEN, PROCESSING_FEE_ID, AccountDesignators.PROCESSING_FEE_INCOME)));
+    chargeDefinitionsMappedByAction.put(Action.APPROVE.name(),
+            Arrays.asList(
+                    getFixedSingleChargeDefinition(100.0, Action.APPROVE, LOAN_ORIGINATION_FEE_ID, AccountDesignators.ORIGINATION_FEE_INCOME),
+                    getProportionalSingleChargeDefinition(1.0, Action.APPROVE, LOAN_FUNDS_ALLOCATION_ID, AccountDesignators.LOAN_FUNDS_SOURCE, AccountDesignators.PENDING_DISBURSAL)));
 
     return new TestCase("simpleCase")
             .minorCurrencyUnitDigits(2)
@@ -183,11 +191,24 @@ public class IndividualLoanServiceTest {
             .initialDisbursementDate(initialDisbursementDate)
             .chargeDefinitionsMappedByAction(chargeDefinitionsMappedByAction)
             .expectAdditionalChargeIdentifier(PROCESSING_FEE_ID)
+            .expectAdditionalChargeIdentifier(LOAN_FUNDS_ALLOCATION_ID)
+            .expectAdditionalChargeIdentifier(LOAN_ORIGINATION_FEE_ID)
             .expectChargeInstancesForActionDatePair(Action.OPEN, initialDisbursementDate,
                     Collections.singletonList(new ChargeInstance(
                             AccountDesignators.ENTRY,
                             AccountDesignators.PROCESSING_FEE_INCOME,
-                            BigDecimal.valueOf(10).setScale(2, BigDecimal.ROUND_UNNECESSARY))));
+                            BigDecimal.valueOf(10).setScale(2, BigDecimal.ROUND_UNNECESSARY))))
+            .expectChargeInstancesForActionDatePair(Action.APPROVE, initialDisbursementDate,
+                    Arrays.asList(
+                            new ChargeInstance(
+                                    AccountDesignators.ENTRY,
+                                    AccountDesignators.ORIGINATION_FEE_INCOME,
+                                    BigDecimal.valueOf(100.0).setScale(2, BigDecimal.ROUND_UNNECESSARY)),
+                            new ChargeInstance(
+                                    AccountDesignators.LOAN_FUNDS_SOURCE,
+                                    AccountDesignators.PENDING_DISBURSAL,
+                                    caseParameters.getMaximumBalance().setScale(2, BigDecimal.ROUND_UNNECESSARY)
+                            )));
   }
 
   private static TestCase yearLoanTestCase()
@@ -217,18 +238,20 @@ public class IndividualLoanServiceTest {
     caseParameters.setPaymentCycle(new PaymentCycle(ChronoUnit.WEEKS, 1, 1, 0, 0));
     caseParameters.setMaximumBalance(BigDecimal.valueOf(2000));
 
-    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
-    chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST.name(), getInterestChargeDefinition(0.05, ChronoUnit.YEARS));
-
     final List<ChargeDefinition> defaultLoanCharges = IndividualLendingPatternFactory.defaultIndividualLoanCharges();
-    defaultLoanCharges.forEach(x -> chargeDefinitionsMappedByAction.put(x.getChargeAction(), Collections.singletonList(x)));
+
+    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAction = defaultLoanCharges.stream()
+            .collect(Collectors.groupingBy(ChargeDefinition::getChargeAction,
+                    Collectors.mapping(x -> x, Collectors.toList())));
+
+    chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST.name(), getInterestChargeDefinition(0.05, ChronoUnit.YEARS));
 
     return new TestCase("chargeDefaultsCase")
             .minorCurrencyUnitDigits(2)
             .caseParameters(caseParameters)
             .initialDisbursementDate(initialDisbursementDate)
             .chargeDefinitionsMappedByAction(chargeDefinitionsMappedByAction)
-            .expectedChargeIdentifiers(new HashSet<>(Arrays.asList(PROCESSING_FEE_ID, ChargeIdentifiers.RETURN_DISBURSEMENT_ID, ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID, ChargeIdentifiers.INTEREST_ID, ChargeIdentifiers.PAYMENT_ID)));
+            .expectedChargeIdentifiers(new HashSet<>(Arrays.asList(PROCESSING_FEE_ID, LOAN_FUNDS_ALLOCATION_ID, RETURN_DISBURSEMENT_ID, LOAN_ORIGINATION_FEE_ID, INTEREST_ID, PAYMENT_ID)));
   }
 
   private static List<ChargeDefinition> getInterestChargeDefinition(final double amount, final ChronoUnit forCycleSizeUnit) {
@@ -238,6 +261,7 @@ public class IndividualLoanServiceTest {
     ret.setAccrueAction(Action.APPLY_INTEREST.name());
     ret.setChargeAction(Action.ACCEPT_PAYMENT.name());
     ret.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
+    ret.setProportionalTo(ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR);
     ret.setFromAccountDesignator(AccountDesignators.CUSTOMER_LOAN);
     ret.setAccrualAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
     ret.setToAccountDesignator(AccountDesignators.INTEREST_INCOME);
@@ -245,7 +269,7 @@ public class IndividualLoanServiceTest {
     return Collections.singletonList(ret);
   }
 
-  private static List<ChargeDefinition> getFixedSingleChargeDefinition(
+  private static ChargeDefinition getFixedSingleChargeDefinition(
           final double amount,
           final Action action,
           final String chargeIdentifier,
@@ -256,10 +280,30 @@ public class IndividualLoanServiceTest {
     ret.setAccrueAction(null);
     ret.setChargeAction(action.name());
     ret.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+    ret.setProportionalTo(null);
     ret.setFromAccountDesignator(AccountDesignators.ENTRY);
     ret.setToAccountDesignator(feeAccountDesignator);
     ret.setForCycleSizeUnit(null);
-    return Collections.singletonList(ret);
+    return ret;
+  }
+
+  private static ChargeDefinition getProportionalSingleChargeDefinition(
+          final double amount,
+          final Action action,
+          final String chargeIdentifier,
+          final String fromAccountDesignator,
+          final String toAccountDesignator) {
+    final ChargeDefinition ret = new ChargeDefinition();
+    ret.setAmount(BigDecimal.valueOf(amount));
+    ret.setIdentifier(chargeIdentifier);
+    ret.setAccrueAction(null);
+    ret.setChargeAction(action.name());
+    ret.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
+    ret.setProportionalTo(ChargeIdentifiers.MAXIMUM_BALANCE_DESIGNATOR);
+    ret.setFromAccountDesignator(fromAccountDesignator);
+    ret.setToAccountDesignator(toAccountDesignator);
+    ret.setForCycleSizeUnit(null);
+    return ret;
   }
 
   public IndividualLoanServiceTest(final TestCase testCase)
@@ -334,16 +378,20 @@ public class IndividualLoanServiceTest {
   }
 
   @Test
-  public void createChargeInstances() {
+  public void getCostComponentsForRepaymentPeriod() {
     testCase.chargeInstancesForActions.entrySet().forEach(entry ->
             Assert.assertEquals(
-                    entry.getValue(),
-                    testSubject.getChargeInstances(
+                    entry.getValue().stream().collect(Collectors.toSet()),
+                    testSubject.getCostComponentsForRepaymentPeriod(
                             testCase.productIdentifier,
                             testCase.caseParameters,
                             testCase.caseParameters.getMaximumBalance(),
                             entry.getKey().getAction(),
-                            testCase.initialDisbursementDate, entry.getKey().getLocalDate())));
+                            testCase.initialDisbursementDate, entry.getKey().getLocalDate())
+                    .stream()
+                    .map(x -> new ChargeInstance(x.getKey().getFromAccountDesignator(), x.getKey().getToAccountDesignator(), x.getValue().getAmount()))
+                    .collect(Collectors.toSet())
+            ));
   }
 
   private double percentDifference(final BigDecimal maxPayment, final BigDecimal minPayment) {

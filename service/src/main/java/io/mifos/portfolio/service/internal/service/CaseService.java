@@ -18,7 +18,6 @@ package io.mifos.portfolio.service.internal.service;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.service.internal.mapper.CaseMapper;
 import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
@@ -35,7 +34,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,18 +49,15 @@ public class CaseService {
   private final PatternFactoryRegistry patternFactoryRegistry;
   private final ProductRepository productRepository;
   private final CaseRepository caseRepository;
-  private final ChargeDefinitionService chargeDefinitionService;
 
   @Autowired
   public CaseService(
           final PatternFactoryRegistry patternFactoryRegistry,
           final ProductRepository productRepository,
-          final CaseRepository caseRepository,
-          final ChargeDefinitionService chargeDefinitionService) {
+          final CaseRepository caseRepository) {
     this.patternFactoryRegistry = patternFactoryRegistry;
     this.productRepository = productRepository;
     this.caseRepository = caseRepository;
-    this.chargeDefinitionService = chargeDefinitionService;
   }
 
   public CasePage findAllEntities(final String productIdentifier,
@@ -127,14 +126,7 @@ public class CaseService {
   public List<CostComponent> getActionCostComponentsForCase(final String productIdentifier,
                                                             final String caseIdentifier,
                                                             final String actionIdentifier) {
-    final Map<String, List<ChargeDefinition>> chargeDefinitions = chargeDefinitionService.getChargeDefinitionsMappedByChargeAction(productIdentifier);
-    final List<ChargeDefinition> chargeDefinitionsForAction = chargeDefinitions.get(actionIdentifier);
-    return chargeDefinitionsForAction.stream().map(x -> {
-      final CostComponent ret = new CostComponent();
-      ret.setChargeIdentifier(x.getIdentifier());
-      ret.setAmount(x.getAmount()); //TODO: This is too simplistic.  Will only work for fixed charges and no accrual.
-      return ret;
-    }).collect(Collectors.toList());
-
+    return getPatternFactoryOrThrow(productIdentifier)
+            .getCostComponentsForAction(productIdentifier, caseIdentifier, actionIdentifier);
   }
 }

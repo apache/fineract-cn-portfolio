@@ -17,15 +17,17 @@ package io.mifos.portfolio;
 
 import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.accounting.api.v1.domain.*;
+import org.hamcrest.Description;
+import org.mockito.AdditionalMatchers;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mockito;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.math.BigDecimal;
-import java.util.Optional;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static io.mifos.portfolio.Fixture.*;
 import static org.mockito.Matchers.argThat;
@@ -106,6 +108,52 @@ class AccountingFixture {
     return ret;
   }
 
+  private static AccountPage customerLoanAccountsPage() {
+    final Account customerLoanAccount1 = new Account();
+    customerLoanAccount1.setIdentifier("customerLoanAccount1");
+    final Account customerLoanAccount2 = new Account();
+    customerLoanAccount2.setIdentifier("customerLoanAccount2");
+    final Account customerLoanAccount3 = new Account();
+    customerLoanAccount3.setIdentifier("customerLoanAccount3");
+
+    final AccountPage ret = new AccountPage();
+    ret.setTotalElements(3L);
+    ret.setTotalPages(1);
+    ret.setAccounts(Arrays.asList(customerLoanAccount1, customerLoanAccount2, customerLoanAccount3));
+    return ret;
+  }
+
+  private static Object pendingDisbursalAccountsPage() {
+    final Account pendingDisbursalAccount1 = new Account();
+    pendingDisbursalAccount1.setIdentifier("pendingDisbursalAccount1");
+    final Account pendingDisbursalAccount2 = new Account();
+    pendingDisbursalAccount2.setIdentifier("pendingDisbursalAccount2");
+    final Account pendingDisbursalAccount3 = new Account();
+    pendingDisbursalAccount3.setIdentifier("pendingDisbursalAccount3");
+
+    final AccountPage ret = new AccountPage();
+    ret.setTotalElements(3L);
+    ret.setTotalPages(1);
+    ret.setAccounts(Arrays.asList(pendingDisbursalAccount1, pendingDisbursalAccount2, pendingDisbursalAccount3));
+    return ret;
+  }
+
+  private static <T> Valid<T> isValid() {
+    return new Valid<>();
+  }
+
+  private static class Valid<T> extends ArgumentMatcher<T> {
+    @Override
+    public boolean matches(final Object argument) {
+      if (argument == null)
+        return false;
+      final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+      final Set errors = validator.validate(argument);
+
+      return errors.size() == 0;
+    }
+  }
+
   private static class AccountMatcher extends ArgumentMatcher<Account> {
     private final String ledgerIdentifer;
     private final AccountType type;
@@ -126,11 +174,7 @@ class AccountingFixture {
 
       checkedArgument = (Account) argument;
 
-      final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-      final Set errors = validator.validate(checkedArgument, Account.class);
-
-      return errors.size() == 0 &&
-              checkedArgument.getLedger().equals(ledgerIdentifer) &&
+      return checkedArgument.getLedger().equals(ledgerIdentifer) &&
               checkedArgument.getType().equals(type.name()) &&
               checkedArgument.getBalance() == 0.0;
     }
@@ -141,17 +185,14 @@ class AccountingFixture {
   }
 
   private static class JournalEntryMatcher extends ArgumentMatcher<JournalEntry> {
-    private final String expectedFromAccountIdentifier;
-    private final String expectedToAccountIdentifier;
-    private final BigDecimal expectedAmount;
+    private final Set<Debtor> debtors;
+    private final Set<Creditor> creditors;
     private JournalEntry checkedArgument;
 
-    private JournalEntryMatcher(final String expectedFromAccountIdentifier,
-                                final String expectedToAccountIdentifier,
-                                final BigDecimal amount) {
-      this.expectedFromAccountIdentifier = expectedFromAccountIdentifier;
-      this.expectedToAccountIdentifier = expectedToAccountIdentifier;
-      this.expectedAmount = amount;
+    private JournalEntryMatcher(final Set<Debtor> debtors,
+                                final Set<Creditor> creditors) {
+      this.debtors = debtors;
+      this.creditors = creditors;
       this.checkedArgument = null; //Set when matches called.
     }
 
@@ -163,37 +204,24 @@ class AccountingFixture {
         return false;
 
       checkedArgument = (JournalEntry) argument;
-      final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
-      final Set errors = validator.validate(checkedArgument);
 
-      final Double debitAmount = checkedArgument.getDebtors().stream()
-              .collect(Collectors.summingDouble(x -> Double.valueOf(x.getAmount())));
+      checkedArgument.getDebtors();
+      checkedArgument.getCreditors();
 
-      final Optional<String> fromAccountIdentifier = checkedArgument.getDebtors().stream().findFirst().map(Debtor::getAccountNumber);
-
-      final Double creditAmount = checkedArgument.getCreditors().stream()
-              .collect(Collectors.summingDouble(x -> Double.valueOf(x.getAmount())));
-
-      final Optional<String> toAccountIdentifier = checkedArgument.getCreditors().stream().findFirst().map(Creditor::getAccountNumber);
-
-      return (errors.size() == 0 &&
-              fromAccountIdentifier.isPresent() && fromAccountIdentifier.get().equals(expectedFromAccountIdentifier) &&
-              toAccountIdentifier.isPresent() && toAccountIdentifier.get().equals(expectedToAccountIdentifier) &&
-              creditAmount.equals(debitAmount) &&
-              creditAmount.equals(expectedAmount.doubleValue()));
+      return this.debtors.equals(checkedArgument.getDebtors()) &&
+              this.creditors.equals(checkedArgument.getCreditors());
     }
 
-    JournalEntry getCheckedArgument() {
-      return checkedArgument;
+    @Override
+    public void describeTo(final Description description) {
+      description.appendText(this.toString());
     }
 
     @Override
     public String toString() {
       return "JournalEntryMatcher{" +
-              "expectedFromAccountIdentifier='" + expectedFromAccountIdentifier + '\'' +
-              ", expectedToAccountIdentifier='" + expectedToAccountIdentifier + '\'' +
-              ", expectedAmount=" + expectedAmount +
-              ", checkedArgument=" + checkedArgument +
+              "debtors=" + debtors +
+              ", creditors=" + creditors +
               '}';
     }
   }
@@ -208,13 +236,17 @@ class AccountingFixture {
     Mockito.doReturn(loanOriginationFeesIncomeAccount()).when(ledgerManagerMock).findAccount(LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER);
     Mockito.doReturn(processingFeeIncomeAccount()).when(ledgerManagerMock).findAccount(PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER);
     Mockito.doReturn(tellerOneAccount()).when(ledgerManagerMock).findAccount(TELLER_ONE_ACCOUNT_IDENTIFIER);
+    Mockito.doReturn(customerLoanAccountsPage()).when(ledgerManagerMock).fetchAccountsOfLedger(Mockito.eq(CUSTOMER_LOAN_LEDGER_IDENTIFIER),
+            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+    Mockito.doReturn(pendingDisbursalAccountsPage()).when(ledgerManagerMock).fetchAccountsOfLedger(Mockito.eq(PENDING_DISBURSAL_LEDGER_IDENTIFIER),
+            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
   }
 
   static String verifyAccountCreation(final LedgerManager ledgerManager,
                                       final String ledgerIdentifier,
                                       final AccountType type) {
     final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, type);
-    Mockito.verify(ledgerManager).createAccount(argThat(specifiesCorrectAccount));
+    Mockito.verify(ledgerManager).createAccount(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectAccount)));
     return specifiesCorrectAccount.getCheckedArgument().getIdentifier();
   }
 
@@ -222,7 +254,16 @@ class AccountingFixture {
                              final String fromAccountIdentifier,
                              final String toAccountIdentifier,
                              final BigDecimal amount) {
-    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(fromAccountIdentifier, toAccountIdentifier, amount);
-    Mockito.verify(ledgerManager).createJournalEntry(argThat(specifiesCorrectJournalEntry));
+    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(
+            Collections.singleton(new Debtor(fromAccountIdentifier, amount.toPlainString())),
+            Collections.singleton(new Creditor(toAccountIdentifier, amount.toPlainString())));
+    Mockito.verify(ledgerManager).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
+  }
+
+  static void verifyTransfer(final LedgerManager ledgerManager,
+                             final Set<Debtor> debtors,
+                             final Set<Creditor> creditors) {
+    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(debtors, creditors);
+    Mockito.verify(ledgerManager).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
   }
 }

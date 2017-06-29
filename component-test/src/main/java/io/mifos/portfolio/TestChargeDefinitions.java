@@ -46,6 +46,7 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
             ChargeIdentifiers.DISBURSEMENT_FEE_ID,
             ChargeIdentifiers.INTEREST_ID,
             ChargeIdentifiers.LATE_FEE_ID,
+            ChargeIdentifiers.LOAN_FUNDS_ALLOCATION_ID,
             ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID,
             ChargeIdentifiers.PROCESSING_FEE_ID,
             ChargeIdentifiers.RETURN_DISBURSEMENT_ID)

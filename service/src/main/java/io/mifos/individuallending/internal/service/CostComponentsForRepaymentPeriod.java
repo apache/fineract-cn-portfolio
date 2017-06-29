@@ -13,28 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.products.spi;
+package io.mifos.individuallending.internal.service;
 
-
-import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.api.v1.domain.Pattern;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.math.BigDecimal;
+import java.util.Map;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
  */
-public interface PatternFactory {
-  Pattern pattern();
-  List<ChargeDefinition> charges();
-  void persistParameters(Long caseId, String parameters);
-  void changeParameters(Long caseId, String parameters);
-  Optional<String> getParameters(Long caseId);
-  Set<String> getNextActionsForState(Case.State state);
-  List<CostComponent> getCostComponentsForAction(String productIdentifier, String caseIdentifier, String actionIdentifier);
-  ProductCommandDispatcher getIndividualLendingCommandDispatcher();
+public class CostComponentsForRepaymentPeriod {
+  final Map<ChargeDefinition, CostComponent> costComponents;
+  final BigDecimal balanceAdjustment;
+
+  CostComponentsForRepaymentPeriod(
+          final Map<ChargeDefinition, CostComponent> costComponents,
+          final BigDecimal balanceAdjustment) {
+    this.costComponents = costComponents;
+    this.balanceAdjustment = balanceAdjustment;
+  }
+
+  public Stream<Map.Entry<ChargeDefinition, CostComponent>> stream() {
+    return costComponents.entrySet().stream();
+  }
 }

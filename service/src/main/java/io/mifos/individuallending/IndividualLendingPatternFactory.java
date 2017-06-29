@@ -17,14 +17,17 @@ package io.mifos.individuallending;
 
 import com.google.gson.Gson;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
+import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
 import io.mifos.individuallending.internal.repository.CaseCreditWorthinessFactorEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType;
+import io.mifos.individuallending.internal.service.CostComponentService;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.portfolio.service.ServiceConstants;
 import io.mifos.products.spi.PatternFactory;
@@ -50,16 +53,19 @@ import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers
 public class IndividualLendingPatternFactory implements PatternFactory {
   final static private String INDIVIDUAL_LENDING_PACKAGE = "io.mifos.individuallending.api.v1";
   private final CaseParametersRepository caseParametersRepository;
-  private IndividualLendingCommandDispatcher individualLendingCommandDispatcher;
+  private final CostComponentService costComponentService;
+  private final IndividualLendingCommandDispatcher individualLendingCommandDispatcher;
   private final Gson gson;
 
   @Autowired
   IndividualLendingPatternFactory(
           final CaseParametersRepository caseParametersRepository,
+          final CostComponentService costComponentService,
           final IndividualLendingCommandDispatcher individualLendingCommandDispatcher,
           @Qualifier(ServiceConstants.GSON_NAME) final Gson gson)
   {
     this.caseParametersRepository = caseParametersRepository;
+    this.costComponentService = costComponentService;
     this.individualLendingCommandDispatcher = individualLendingCommandDispatcher;
     this.gson = gson;
   }
@@ -118,15 +124,16 @@ public class IndividualLendingPatternFactory implements PatternFactory {
             ENTRY,
             DISBURSEMENT_FEE_INCOME);
 
-    //TODO: Make proportional to payment rather than loan amount.
+    //TODO: Make payable at time of ACCEPT_PAYMENT but accrued at MARK_LATE
     final ChargeDefinition lateFee = charge(
             LATE_FEE_NAME,
-            Action.ACCEPT_PAYMENT,
+            Action.MARK_LATE,
             BigDecimal.valueOf(0.01),
             CUSTOMER_LOAN,
             LATE_FEE_INCOME);
     lateFee.setAccrueAction(Action.MARK_LATE.name());
     lateFee.setAccrualAccountDesignator(LATE_FEE_ACCRUAL);
+    lateFee.setProportionalTo(ChargeIdentifiers.PAYMENT_ID);
 
     //TODO: Make multiple write off allowance charges.
     final ChargeDefinition writeOffAllowanceCharge = charge(
@@ -135,6 +142,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
             BigDecimal.valueOf(0.30),
             PENDING_DISBURSAL,
             ARREARS_ALLOWANCE);
+    writeOffAllowanceCharge.setProportionalTo(ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR);
 
     final ChargeDefinition interestCharge = charge(
             INTEREST_NAME,
@@ -145,6 +153,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     interestCharge.setForCycleSizeUnit(ChronoUnit.YEARS);
     interestCharge.setAccrueAction(Action.APPLY_INTEREST.name());
     interestCharge.setAccrualAccountDesignator(INTEREST_ACCRUAL);
+    interestCharge.setProportionalTo(ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR);
 
     final ChargeDefinition disbursementReturnCharge = charge(
             RETURN_DISBURSEMENT_NAME,
@@ -152,9 +161,11 @@ public class IndividualLendingPatternFactory implements PatternFactory {
             BigDecimal.valueOf(1.0),
             PENDING_DISBURSAL,
             LOAN_FUNDS_SOURCE);
+    interestCharge.setProportionalTo(ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR); //TODO: Balance in which account?
 
     ret.add(processingFee);
     ret.add(loanOriginationFee);
+    ret.add(loanFundsAllocation);
     ret.add(disbursementFee);
     ret.add(lateFee);
     ret.add(writeOffAllowanceCharge);
@@ -247,6 +258,17 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     return getAllowedNextActionsForState(state).stream().map(Enum::name).collect(Collectors.toSet());
   }
 
+  @Override
+  public List<CostComponent> getCostComponentsForAction(
+          final String productIdentifier,
+          final String caseIdentifier,
+          final String actionIdentifier) {
+    return costComponentService.getCostComponents(productIdentifier, caseIdentifier, Action.valueOf(actionIdentifier))
+            .stream()
+            .map(x -> new CostComponent(x.getChargeIdentifier(), x.getAmount()))
+            .collect(Collectors.toList());
+  }
+
   public static Set<Action> getAllowedNextActionsForState(Case.State state) {
     switch (state)
     {
@@ -285,6 +307,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     ret.setChargeAction(action.name());
     ret.setAmount(defaultAmount);
     ret.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
+    ret.setProportionalTo(ChargeIdentifiers.MAXIMUM_BALANCE_DESIGNATOR);
     ret.setFromAccountDesignator(fromAccount);
     ret.setToAccountDesignator(toAccount);
 

@@ -30,7 +30,10 @@ import java.util.Objects;
  * @author Myrle Krantz
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
-@ScriptAssert(lang = "javascript", script = "_this.amount !== null && _this.amount.scale() <= 4 && ((_this.accrueAction === null && _this.accrualAccountDesignator === null) || (_this.accrueAction !== null && _this.accrualAccountDesignator !== null))")
+@ScriptAssert(lang = "javascript", script = "_this.amount !== null " +
+        "&& _this.amount.scale() <= 4 " +
+        "&& ((_this.accrueAction === null && _this.accrualAccountDesignator === null) || (_this.accrueAction !== null && _this.accrualAccountDesignator !== null))" +
+        "&& ((_this.chargeMethod == 'PROPORTIONAL' && _this.proportionalTo !== null) || (_this.chargeMethod == 'FIXED' && _this.proportionalTo === null))")
 public class ChargeDefinition {
   @SuppressWarnings("WeakerAccess")
   public enum ChargeMethod {
@@ -57,6 +60,9 @@ public class ChargeDefinition {
 
   @NotNull
   private ChargeMethod chargeMethod;
+
+  @ValidIdentifier(optional = true)
+  private String proportionalTo;
 
   @ValidIdentifier
   private String fromAccountDesignator; //Where it's going.
@@ -131,6 +137,14 @@ public class ChargeDefinition {
     this.chargeMethod = chargeMethod;
   }
 
+  public String getProportionalTo() {
+    return proportionalTo;
+  }
+
+  public void setProportionalTo(String proportionalTo) {
+    this.proportionalTo = proportionalTo;
+  }
+
   public String getFromAccountDesignator() {
     return fromAccountDesignator;
   }
@@ -176,6 +190,7 @@ public class ChargeDefinition {
             Objects.equals(chargeAction, that.chargeAction) &&
             Objects.equals(amount, that.amount) &&
             chargeMethod == that.chargeMethod &&
+            Objects.equals(proportionalTo, that.proportionalTo) &&
             Objects.equals(fromAccountDesignator, that.fromAccountDesignator) &&
             Objects.equals(accrualAccountDesignator, that.accrualAccountDesignator) &&
             Objects.equals(toAccountDesignator, that.toAccountDesignator) &&
@@ -184,7 +199,7 @@ public class ChargeDefinition {
 
   @Override
   public int hashCode() {
-    return Objects.hash(identifier, name, description, accrueAction, chargeAction, amount, chargeMethod, fromAccountDesignator, accrualAccountDesignator, toAccountDesignator, forCycleSizeUnit);
+    return Objects.hash(identifier, name, description, accrueAction, chargeAction, amount, chargeMethod, proportionalTo, fromAccountDesignator, accrualAccountDesignator, toAccountDesignator, forCycleSizeUnit);
   }
 
   @Override
@@ -197,6 +212,7 @@ public class ChargeDefinition {
             ", chargeAction='" + chargeAction + '\'' +
             ", amount=" + amount +
             ", chargeMethod=" + chargeMethod +
+            ", proportionalTo='" + proportionalTo + '\'' +
             ", fromAccountDesignator='" + fromAccountDesignator + '\'' +
             ", accrualAccountDesignator='" + accrualAccountDesignator + '\'' +
             ", toAccountDesignator='" + toAccountDesignator + '\'' +

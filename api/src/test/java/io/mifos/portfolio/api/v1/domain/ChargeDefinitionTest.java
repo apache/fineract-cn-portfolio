@@ -18,6 +18,7 @@ package io.mifos.portfolio.api.v1.domain;
 import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import org.apache.commons.lang.RandomStringUtils;
 import org.junit.runners.Parameterized;
 
 import java.math.BigDecimal;
@@ -42,6 +43,7 @@ public class ChargeDefinitionTest extends ValidationTest<ChargeDefinition> {
     ret.setChargeAction(Action.OPEN.name());
     ret.setAmount(BigDecimal.ONE);
     ret.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
+    ret.setProportionalTo("balance");
     ret.setFromAccountDesignator("x1234567898");
     ret.setToAccountDesignator("y1234567898");
     ret.setForCycleSizeUnit(ChronoUnit.YEARS);
@@ -86,7 +88,21 @@ public class ChargeDefinitionTest extends ValidationTest<ChargeDefinition> {
     ret.add(new ValidationTestCase<ChargeDefinition>("nullChargeMethod")
             .adjustment(x -> x.setChargeMethod(null))
             .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("invalidProportionalToIdentifier")
+            .adjustment(x -> x.setProportionalTo(RandomStringUtils.random(33)))
+            .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("missingProportionalToIdentifierOnProportionalCharge")
+            .adjustment(x -> x.setProportionalTo(null))
+            .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("presentProportionalToIdentifierOnFixedCharge")
+            .adjustment(x -> x.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED))
+            .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("missingProportionalToIdentifierOnFixedCharge")
+            .adjustment(x -> {
+              x.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+              x.setProportionalTo(null);
+            })
+            .valid(true));
     return ret;
   }
-
 }

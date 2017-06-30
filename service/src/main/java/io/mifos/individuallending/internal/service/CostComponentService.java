@@ -32,6 +32,7 @@ import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -68,7 +69,7 @@ public class CostComponentService {
   public DataContextOfAction checkedGetDataContext(
           final String productIdentifier,
           final String caseIdentifier,
-          final List<AccountAssignment> oneTimeAccountAssignments) {
+          final @Nullable List<AccountAssignment> oneTimeAccountAssignments) {
 
     final ProductEntity product =
             productRepository.findByIdentifier(productIdentifier)

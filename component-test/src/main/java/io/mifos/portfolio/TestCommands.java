@@ -39,29 +39,29 @@ public class TestCommands extends AbstractPortfolioTest {
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN);
 
 
-    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN, Collections.emptyList(), OPEN_INDIVIDUALLOAN_CASE, Case.State.PENDING);
+    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN, null, OPEN_INDIVIDUALLOAN_CASE, Case.State.PENDING);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, Action.DENY);
 
 
-    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, Collections.emptyList(), APPROVE_INDIVIDUALLOAN_CASE, Case.State.APPROVED);
+    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, null, APPROVE_INDIVIDUALLOAN_CASE, Case.State.APPROVED);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE, Action.CLOSE);
 
 
-    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE, Collections.emptyList(), DISBURSE_INDIVIDUALLOAN_CASE, Case.State.ACTIVE);
+    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE, null, DISBURSE_INDIVIDUALLOAN_CASE, Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
             Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
 
 
-    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.ACCEPT_PAYMENT, Collections.emptyList(), ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE, Case.State.ACTIVE);
+    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.ACCEPT_PAYMENT, null, ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE, Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
             Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
 
 
-    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.ACCEPT_PAYMENT, Collections.emptyList(), ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE, Case.State.ACTIVE);
+    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.ACCEPT_PAYMENT, null, ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE, Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
             Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
 
-    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.CLOSE, Collections.emptyList(), CLOSE_INDIVIDUALLOAN_CASE, Case.State.CLOSED);
+    checkStateTransfer(product.getIdentifier(), customerCase.getIdentifier(), Action.CLOSE, null, CLOSE_INDIVIDUALLOAN_CASE, Case.State.CLOSED);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
   }
 

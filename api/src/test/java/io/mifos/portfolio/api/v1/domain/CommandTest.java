@@ -52,6 +52,9 @@ public class CommandTest extends ValidationTest<Command> {
     ret.add(new ValidationTestCase<Command>("validAccountAssignment")
             .adjustment(x -> x.setOneTimeAccountAssignments(Collections.singletonList(new AccountAssignment(PROCESSING_FEE_ID, "7534"))))
             .valid(true));
+    ret.add(new ValidationTestCase<Command>("nullAccountAssignment")
+            .adjustment(x -> x.setOneTimeAccountAssignments(null))
+            .valid(true));
     return ret;
   }
 }

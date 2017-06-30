@@ -20,6 +20,9 @@ import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -31,29 +34,29 @@ public class DataContextOfAction {
   private final CaseParameters caseParameters;
   private final List<AccountAssignment> oneTimeAccountAssignments;
 
-  DataContextOfAction(final ProductEntity product,
-                      final CaseEntity customerCase,
-                      final CaseParameters caseParameters,
-                      final List<AccountAssignment> oneTimeAccountAssignments) {
+  DataContextOfAction(final @Nonnull ProductEntity product,
+                      final @Nonnull CaseEntity customerCase,
+                      final @Nonnull CaseParameters caseParameters,
+                      final @Nullable List<AccountAssignment> oneTimeAccountAssignments) {
     this.product = product;
     this.customerCase = customerCase;
     this.caseParameters = caseParameters;
-    this.oneTimeAccountAssignments = oneTimeAccountAssignments;
+    this.oneTimeAccountAssignments = oneTimeAccountAssignments == null ? Collections.emptyList() : oneTimeAccountAssignments;
   }
 
-  public ProductEntity getProduct() {
+  public @Nonnull ProductEntity getProduct() {
     return product;
   }
 
-  public CaseEntity getCustomerCase() {
+  public @Nonnull CaseEntity getCustomerCase() {
     return customerCase;
   }
 
-  public CaseParameters getCaseParameters() {
+  public @Nonnull CaseParameters getCaseParameters() {
     return caseParameters;
   }
 
-  public List<AccountAssignment> getOneTimeAccountAssignments() {
+  public @Nonnull List<AccountAssignment> getOneTimeAccountAssignments() {
     return oneTimeAccountAssignments;
   }
 }

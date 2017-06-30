@@ -23,6 +23,7 @@ import io.mifos.portfolio.service.internal.mapper.ProductMapper;
 import io.mifos.portfolio.service.internal.repository.CaseAccountAssignmentEntity;
 import io.mifos.portfolio.service.internal.repository.ProductAccountAssignmentEntity;
 
+import javax.annotation.Nonnull;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -31,11 +32,11 @@ import java.util.stream.Stream;
  * @author Myrle Krantz
  */
 public class DesignatorToAccountIdentifierMapper {
-  private final Set<ProductAccountAssignmentEntity> productAccountAssignments;
-  private final Set<CaseAccountAssignmentEntity> caseAccountAssignments;
-  private final List<AccountAssignment> oneTimeAccountAssignments;
+  private final @Nonnull Set<ProductAccountAssignmentEntity> productAccountAssignments;
+  private final @Nonnull Set<CaseAccountAssignmentEntity> caseAccountAssignments;
+  private final @Nonnull List<AccountAssignment> oneTimeAccountAssignments;
 
-  public DesignatorToAccountIdentifierMapper(final DataContextOfAction dataContextOfAction) {
+  public DesignatorToAccountIdentifierMapper(final @Nonnull DataContextOfAction dataContextOfAction) {
     this.productAccountAssignments = dataContextOfAction.getProduct().getAccountAssignments();
     this.caseAccountAssignments = dataContextOfAction.getCustomerCase().getAccountAssignments();
     this.oneTimeAccountAssignments = dataContextOfAction.getOneTimeAccountAssignments();
@@ -50,7 +51,7 @@ public class DesignatorToAccountIdentifierMapper {
             productAccountAssignments.stream().map(ProductMapper::mapAccountAssignmentEntity));
   }
 
-  public String mapOrThrow(final String accountDesignator) {
+  public String mapOrThrow(final @Nonnull String accountDesignator) {
     return allAccountAssignmentsAsStream()
             .filter(x -> x.getDesignator().equals(accountDesignator))
             .findFirst()

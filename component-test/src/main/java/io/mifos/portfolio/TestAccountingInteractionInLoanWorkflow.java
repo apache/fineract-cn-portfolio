@@ -19,6 +19,8 @@ import com.google.gson.Gson;
 import io.mifos.accounting.api.v1.domain.AccountType;
 import io.mifos.accounting.api.v1.domain.Creditor;
 import io.mifos.accounting.api.v1.domain.Debtor;
+import io.mifos.core.api.util.ApiFactory;
+import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
@@ -26,12 +28,18 @@ import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.events.EventConstants;
+import io.mifos.rhythm.spi.v1.client.BeatListener;
+import io.mifos.rhythm.spi.v1.domain.BeatPublish;
+import io.mifos.rhythm.spi.v1.events.BeatPublishEvent;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -48,12 +56,19 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private static final BigDecimal LOAN_ORIGINATION_FEE_AMOUNT = BigDecimal.valueOf(100_0000, MINOR_CURRENCY_UNIT_DIGITS);
   private static final BigDecimal DISBURSEMENT_FEE_AMOUNT = BigDecimal.valueOf(1_0000, MINOR_CURRENCY_UNIT_DIGITS);
 
+  private BeatListener portfolioBeatListener;
+
   private static Product product;
   private static Case customerCase;
   private static CaseParameters caseParameters;
   private static String pendingDisbursalAccountIdentifier;
   private static String customerLoanAccountIdentifier;
 
+
+  @Before
+  public void prepBeatListener() {
+    portfolioBeatListener = new ApiFactory(logger).create(BeatListener.class, testEnvironment.serverURI());
+  }
 
   @Test
   public void step1CreateProduct() throws InterruptedException {
@@ -153,5 +168,17 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
 
+  }
+
+  //Perform daily interest calculation.
+  @Test
+  public void step6CalculateInterestAccrual() throws InterruptedException {
+    final String beatIdentifier = "alignment0";
+    final String midnightTimeStamp = DateConverter.toIsoString(LocalDateTime.now().truncatedTo(ChronoUnit.DAYS));
+
+    final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
+    portfolioBeatListener.publishBeat(interestBeat);
+    Assert.assertTrue(this.eventRecorder.wait(io.mifos.rhythm.spi.v1.events.EventConstants.POST_PUBLISHEDBEAT,
+        new BeatPublishEvent(EventConstants.DESTINATION, beatIdentifier, midnightTimeStamp)));
   }
 }

@@ -80,7 +80,7 @@ public class CostComponentService {
 
     final CaseParameters caseParameters =
             caseParametersRepository.findByCaseId(customerCase.getId())
-                    .map(CaseParametersMapper::mapEntity)
+                    .map(x -> CaseParametersMapper.mapEntity(x, product.getMinorCurrencyUnitDigits()))
                     .orElseThrow(() -> ServiceException.notFound(
                             "Individual loan not found ''{0}.{1}''.",
                             productIdentifier, caseIdentifier));

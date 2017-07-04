@@ -33,7 +33,7 @@ public interface PatternFactory {
   List<ChargeDefinition> charges();
   void persistParameters(Long caseId, String parameters);
   void changeParameters(Long caseId, String parameters);
-  Optional<String> getParameters(Long caseId);
+  Optional<String> getParameters(Long caseId, int minorCurrencyUnitDigits);
   Set<String> getNextActionsForState(Case.State state);
   List<CostComponent> getCostComponentsForAction(String productIdentifier, String caseIdentifier, String actionIdentifier);
   ProductCommandDispatcher getIndividualLendingCommandDispatcher();

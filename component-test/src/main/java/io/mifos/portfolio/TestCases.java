@@ -132,7 +132,7 @@ public class TestCases extends AbstractPortfolioTest {
     final List<CreditWorthinessFactor> debts = caseParameters.getCreditWorthinessSnapshots().get(0).getDebts();
     final ArrayList<CreditWorthinessFactor> newDebts = new ArrayList<>();
     newDebts.addAll(debts);
-    newDebts.add(new CreditWorthinessFactor("boop", BigDecimal.valueOf(5, 4)));
+    newDebts.add(new CreditWorthinessFactor("boop", BigDecimal.valueOf(5, Fixture.MINOR_CURRENCY_UNIT_DIGITS)));
     caseParameters.getCreditWorthinessSnapshots().get(0).setDebts(newDebts);
     final String changedParameters = new Gson().toJson(caseParameters);
     caseInstance.setParameters(changedParameters);

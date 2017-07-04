@@ -72,13 +72,15 @@ public class CaseService {
     final List<String> currentStates = currentStatesStream.map(Enum::name).collect(Collectors.toList());
 
     final Page<CaseEntity> ret = caseRepository.findByProductIdentifierAndCurrentStateIn(productIdentifier, currentStates, pageRequest);
+    final int minorCurrencyUnitDigits = getMinorCurrencyUnitDigits(productIdentifier);
 
-    return new CasePage(mapList(ret.getContent()), ret.getTotalPages(), ret.getTotalElements());
+    return new CasePage(mapList(ret.getContent(), minorCurrencyUnitDigits), ret.getTotalPages(), ret.getTotalElements());
   }
 
-  private List<Case> mapList(final List<CaseEntity> in) {
+  private List<Case> mapList(final List<CaseEntity> in,
+                             final int minorCurrencyUnitDigits) {
     return in.stream()
-            .map(this::map)
+            .map(caseEntity -> map(caseEntity, minorCurrencyUnitDigits))
             .filter(Optional::isPresent)
             .map(Optional::get)
             .collect(Collectors.toList());
@@ -86,8 +88,9 @@ public class CaseService {
 
   public Optional<Case> findByIdentifier(final String productIdentifier, final String caseIdentifier)
   {
+    final int minorCurrencyUnitDigits = getMinorCurrencyUnitDigits(productIdentifier);
     return caseRepository.findByProductIdentifierAndIdentifier(productIdentifier, caseIdentifier)
-            .flatMap(this::map);
+            .flatMap(caseEntity -> map(caseEntity, minorCurrencyUnitDigits));
   }
 
   public Set<String> getNextActionsForCase(final String productIdentifier, final String caseIdentifier) {
@@ -95,22 +98,22 @@ public class CaseService {
 
     return caseRepository.findByProductIdentifierAndIdentifier(productIdentifier, caseIdentifier)
             .map(x -> pattern.getNextActionsForState(Case.State.valueOf(x.getCurrentState())))
-            .orElseThrow(() -> ServiceException.notFound("Case with identifier " + productIdentifier + "." + caseIdentifier + " doesn't exist."));
+            .orElseThrow(() -> ServiceException.notFound("Case with identifier ''" + productIdentifier + "." + caseIdentifier + "'' doesn''t exist."));
   }
 
   public ProductCommandDispatcher getProductCommandDispatcher(final String productIdentifier) {
     return getPatternFactoryOrThrow(productIdentifier).getIndividualLendingCommandDispatcher();
   }
 
-  private Optional<Case> map(final CaseEntity caseEntity) {
+  private Optional<Case> map(final CaseEntity caseEntity, final int minorCurrencyUnitDigits) {
     return getPatternFactory(caseEntity.getProductIdentifier())
-            .flatMap(x -> x.getParameters(caseEntity.getId()))
+            .flatMap(x -> x.getParameters(caseEntity.getId(), minorCurrencyUnitDigits))
             .map(x -> CaseMapper.map(caseEntity, x));
   }
 
   private PatternFactory getPatternFactoryOrThrow(final String productIdentifier) {
     return getPatternFactory(productIdentifier)
-            .orElseThrow(() -> ServiceException.notFound("Product with identifier " + productIdentifier + " doesn't exist."));
+            .orElseThrow(() -> ServiceException.notFound("Product with identifier ''" + productIdentifier + "'' doesn''t exist."));
   }
 
   private Optional<PatternFactory> getPatternFactory(final String productIdentifier) {
@@ -128,5 +131,11 @@ public class CaseService {
                                                             final String actionIdentifier) {
     return getPatternFactoryOrThrow(productIdentifier)
             .getCostComponentsForAction(productIdentifier, caseIdentifier, actionIdentifier);
+  }
+
+  private int getMinorCurrencyUnitDigits(final String productIdentifier) {
+    return productRepository.findByIdentifier(productIdentifier)
+        .map(ProductEntity::getMinorCurrencyUnitDigits)
+        .orElse(4);
   }
 }

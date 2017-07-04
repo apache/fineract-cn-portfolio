@@ -22,6 +22,7 @@ import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
@@ -42,6 +43,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -163,10 +165,36 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final DisburseCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
+    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+        productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.DISBURSE);
+
+
+    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+        individualLoanService.getCostComponentsForRepaymentPeriod(productIdentifier, dataContextOfAction.getCaseParameters(), BigDecimal.ZERO, Action.DISBURSE, today(), LocalDate.now());
+
+
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+
+    final List<ChargeInstance> charges = Stream.concat(costComponentsForRepaymentPeriod.stream().map(x -> new ChargeInstance(
+            designatorToAccountIdentifierMapper.mapOrThrow(x.getKey().getFromAccountDesignator()),
+            designatorToAccountIdentifierMapper.mapOrThrow(x.getKey().getToAccountDesignator()),
+            x.getValue().getAmount())),
+        Stream.of(new ChargeInstance(
+            designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.PENDING_DISBURSAL),
+            designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN),
+                dataContextOfAction.getCaseParameters().getMaximumBalance())))
+        .collect(Collectors.toList());
+
+    accountingAdapter.bookCharges(charges,
+        command.getCommand().getNote(),
+        productIdentifier + "." + caseIdentifier + "." + Action.DISBURSE.name(),
+        Action.DISBURSE.getTransactionType());
+    //Only move to new state if book charges command was accepted.
     updateCaseState(dataContextOfAction.getCustomerCase(), Case.State.ACTIVE);
-    return new IndividualLoanCommandEvent(command.getProductIdentifier(), command.getCaseIdentifier(), "x");
+
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, Action.DISBURSE.name());
   }
 
   @Transactional

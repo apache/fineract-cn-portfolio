@@ -62,7 +62,7 @@ public class CaseParametersService {
             .findByProductIdentifierAndIdentifier(productIdentifier, caseIdentifier)
             .map(CaseEntity::getId)
             .flatMap(caseParametersRepository::findByCaseId)
-            .map(CaseParametersMapper::mapEntity);
+            .map(x -> CaseParametersMapper.mapEntity(x, 4));
   }
 
   public CasePage findByCustomerIdentifier(
@@ -79,7 +79,7 @@ public class CaseParametersService {
 
   private List<Case> mapList(final List<CaseParametersEntity> in) {
     return in.stream()
-            .map(x -> CaseMapper.map(caseRepository.findOne(x.getCaseId()), gson.toJson(CaseParametersMapper.mapEntity(x))))
+            .map(x -> CaseMapper.map(caseRepository.findOne(x.getCaseId()), gson.toJson(CaseParametersMapper.mapEntity(x, 4))))
             .collect(Collectors.toList());
   }
 }

@@ -25,11 +25,13 @@ import io.mifos.core.test.fixture.mariadb.MariaDBInitializer;
 import io.mifos.core.test.listener.EnableEventRecording;
 import io.mifos.core.test.listener.EventRecorder;
 import io.mifos.individuallending.api.v1.client.IndividualLending;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.portfolio.api.v1.client.PortfolioManager;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.api.v1.events.CaseEvent;
+import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.service.config.PortfolioServiceConfiguration;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
@@ -42,6 +44,7 @@ import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cloud.netflix.feign.EnableFeignClients;
@@ -56,6 +59,7 @@ import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -74,6 +78,7 @@ import static org.mockito.Mockito.doReturn;
         classes = {AbstractPortfolioTest.TestConfiguration.class})
 public class AbstractPortfolioTest {
   private static final String APP_NAME = "portfolio-v1";
+  private static final String LOGGER_NAME = "test-logger";
 
   @Configuration
   @EnableEventRecording
@@ -86,9 +91,9 @@ public class AbstractPortfolioTest {
       super();
     }
 
-    @Bean()
+    @Bean(name = LOGGER_NAME)
     public Logger logger() {
-      return LoggerFactory.getLogger("test-logger");
+      return LoggerFactory.getLogger(LOGGER_NAME);
     }
     @Bean()
     public AccountingAdapter accountingAdapter(@SuppressWarnings("SpringJavaAutowiringInspection")
@@ -135,6 +140,10 @@ public class AbstractPortfolioTest {
 
   @MockBean
   LedgerManager ledgerManager;
+
+  @Autowired
+  @Qualifier(LOGGER_NAME)
+  Logger logger;
 
   @Before
   public void prepTest() {
@@ -235,4 +244,25 @@ public class AbstractPortfolioTest {
     final Set<CostComponent> setOfExpectedCostComponents = new HashSet<>(Arrays.asList(expectedCostComponents));
     Assert.assertEquals(setOfExpectedCostComponents, setOfCostComponents);
   }
+
+  void setFeeToFixedValue(final String productIdentifier,
+                          final String feeId,
+                          final BigDecimal amount) throws InterruptedException {
+    final ChargeDefinition chargeDefinition
+        = portfolioManager.getChargeDefinition(productIdentifier, feeId);
+    chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+    chargeDefinition.setAmount(amount);
+    chargeDefinition.setProportionalTo(null);
+    portfolioManager.changeChargeDefinition(productIdentifier, feeId, chargeDefinition);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CHARGE_DEFINITION,
+        new ChargeDefinitionEvent(productIdentifier, feeId)));
+  }
+
+  AccountAssignment assignEntryToTeller() {
+    final AccountAssignment entryAccountAssignment = new AccountAssignment();
+    entryAccountAssignment.setDesignator(AccountDesignators.ENTRY);
+    entryAccountAssignment.setAccountIdentifier(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER);
+    return entryAccountAssignment;
+  }
+
 }

@@ -56,10 +56,11 @@ public class ScheduledActionService {
     final Period lastPeriod = repaymentPeriods.last();
 
     return Stream.concat(Stream.of(
-            new ScheduledAction(Action.OPEN, initialDisbursalDate, firstPeriod, firstPeriod),
-            new ScheduledAction(Action.APPROVE, initialDisbursalDate, firstPeriod, firstPeriod)),
-            Stream.concat(repaymentPeriods.stream().flatMap(this::generateScheduledActionsForRepaymentPeriod),
-                    Stream.of(new ScheduledAction(Action.CLOSE, lastPeriod.getEndDate(), lastPeriod, lastPeriod))));
+        new ScheduledAction(Action.OPEN, initialDisbursalDate, firstPeriod, firstPeriod),
+        new ScheduledAction(Action.APPROVE, initialDisbursalDate, firstPeriod, firstPeriod),
+        new ScheduledAction(Action.DISBURSE, initialDisbursalDate, firstPeriod, firstPeriod)),
+        Stream.concat(repaymentPeriods.stream().flatMap(this::generateScheduledActionsForRepaymentPeriod),
+            Stream.of(new ScheduledAction(Action.CLOSE, lastPeriod.getEndDate(), lastPeriod, lastPeriod))));
   }
 
   private LocalDate getEndDate(final @Nonnull CaseParameters caseParameters,

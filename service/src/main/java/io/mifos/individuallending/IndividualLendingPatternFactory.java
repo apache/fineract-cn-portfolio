@@ -246,10 +246,10 @@ public class IndividualLendingPatternFactory implements PatternFactory {
   }
 
   @Override
-  public Optional<String> getParameters(final Long caseId) {
+  public Optional<String> getParameters(final Long caseId, final int minorCurrencyUnitDigits) {
     return caseParametersRepository
             .findByCaseId(caseId)
-            .map(CaseParametersMapper::mapEntity)
+            .map(x -> CaseParametersMapper.mapEntity(x, minorCurrencyUnitDigits))
             .map(gson::toJson);
   }
 

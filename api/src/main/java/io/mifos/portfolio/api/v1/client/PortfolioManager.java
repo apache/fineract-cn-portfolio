@@ -201,7 +201,7 @@ public interface PortfolioManager {
   void changeChargeDefinition(
           @PathVariable("productidentifier") final String productIdentifier,
           @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier,
-          final ChargeDefinition taskDefinition);
+          final ChargeDefinition chargeDefinition);
 
   @RequestMapping(
           value = "/products/{productidentifier}/charges/{chargedefinitionidentifier}",

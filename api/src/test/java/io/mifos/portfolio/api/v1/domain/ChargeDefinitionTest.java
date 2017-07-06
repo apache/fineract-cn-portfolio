@@ -103,6 +103,12 @@ public class ChargeDefinitionTest extends ValidationTest<ChargeDefinition> {
               x.setProportionalTo(null);
             })
             .valid(true));
+    ret.add(new ValidationTestCase<ChargeDefinition>("proportionalToRunningBalance")
+        .adjustment(x -> x.setProportionalTo("{runningbalance}"))
+        .valid(true));
+    ret.add(new ValidationTestCase<ChargeDefinition>("proportionalToMaximumBalance")
+        .adjustment(x -> x.setProportionalTo("{maximumbalance}"))
+        .valid(true));
     return ret;
   }
 }

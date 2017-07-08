@@ -24,9 +24,13 @@ import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
+import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.rhythm.spi.v1.client.BeatListener;
 import io.mifos.rhythm.spi.v1.domain.BeatPublish;
@@ -44,7 +48,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import static io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants.*;
 import static io.mifos.portfolio.Fixture.MINOR_CURRENCY_UNIT_DIGITS;
 
 /**
@@ -79,6 +82,13 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID, LOAN_ORIGINATION_FEE_AMOUNT);
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.DISBURSEMENT_FEE_ID, DISBURSEMENT_FEE_AMOUNT);
 
+    final ChargeDefinition interestChargeDefinition = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.INTEREST_ID);
+    interestChargeDefinition.setAmount(Fixture.INTEREST_RATE);
+
+    portfolioManager.changeChargeDefinition(product.getIdentifier(), interestChargeDefinition.getIdentifier(), interestChargeDefinition);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CHARGE_DEFINITION,
+        new ChargeDefinitionEvent(product.getIdentifier(), interestChargeDefinition.getIdentifier())));
+
     portfolioManager.enableProduct(product.getIdentifier(), true);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
   }
@@ -104,7 +114,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         customerCase.getIdentifier(),
         Action.OPEN,
         Collections.singletonList(assignEntryToTeller()),
-        OPEN_INDIVIDUALLOAN_CASE,
+        IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, Action.DENY);
     checkCostComponentForActionCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE,
@@ -126,7 +136,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         customerCase.getIdentifier(),
         Action.APPROVE,
         Collections.singletonList(assignEntryToTeller()),
-        APPROVE_INDIVIDUALLOAN_CASE,
+        IndividualLoanEventConstants.APPROVE_INDIVIDUALLOAN_CASE,
         Case.State.APPROVED);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE, Action.CLOSE);
 
@@ -153,7 +163,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         customerCase.getIdentifier(),
         Action.DISBURSE,
         Collections.singletonList(assignEntryToTeller()),
-        DISBURSE_INDIVIDUALLOAN_CASE,
+        IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE,
         Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
@@ -176,9 +186,32 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final String beatIdentifier = "alignment0";
     final String midnightTimeStamp = DateConverter.toIsoString(LocalDateTime.now().truncatedTo(ChronoUnit.DAYS));
 
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, caseParameters.getMaximumBalance());
+
     final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
     portfolioBeatListener.publishBeat(interestBeat);
     Assert.assertTrue(this.eventRecorder.wait(io.mifos.rhythm.spi.v1.events.EventConstants.POST_PUBLISHEDBEAT,
         new BeatPublishEvent(EventConstants.DESTINATION, beatIdentifier, midnightTimeStamp)));
+
+    Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.APPLY_INTEREST_INDIVIDUALLOAN_CASE,
+        new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier())));
+
+    final Case customerCaseAfterStateChange = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
+    Assert.assertEquals(customerCaseAfterStateChange.getCurrentState(), Case.State.ACTIVE.name());
+
+    final String calculatedInterest = caseParameters.getMaximumBalance().multiply(Fixture.INTEREST_RATE.divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN))
+        .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN)
+        .toPlainString();
+
+    final Set<Debtor> debtors = new HashSet<>();
+    debtors.add(new Debtor(
+        AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT,
+        calculatedInterest));
+
+    final Set<Creditor> creditors = new HashSet<>();
+    creditors.add(new Creditor(
+        customerLoanAccountIdentifier,
+        calculatedInterest));
+    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
   }
 }

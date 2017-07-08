@@ -15,13 +15,10 @@
  */
 package io.mifos.individuallending.internal.service;
 
-import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
-import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
-import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
@@ -38,7 +35,6 @@ import javax.money.MonetaryAmount;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.function.BiFunction;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -57,17 +53,14 @@ public class IndividualLoanService {
   private static final int EXTRA_PRECISION = 4;
   private final ProductService productService;
   private final ChargeDefinitionService chargeDefinitionService;
-  private final ScheduledActionService scheduledActionService;
   private final PeriodChargeCalculator periodChargeCalculator;
 
   @Autowired
   public IndividualLoanService(final ProductService productService,
                                final ChargeDefinitionService chargeDefinitionService,
-                               final ScheduledActionService scheduledActionService,
                                final PeriodChargeCalculator periodChargeCalculator) {
     this.productService = productService;
     this.chargeDefinitionService = chargeDefinitionService;
-    this.scheduledActionService = scheduledActionService;
     this.periodChargeCalculator = periodChargeCalculator;
   }
 
@@ -81,7 +74,7 @@ public class IndividualLoanService {
             .orElseThrow(() -> new IllegalArgumentException("Non-existent product identifier."));
     final int minorCurrencyUnitDigits = product.getMinorCurrencyUnitDigits();
 
-    final List<ScheduledAction> scheduledActions = scheduledActionService.getHypotheticalScheduledActions(initialDisbursalDate, caseParameters);
+    final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(initialDisbursalDate, caseParameters);
 
     final List<ScheduledCharge> scheduledCharges = getScheduledCharges(productIdentifier, minorCurrencyUnitDigits, caseParameters.getMaximumBalance(), scheduledActions);
 
@@ -113,34 +106,15 @@ public class IndividualLoanService {
     return ret;
   }
 
-  public CostComponentsForRepaymentPeriod getCostComponentsForRepaymentPeriod(final String productIdentifier,
-                                                                              final CaseParameters caseParameters,
-                                                                              final BigDecimal runningBalance,
-                                                                              final Action action,
-                                                                              final LocalDate initialDisbursalDate,
-                                                                              final LocalDate forDate) {
-    final Product product = productService.findByIdentifier(productIdentifier)
-            .orElseThrow(() -> new IllegalArgumentException("Non-existent product identifier."));
-    final int minorCurrencyUnitDigits = product.getMinorCurrencyUnitDigits();
-    final List<ScheduledAction> scheduledActions = scheduledActionService.getScheduledActions(initialDisbursalDate, caseParameters, action, forDate);
-    final List<ScheduledCharge> scheduledCharges = getScheduledCharges(productIdentifier, minorCurrencyUnitDigits, runningBalance, scheduledActions);
-
-    return getCostComponentsForScheduledCharges(
-            scheduledCharges,
-            caseParameters.getMaximumBalance(),
-            runningBalance,
-            minorCurrencyUnitDigits);
-  }
-
   private static ChargeName chargeNameFromChargeDefinition(final ScheduledCharge scheduledCharge) {
     return new ChargeName(scheduledCharge.getChargeDefinition().getIdentifier(), scheduledCharge.getChargeDefinition().getName());
   }
 
-  private List<ScheduledCharge> getScheduledCharges(
-          final String productIdentifier,
-          final int minorCurrencyUnitDigits,
-          final BigDecimal initialBalance,
-          final @Nonnull List<ScheduledAction> scheduledActions) {
+  List<ScheduledCharge> getScheduledCharges(
+      final String productIdentifier,
+      final int minorCurrencyUnitDigits,
+      final BigDecimal initialBalance,
+      final @Nonnull List<ScheduledAction> scheduledActions) {
     final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction
             = chargeDefinitionService.getChargeDefinitionsMappedByChargeAction(productIdentifier);
 
@@ -199,7 +173,13 @@ public class IndividualLoanService {
           final List<ScheduledCharge> scheduledCharges) {
     final Map<Period, SortedSet<ScheduledCharge>> orderedScheduledChargesGroupedByPeriod
             = scheduledCharges.stream()
-            .collect(Collectors.groupingBy(x -> x.getScheduledAction().repaymentPeriod,
+            .collect(Collectors.groupingBy(scheduledCharge -> {
+                  final ScheduledAction scheduledAction = scheduledCharge.getScheduledAction();
+                  if (ScheduledActionHelpers.actionHasNoActionPeriod(scheduledAction.action))
+                    return new Period(null, null);
+                  else
+                    return scheduledAction.repaymentPeriod;
+                  },
                     Collectors.mapping(x -> x,
                             Collector.of(
                                     () -> new TreeSet<>(new ScheduledChargeComparator()),
@@ -207,8 +187,7 @@ public class IndividualLoanService {
                                     (left, right) -> { left.addAll(right); return left; }))));
 
     final SortedSet<Period> sortedRepaymentPeriods
-            = scheduledCharges.stream()
-            .map(x -> x.getScheduledAction().repaymentPeriod)
+            = orderedScheduledChargesGroupedByPeriod.keySet().stream()
             .collect(Collector.of(TreeSet::new, TreeSet::add, (left, right) -> { left.addAll(right); return left; }));
 
     BigDecimal balance = initialBalance.setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
@@ -217,11 +196,11 @@ public class IndividualLoanService {
     {
       final SortedSet<ScheduledCharge> scheduledChargesInPeriod = orderedScheduledChargesGroupedByPeriod.get(repaymentPeriod);
       final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-              getCostComponentsForScheduledCharges(scheduledChargesInPeriod, balance, balance, minorCurrencyUnitDigits);
+              CostComponentService.getCostComponentsForScheduledCharges(scheduledChargesInPeriod, balance, balance, minorCurrencyUnitDigits);
 
       final PlannedPayment plannedPayment = new PlannedPayment();
-      plannedPayment.setCostComponents(costComponentsForRepaymentPeriod.costComponents.values().stream().collect(Collectors.toList()));
-      plannedPayment.setDate(DateConverter.toIsoString(repaymentPeriod.getEndDate()));
+      plannedPayment.setCostComponents(new ArrayList<>(costComponentsForRepaymentPeriod.costComponents.values()));
+      plannedPayment.setDate(repaymentPeriod.getEndDateAsString());
       balance = balance.add(costComponentsForRepaymentPeriod.balanceAdjustment);
       plannedPayment.setRemainingPrincipal(balance);
       plannedPayments.add(plannedPayment);
@@ -237,67 +216,6 @@ public class IndividualLoanService {
       });
     }
     return plannedPayments;
-  }
-
-  static private CostComponentsForRepaymentPeriod getCostComponentsForScheduledCharges(
-          final Collection<ScheduledCharge> scheduledCharges,
-          final BigDecimal maximumBalance,
-          final BigDecimal runningBalance,
-          final int minorCurrencyUnitDigits) {
-    BigDecimal balanceAdjustment = BigDecimal.ZERO;
-
-    final Map<ChargeDefinition, CostComponent> costComponentMap = new HashMap<>();
-    for (final ScheduledCharge scheduledCharge : scheduledCharges)
-    {
-      final CostComponent costComponent = costComponentMap
-              .computeIfAbsent(scheduledCharge.getChargeDefinition(),
-                      chargeIdentifier -> {
-                        final CostComponent ret = new CostComponent();
-                        ret.setChargeIdentifier(scheduledCharge.getChargeDefinition().getIdentifier());
-                        ret.setAmount(BigDecimal.ZERO);
-                        return ret;
-                      });
-
-      final BigDecimal chargeAmount = howToApplyScheduledChargeToBalance(scheduledCharge, 8)
-              .apply(maximumBalance, runningBalance)
-              .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
-      if (chargeDefinitionTouchesCustomerLoanAccount(scheduledCharge.getChargeDefinition()))
-        balanceAdjustment = balanceAdjustment.add(chargeAmount);
-      costComponent.setAmount(costComponent.getAmount().add(chargeAmount));
-    }
-
-    return new CostComponentsForRepaymentPeriod(
-            costComponentMap,
-            balanceAdjustment);
-  }
-
-  private static boolean chargeDefinitionTouchesCustomerLoanAccount(final ChargeDefinition chargeDefinition)
-  {
-    return chargeDefinition.getToAccountDesignator().equals(AccountDesignators.CUSTOMER_LOAN) ||
-            chargeDefinition.getFromAccountDesignator().equals(AccountDesignators.CUSTOMER_LOAN) ||
-            (chargeDefinition.getAccrualAccountDesignator() != null && chargeDefinition.getAccrualAccountDesignator().equals(AccountDesignators.CUSTOMER_LOAN));
-  }
-
-  private static BiFunction<BigDecimal, BigDecimal, BigDecimal> howToApplyScheduledChargeToBalance(
-          final ScheduledCharge scheduledCharge,
-          final int precision)
-  {
-
-    switch (scheduledCharge.getChargeDefinition().getChargeMethod())
-    {
-      case FIXED:
-        return (maximumBalance, runningBalance) -> scheduledCharge.getChargeDefinition().getAmount();
-      case PROPORTIONAL: {
-        if (scheduledCharge.getChargeDefinition().getProportionalTo().equals(ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR))
-          return (maximumBalance, runningBalance) -> PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, precision).multiply(runningBalance);
-        else if (scheduledCharge.getChargeDefinition().getProportionalTo().equals(ChargeIdentifiers.MAXIMUM_BALANCE_DESIGNATOR))
-          return (maximumBalance, runningBalance) -> PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, precision).multiply(maximumBalance);
-        else //TODO: correctly implement charges which are proportionate to other charges.
-          return (maximumBalance, runningBalance) -> PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, precision).multiply(maximumBalance);
-      }
-      default:
-        return (maximumBalance, runningBalance) -> BigDecimal.ZERO;
-    }
   }
 
   private BigDecimal loanPaymentInContextOfAccruedInterest(

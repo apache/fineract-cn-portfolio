@@ -21,6 +21,7 @@ import io.mifos.accounting.api.v1.client.LedgerNotFoundException;
 import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.lang.DateConverter;
+import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import org.apache.commons.lang.RandomStringUtils;
@@ -29,10 +30,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -102,8 +100,13 @@ public class AccountingAdapter {
   }
 
   public BigDecimal getCurrentBalance(final String accountIdentifier) {
-    final Account account = ledgerManager.findAccount(accountIdentifier);
-    return BigDecimal.valueOf(account.getBalance());
+    try {
+      final Account account = ledgerManager.findAccount(accountIdentifier);
+      return BigDecimal.valueOf(account.getBalance());
+    }
+    catch (final AccountNotFoundException e) {
+     throw ServiceException.internalError("Could not found the account with the identifier ''{0}''", accountIdentifier);
+    }
   }
 
   public String createAccountForLedgerAssignment(final String customerIdentifier, final AccountAssignment ledgerAssignment) {
@@ -138,7 +141,7 @@ public class AccountingAdapter {
   public static Set<String> getRequiredAccountDesignators(final Collection<ChargeDefinition> chargeDefinitionEntities) {
     return chargeDefinitionEntities.stream()
             .flatMap(AccountingAdapter::getAutomaticActionAccountDesignators)
-            .filter(x -> x != null)
+            .filter(Objects::nonNull)
             .collect(Collectors.toSet());
   }
 

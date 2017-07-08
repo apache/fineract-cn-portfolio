@@ -101,7 +101,7 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
 
     final ChargeDefinition interestChargeDefinition
         = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.INTEREST_ID);
-    interestChargeDefinition.setAmount(Fixture.interestRate);
+    interestChargeDefinition.setAmount(Fixture.INTEREST_RATE);
 
     portfolioManager.changeChargeDefinition(
         product.getIdentifier(),

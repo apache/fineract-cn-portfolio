@@ -24,6 +24,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -36,5 +37,7 @@ public interface CaseRepository extends JpaRepository<CaseEntity, Long> {
   //TODO: It should be possible to delete the @Query once we've updated to spring-data-release train ingalls.
   @Query("SELECT COUNT(t) > 0  FROM CaseEntity t WHERE t.productIdentifier = :productIdentifier")
   boolean existsByProductIdentifier(@Param("productIdentifier") String productIdentifier);
+
+  Stream<CaseEntity> findByCurrentStateIn(Collection<String> currentStates);
 
 }

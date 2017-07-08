@@ -18,17 +18,18 @@ package io.mifos.individuallending.internal.service;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.time.LocalDate;
 import java.util.Objects;
 
 /**
  * @author Myrle Krantz
  */
-class ScheduledAction {
+public class ScheduledAction {
   final Action action;
   final LocalDate when;
-  final Period actionPeriod;
-  final Period repaymentPeriod;
+  final @Nullable Period actionPeriod;
+  final @Nullable Period repaymentPeriod;
 
   ScheduledAction(@Nonnull final Action action,
                   @Nonnull final LocalDate when,
@@ -38,6 +39,14 @@ class ScheduledAction {
     this.when = when;
     this.actionPeriod = actionPeriod;
     this.repaymentPeriod = repaymentPeriod;
+  }
+
+  ScheduledAction(@Nonnull final Action action,
+                  @Nonnull final LocalDate when) {
+    this.action = action;
+    this.when = when;
+    this.actionPeriod = null;
+    this.repaymentPeriod = null;
   }
 
   @Override

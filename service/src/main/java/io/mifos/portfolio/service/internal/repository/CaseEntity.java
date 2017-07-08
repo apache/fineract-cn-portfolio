@@ -17,6 +17,7 @@ package io.mifos.portfolio.service.internal.repository;
 
 import io.mifos.core.mariadb.util.LocalDateTimeConverter;
 
+import javax.annotation.Nullable;
 import javax.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Set;
@@ -33,17 +34,21 @@ public class CaseEntity {
   @Column(name = "id")
   private Long id;
 
-  @Column(name = "identifier")
+  @Column(name = "identifier", nullable = false)
   private String identifier;
 
-  @Column(name = "product_identifier")
+  @Column(name = "product_identifier", nullable = false)
   private String productIdentifier;
 
   @OneToMany(targetEntity = CaseAccountAssignmentEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "caseEntity")
   private Set<CaseAccountAssignmentEntity> accountAssignments;
 
-  @Column(name = "current_state")
+  @Column(name = "current_state", nullable = false)
   private String currentState;
+
+  @Column(name = "end_of_term")
+  @Convert(converter = LocalDateTimeConverter.class)
+  @Nullable private LocalDateTime endOfTerm;
 
   @Column(name = "created_on")
   @Convert(converter = LocalDateTimeConverter.class)
@@ -100,6 +105,14 @@ public class CaseEntity {
 
   public void setCurrentState(String currentState) {
     this.currentState = currentState;
+  }
+
+  public LocalDateTime getEndOfTerm() {
+    return endOfTerm;
+  }
+
+  public void setEndOfTerm(LocalDateTime endOfTerm) {
+    this.endOfTerm = endOfTerm;
   }
 
   public LocalDateTime getCreatedOn() {

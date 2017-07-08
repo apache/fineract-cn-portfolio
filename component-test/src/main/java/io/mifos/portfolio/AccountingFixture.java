@@ -20,14 +20,15 @@ import io.mifos.accounting.api.v1.domain.*;
 import org.hamcrest.Description;
 import org.mockito.AdditionalMatchers;
 import org.mockito.ArgumentMatcher;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Set;
+import java.util.*;
 
 import static org.mockito.Matchers.argThat;
 
@@ -52,6 +53,8 @@ class AccountingFixture {
   static final String TELLER_ONE_ACCOUNT_IDENTIFIER = "7352";
   static final String LOAN_INTEREST_ACCRUAL_ACCOUNT = "7810";
   static final String CONSUMER_LOAN_INTEREST_ACCOUNT = "1103";
+
+  static final Map<String, Account> accountMap = new HashMap<>();
 
 
   private static Ledger cashLedger() {
@@ -111,60 +114,60 @@ class AccountingFixture {
 
   }
 
-  private static Account loanFundsSourceAccount() {
+  private static void loanFundsSourceAccount() {
     final Account ret = new Account();
     ret.setIdentifier(LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER);
     ret.setLedger(CASH_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
-    return ret;
+    accountMap.put(LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER, ret);
   }
 
-  private static Account processingFeeIncomeAccount() {
+  private static void processingFeeIncomeAccount() {
     final Account ret = new Account();
     ret.setIdentifier(PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
-    return ret;
+    accountMap.put(PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER, ret);
   }
 
-  private static Account loanOriginationFeesIncomeAccount() {
+  private static void loanOriginationFeesIncomeAccount() {
     final Account ret = new Account();
     ret.setIdentifier(LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
-    return ret;
+    accountMap.put(LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER, ret);
   }
 
-  private static Account disbursementFeeIncomeAccount() {
+  private static void disbursementFeeIncomeAccount() {
     final Account ret = new Account();
     ret.setIdentifier(DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
-    return ret;
+    accountMap.put(DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, ret);
   }
 
-  private static Account tellerOneAccount() {
+  private static void tellerOneAccount() {
     final Account ret = new Account();
     ret.setIdentifier(TELLER_ONE_ACCOUNT_IDENTIFIER);
     ret.setLedger(CASH_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
-    return ret;
+    accountMap.put(TELLER_ONE_ACCOUNT_IDENTIFIER, ret);
   }
 
-  private static Account loanInterestAccrualAccount() {
+  private static void loanInterestAccrualAccount() {
     final Account ret = new Account();
     ret.setIdentifier(LOAN_INTEREST_ACCRUAL_ACCOUNT);
     ret.setLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
-    return ret;
+    accountMap.put(LOAN_INTEREST_ACCRUAL_ACCOUNT, ret);
   }
 
-  private static Account consumerLoanInterestAccount() {
+  private static void consumerLoanInterestAccount() {
     final Account ret = new Account();
     ret.setIdentifier(CONSUMER_LOAN_INTEREST_ACCOUNT);
     ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
-    return ret;
+    accountMap.put(CONSUMER_LOAN_INTEREST_ACCOUNT, ret);
   }
 
   private static AccountPage customerLoanAccountsPage() {
@@ -290,7 +293,32 @@ class AccountingFixture {
     }
   }
 
+  private static class FindAccountAnswer implements Answer {
+    @Override
+    public Account answer(InvocationOnMock invocation) throws Throwable {
+      final String identifier = invocation.getArgumentAt(0, String.class);
+      return accountMap.get(identifier);
+    }
+  }
+
+  private static class CreateAccountAnswer implements Answer {
+    @Override
+    public Void answer(InvocationOnMock invocation) throws Throwable {
+      final Account account = invocation.getArgumentAt(0, Account.class);
+      accountMap.put(account.getIdentifier(), account);
+      return null;
+    }
+  }
+
   static void mockAccountingPrereqs(final LedgerManager ledgerManagerMock) {
+    loanFundsSourceAccount();
+    loanOriginationFeesIncomeAccount();
+    processingFeeIncomeAccount();
+    disbursementFeeIncomeAccount();
+    tellerOneAccount();
+    loanInterestAccrualAccount();
+    consumerLoanInterestAccount();
+
     Mockito.doReturn(incomeLedger()).when(ledgerManagerMock).findLedger(INCOME_LEDGER_IDENTIFIER);
     Mockito.doReturn(feesAndChargesLedger()).when(ledgerManagerMock).findLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     Mockito.doReturn(cashLedger()).when(ledgerManagerMock).findLedger(CASH_LEDGER_IDENTIFIER);
@@ -298,17 +326,17 @@ class AccountingFixture {
     Mockito.doReturn(customerLoanLedger()).when(ledgerManagerMock).findLedger(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
     Mockito.doReturn(loanIncomeLedger()).when(ledgerManagerMock).findLedger(LOAN_INCOME_LEDGER_IDENTIFIER);
     Mockito.doReturn(accruedIncomeLedger()).when(ledgerManagerMock).findLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
-    Mockito.doReturn(loanFundsSourceAccount()).when(ledgerManagerMock).findAccount(LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER);
-    Mockito.doReturn(loanOriginationFeesIncomeAccount()).when(ledgerManagerMock).findAccount(LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER);
-    Mockito.doReturn(processingFeeIncomeAccount()).when(ledgerManagerMock).findAccount(PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER);
-    Mockito.doReturn(disbursementFeeIncomeAccount()).when(ledgerManagerMock).findAccount(DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER);
-    Mockito.doReturn(tellerOneAccount()).when(ledgerManagerMock).findAccount(TELLER_ONE_ACCOUNT_IDENTIFIER);
-    Mockito.doReturn(loanInterestAccrualAccount()).when(ledgerManagerMock).findAccount(LOAN_INTEREST_ACCRUAL_ACCOUNT);
-    Mockito.doReturn(consumerLoanInterestAccount()).when(ledgerManagerMock).findAccount(CONSUMER_LOAN_INTEREST_ACCOUNT);
     Mockito.doReturn(customerLoanAccountsPage()).when(ledgerManagerMock).fetchAccountsOfLedger(Mockito.eq(CUSTOMER_LOAN_LEDGER_IDENTIFIER),
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
     Mockito.doReturn(pendingDisbursalAccountsPage()).when(ledgerManagerMock).fetchAccountsOfLedger(Mockito.eq(PENDING_DISBURSAL_LEDGER_IDENTIFIER),
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+
+    Mockito.doAnswer(new FindAccountAnswer()).when(ledgerManagerMock).findAccount(Matchers.anyString());
+    Mockito.doAnswer(new CreateAccountAnswer()).when(ledgerManagerMock).createAccount(Matchers.any());
+  }
+
+  static void mockBalance(final String accountIdentifier, final BigDecimal balance) {
+    accountMap.get(accountIdentifier).setBalance(balance.doubleValue());
   }
 
   static String verifyAccountCreation(final LedgerManager ledgerManager,

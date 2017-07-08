@@ -16,6 +16,7 @@
 package io.mifos.individuallending;
 
 import com.google.gson.Gson;
+import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
@@ -25,6 +26,7 @@ import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType;
 import io.mifos.individuallending.internal.service.CostComponentService;
+import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
@@ -145,14 +147,14 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     writeOffAllowanceCharge.setProportionalTo(ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR);
 
     final ChargeDefinition interestCharge = charge(
-            INTEREST_NAME,
-            Action.ACCEPT_PAYMENT,
-            BigDecimal.valueOf(0.05),
-            CUSTOMER_LOAN,
-            PENDING_DISBURSAL);
+        INTEREST_NAME,
+        Action.ACCEPT_PAYMENT,
+        BigDecimal.valueOf(0.05),
+        INTEREST_ACCRUAL,
+        PENDING_DISBURSAL);
     interestCharge.setForCycleSizeUnit(ChronoUnit.YEARS);
     interestCharge.setAccrueAction(Action.APPLY_INTEREST.name());
-    interestCharge.setAccrualAccountDesignator(INTEREST_ACCRUAL);
+    interestCharge.setAccrualAccountDesignator(CUSTOMER_LOAN);
     interestCharge.setProportionalTo(ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR);
 
     final ChargeDefinition disbursementReturnCharge = charge(
@@ -263,13 +265,26 @@ public class IndividualLendingPatternFactory implements PatternFactory {
           final String productIdentifier,
           final String caseIdentifier,
           final String actionIdentifier) {
-    return costComponentService.getCostComponents(productIdentifier, caseIdentifier, Action.valueOf(actionIdentifier))
+    final Action action = Action.valueOf(actionIdentifier);
+    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, Collections.emptyList());
+    final Case.State caseState = Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState());
+    checkActionCanBeExecuted(caseState, action);
+
+    return costComponentService.getCostComponentsForAction(action, dataContextOfAction)
+        .stream()
+        .map(costComponentEntry -> new CostComponent(costComponentEntry.getKey().getIdentifier(), costComponentEntry.getValue().getAmount()))
+        .collect(Collectors.toList())
             .stream()
             .map(x -> new CostComponent(x.getChargeIdentifier(), x.getAmount()))
             .collect(Collectors.toList());
   }
 
-  public static Set<Action> getAllowedNextActionsForState(Case.State state) {
+  public static void checkActionCanBeExecuted(final Case.State state, final Action action) {
+    if (!getAllowedNextActionsForState(state).contains(action))
+      throw ServiceException.badRequest("Cannot call action {0} from state {1}", action.name(), state.name());
+  }
+
+  private static Set<Action> getAllowedNextActionsForState(final Case.State state) {
     switch (state)
     {
       case CREATED:

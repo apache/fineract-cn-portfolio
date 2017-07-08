@@ -35,7 +35,7 @@ import static io.mifos.individuallending.internal.service.Fixture.*;
  * @author Myrle Krantz
  */
 @RunWith(Parameterized.class)
-public class ScheduledActionServiceTest {
+public class ScheduledActionHelperTest {
   private static class TestCase
   {
     final String description;
@@ -355,17 +355,17 @@ public class ScheduledActionServiceTest {
 
   private final TestCase testCase;
 
-  public ScheduledActionServiceTest(final TestCase testCase)
+  public ScheduledActionHelperTest(final TestCase testCase)
   {
     this.testCase = testCase;
   }
 
   @Test
   public void getScheduledActions() throws Exception {
-    final ScheduledActionService testSubject = new ScheduledActionService();
-    final List<ScheduledAction> result = testSubject.getHypotheticalScheduledActions(testCase.initialDisbursementDate, testCase.caseParameters);
+    final List<ScheduledAction> result = ScheduledActionHelpers.getHypotheticalScheduledActions(testCase.initialDisbursementDate, testCase.caseParameters);
 
-    Assert.assertTrue(testCase.description, result.containsAll(testCase.expectedResultContents));
+    Assert.assertTrue("Case " + testCase.description + " should contain " + testCase.expectedResultContents,
+        result.containsAll(testCase.expectedResultContents));
     result.forEach(x -> {
       Assert.assertTrue(x.toString(), testCase.earliestActionDate.isBefore(x.when) || testCase.earliestActionDate.isEqual(x.when));
       Assert.assertTrue(x.toString(), testCase.latestActionDate.isAfter(x.when) || testCase.latestActionDate.isEqual(x.when));
@@ -374,15 +374,19 @@ public class ScheduledActionServiceTest {
     Assert.assertEquals(testCase.expectedInterestCount, countActionsByType(result, Action.APPLY_INTEREST));
     Assert.assertEquals(1, countActionsByType(result, Action.APPROVE));
     Assert.assertEquals(1, countActionsByType(result, Action.CLOSE));
-    result.forEach(x -> Assert.assertNotNull(x.actionPeriod));
-    result.forEach(x -> Assert.assertNotNull(x.repaymentPeriod));
+    result.stream().filter(scheduledAction -> !ScheduledActionHelpers.actionHasNoActionPeriod(scheduledAction.action))
+        .forEach(scheduledAction -> {
+          Assert.assertNotNull("The action period of " + scheduledAction.toString() + " should not be null.",
+              scheduledAction.actionPeriod);
+          Assert.assertNotNull("The repayment period of " + scheduledAction.toString() + " should not be null.",
+              scheduledAction.repaymentPeriod);
+        });
     Assert.assertTrue(noDuplicatesInResult(result));
     Assert.assertTrue(maximumOneInterestPerDay(result));
   }
 
   private long countActionsByType(final List<ScheduledAction> scheduledActions, final Action actionToCount) {
-    return scheduledActions.stream().filter(x -> x.action == actionToCount)
-            .collect(Collectors.counting());
+    return scheduledActions.stream().filter(x -> x.action == actionToCount).count();
   }
 
   private boolean maximumOneInterestPerDay(final List<ScheduledAction> result) {

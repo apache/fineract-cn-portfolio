@@ -38,10 +38,11 @@ import static java.math.BigDecimal.ROUND_HALF_EVEN;
 
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class Fixture {
+  static final int MINOR_CURRENCY_UNIT_DIGITS = 2;
+  static final BigDecimal INTEREST_RATE = BigDecimal.valueOf(0.10).setScale(4, RoundingMode.HALF_EVEN);
+  static final BigDecimal ACCRUAL_PERIODS = BigDecimal.valueOf(365.2425);
 
-  public static final int MINOR_CURRENCY_UNIT_DIGITS = 2;
   private static int uniquenessSuffix = 0;
-  static final BigDecimal interestRate = BigDecimal.valueOf(0.10).setScale(4, RoundingMode.HALF_EVEN);
 
   static public Product getTestProduct() {
     final Product product = new Product();

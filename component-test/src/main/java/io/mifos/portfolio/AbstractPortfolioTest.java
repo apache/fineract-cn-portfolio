@@ -213,8 +213,7 @@ public class AbstractPortfolioTest {
     command.setOneTimeAccountAssignments(oneTimeAccountAssignments);
     portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, action.name(), command);
 
-    Assert.assertTrue(eventRecorder.waitForMatch(event,
-            (IndividualLoanCommandEvent x) -> individualLoanCommandEventMatches(x, productIdentifier, caseIdentifier)));
+    Assert.assertTrue(eventRecorder.wait(event, new IndividualLoanCommandEvent(productIdentifier, caseIdentifier)));
 
     final Case customerCase = portfolioManager.getCase(productIdentifier, caseIdentifier);
     Assert.assertEquals(customerCase.getCurrentState(), nextState.name());

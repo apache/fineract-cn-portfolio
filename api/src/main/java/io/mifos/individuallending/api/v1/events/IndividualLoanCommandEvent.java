@@ -24,15 +24,13 @@ import java.util.Objects;
 public class IndividualLoanCommandEvent {
   private String productIdentifier;
   private String caseIdentifier;
-  private String commandIdentifier;
 
   public IndividualLoanCommandEvent() {
   }
 
-  public IndividualLoanCommandEvent(String productIdentifier, String caseIdentifier, String commandIdentifier) {
+  public IndividualLoanCommandEvent(String productIdentifier, String caseIdentifier) {
     this.productIdentifier = productIdentifier;
     this.caseIdentifier = caseIdentifier;
-    this.commandIdentifier = commandIdentifier;
   }
 
   public String getProductIdentifier() {
@@ -51,27 +49,18 @@ public class IndividualLoanCommandEvent {
     this.caseIdentifier = caseIdentifier;
   }
 
-  public String getCommandIdentifier() {
-    return commandIdentifier;
-  }
-
-  public void setCommandIdentifier(String commandIdentifier) {
-    this.commandIdentifier = commandIdentifier;
-  }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     IndividualLoanCommandEvent that = (IndividualLoanCommandEvent) o;
     return Objects.equals(productIdentifier, that.productIdentifier) &&
-            Objects.equals(caseIdentifier, that.caseIdentifier) &&
-            Objects.equals(commandIdentifier, that.commandIdentifier);
+            Objects.equals(caseIdentifier, that.caseIdentifier);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(productIdentifier, caseIdentifier, commandIdentifier);
+    return Objects.hash(productIdentifier, caseIdentifier);
   }
 
   @Override
@@ -79,7 +68,6 @@ public class IndividualLoanCommandEvent {
     return "IndividualLoanCommandEvent{" +
             "productIdentifier='" + productIdentifier + '\'' +
             ", caseIdentifier='" + caseIdentifier + '\'' +
-            ", commandIdentifier='" + commandIdentifier + '\'' +
             '}';
   }
 }

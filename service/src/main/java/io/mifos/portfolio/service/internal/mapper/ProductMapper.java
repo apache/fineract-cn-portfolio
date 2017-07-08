@@ -22,6 +22,7 @@ import io.mifos.portfolio.service.internal.repository.ProductAccountAssignmentEn
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,7 +42,7 @@ public class ProductMapper {
             new TermRange(productEntity.getTermRangeTemporalUnit(),
                     productEntity.getTermRangeMaximum()));
     product.setBalanceRange(
-            new BalanceRange(productEntity.getBalanceRangeMinimum(), productEntity.getBalanceRangeMaximum()));
+            new BalanceRange(productEntity.getBalanceRangeMinimum().setScale(productEntity.getMinorCurrencyUnitDigits(), BigDecimal.ROUND_HALF_EVEN), productEntity.getBalanceRangeMaximum().setScale(productEntity.getMinorCurrencyUnitDigits(), BigDecimal.ROUND_HALF_EVEN)));
     product.setInterestRange(
             new InterestRange(productEntity.getInterestRangeMinimum(), productEntity.getInterestRangeMaximum()));
     product.setInterestBasis(productEntity.getInterestBasis());

@@ -251,7 +251,7 @@ public class IndividualLoanServiceTest {
             .caseParameters(caseParameters)
             .initialDisbursementDate(initialDisbursementDate)
             .chargeDefinitionsMappedByAction(chargeDefinitionsMappedByAction)
-            .expectedChargeIdentifiers(new HashSet<>(Arrays.asList(PROCESSING_FEE_ID, LOAN_FUNDS_ALLOCATION_ID, RETURN_DISBURSEMENT_ID, LOAN_ORIGINATION_FEE_ID, INTEREST_ID, PAYMENT_ID)));
+            .expectedChargeIdentifiers(new HashSet<>(Arrays.asList(PROCESSING_FEE_ID, LOAN_FUNDS_ALLOCATION_ID, RETURN_DISBURSEMENT_ID, LOAN_ORIGINATION_FEE_ID, INTEREST_ID, DISBURSEMENT_FEE_ID, PAYMENT_ID)));
   }
 
   private static List<ChargeDefinition> getInterestChargeDefinition(final double amount, final ChronoUnit forCycleSizeUnit) {
@@ -317,7 +317,7 @@ public class IndividualLoanServiceTest {
     Mockito.doReturn(Optional.of(product)).when(productServiceMock).findByIdentifier(testCase.productIdentifier);
     Mockito.doReturn(testCase.chargeDefinitionsMappedByAction).when(chargeDefinitionServiceMock).getChargeDefinitionsMappedByChargeAction(testCase.productIdentifier);
 
-    testSubject = new IndividualLoanService(productServiceMock, chargeDefinitionServiceMock, new ScheduledActionService(), new PeriodChargeCalculator());
+    testSubject = new IndividualLoanService(productServiceMock, chargeDefinitionServiceMock, new PeriodChargeCalculator());
   }
 
   @Test
@@ -357,9 +357,13 @@ public class IndividualLoanServiceTest {
     });
 
     //All customer payments should be within one percent of each other.
-    final Set<BigDecimal> customerPayments = allPlannedPayments.stream().map(this::getCustomerPayment).collect(Collectors.toSet());
-    final Optional<BigDecimal> maxPayment = customerPayments.stream().collect(Collectors.maxBy(BigDecimal::compareTo));
-    final Optional<BigDecimal> minPayment = customerPayments.stream().collect(Collectors.minBy(BigDecimal::compareTo));
+    final Set<BigDecimal> customerRepayments = allPlannedPayments.stream()
+        .map(this::getCustomerRepayment)
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .collect(Collectors.toSet());
+    final Optional<BigDecimal> maxPayment = customerRepayments.stream().max(BigDecimal::compareTo);
+    final Optional<BigDecimal> minPayment = customerRepayments.stream().min(BigDecimal::compareTo);
     Assert.assertTrue(maxPayment.isPresent());
     Assert.assertTrue(minPayment.isPresent());
     final double percentDifference = percentDifference(maxPayment.get(), minPayment.get());
@@ -377,36 +381,17 @@ public class IndividualLoanServiceTest {
     Assert.assertEquals(testCase.expectedChargeIdentifiers, resultChargeIdentifiers);
   }
 
-  @Test
-  public void getCostComponentsForRepaymentPeriod() {
-    testCase.chargeInstancesForActions.entrySet().forEach(entry ->
-            Assert.assertEquals(
-                    entry.getValue().stream().collect(Collectors.toSet()),
-                    testSubject.getCostComponentsForRepaymentPeriod(
-                            testCase.productIdentifier,
-                            testCase.caseParameters,
-                            testCase.caseParameters.getMaximumBalance(),
-                            entry.getKey().getAction(),
-                            testCase.initialDisbursementDate, entry.getKey().getLocalDate())
-                    .stream()
-                    .map(x -> new ChargeInstance(x.getKey().getFromAccountDesignator(), x.getKey().getToAccountDesignator(), x.getValue().getAmount()))
-                    .collect(Collectors.toSet())
-            ));
-  }
-
   private double percentDifference(final BigDecimal maxPayment, final BigDecimal minPayment) {
     final BigDecimal difference = maxPayment.subtract(minPayment);
     final BigDecimal percentDifference = difference.divide(maxPayment, 4, BigDecimal.ROUND_UP);
     return percentDifference.doubleValue();
   }
 
-  private BigDecimal getCustomerPayment(final PlannedPayment plannedPayment) {
+  private Optional<BigDecimal> getCustomerRepayment(final PlannedPayment plannedPayment) {
     final Optional<CostComponent> ret = plannedPayment.getCostComponents().stream()
             .filter(y -> y.getChargeIdentifier().equals(ChargeIdentifiers.PAYMENT_ID))
             .findAny();
 
-    Assert.assertTrue(ret.isPresent());
-
-    return ret.get().getAmount().abs();
+    return ret.map(x -> x.getAmount().abs());
   }
 }

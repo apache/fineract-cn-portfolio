@@ -84,3 +84,4 @@ system:
 
 portfolio:
   bookInterestAsUser: interest_user
+  bookInterestInTimeSlot: 0

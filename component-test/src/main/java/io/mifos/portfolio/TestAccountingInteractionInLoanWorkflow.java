@@ -37,9 +37,7 @@ import io.mifos.rhythm.spi.v1.domain.BeatPublish;
 import io.mifos.rhythm.spi.v1.events.BeatPublishEvent;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.FixMethodOrder;
 import org.junit.Test;
-import org.junit.runners.MethodSorters;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -53,7 +51,6 @@ import static io.mifos.portfolio.Fixture.MINOR_CURRENCY_UNIT_DIGITS;
 /**
  * @author Myrle Krantz
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTest {
   private static final BigDecimal PROCESSING_FEE_AMOUNT = BigDecimal.valueOf(10_0000, MINOR_CURRENCY_UNIT_DIGITS);
   private static final BigDecimal LOAN_ORIGINATION_FEE_AMOUNT = BigDecimal.valueOf(100_0000, MINOR_CURRENCY_UNIT_DIGITS);
@@ -74,8 +71,27 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   @Test
-  public void step1CreateProduct() throws InterruptedException {
-    //Create product and set charges to fixed fees.
+  public void workflowTerminatingInApplicationDenial() throws InterruptedException {
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase();
+    step4DenyCase();
+  }
+
+  @Test
+  public void workflowTerminatingInEarlyLoanPayoff() throws InterruptedException {
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase();
+    step4ApproveCase();
+    step5DisburseFullAmount();
+    step6CalculateInterestAccrual();
+    //step7PaybackFullAmount();
+  }
+
+  //Create product and set charges to fixed fees.
+  private void step1CreateProduct() throws InterruptedException {
+    logger.info("step1CreateProduct");
     product = createProduct();
 
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.PROCESSING_FEE_ID, PROCESSING_FEE_AMOUNT);
@@ -93,9 +109,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
   }
 
-  @Test
-  public void step2CreateCase() throws InterruptedException {
-    //Create case.
+  private void step2CreateCase() throws InterruptedException {
+    logger.info("step2CreateCase");
     caseParameters = Fixture.createAdjustedCaseParameters(x -> {
     });
     final String caseParametersAsString = new Gson().toJson(caseParameters);
@@ -107,8 +122,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   //Open the case and accept a processing fee.
-  @Test
-  public void step3OpenCase() throws InterruptedException {
+  private void step3OpenCase() throws InterruptedException {
+    logger.info("step3OpenCase");
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -128,9 +143,23 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
 
+  //Deny the case. Once this is done, no more actions are possible for the case.
+  private void step4DenyCase() throws InterruptedException {
+    logger.info("step4DenyCase");
+    checkStateTransfer(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.DENY,
+        Collections.singletonList(assignEntryToTeller()),
+        IndividualLoanEventConstants.DENY_INDIVIDUALLOAN_CASE,
+        Case.State.CLOSED);
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
+  }
+
+
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
-  @Test
-  public void step4ApproveCase() throws InterruptedException {
+  private void step4ApproveCase() throws InterruptedException {
+    logger.info("step4ApproveCase");
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -156,8 +185,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
-  @Test
-  public void step5DisburseFullAmount() throws InterruptedException {
+  private void step5DisburseFullAmount() throws InterruptedException {
+    logger.info("step5DisburseFullAmount");
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -181,8 +210,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   //Perform daily interest calculation.
-  @Test
-  public void step6CalculateInterestAccrual() throws InterruptedException {
+  private void step6CalculateInterestAccrual() throws InterruptedException {
+    logger.info("step6CalculateInterestAccrual");
     final String beatIdentifier = "alignment0";
     final String midnightTimeStamp = DateConverter.toIsoString(LocalDateTime.now().truncatedTo(ChronoUnit.DAYS));
 

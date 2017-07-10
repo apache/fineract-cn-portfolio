@@ -18,10 +18,7 @@ package io.mifos.portfolio;
 import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.anubis.test.v1.TenantApplicationSecurityEnvironmentTestRule;
 import io.mifos.core.api.context.AutoUserContext;
-import io.mifos.core.test.env.TestEnvironment;
 import io.mifos.core.test.fixture.TenantDataStoreContextTestRule;
-import io.mifos.core.test.fixture.cassandra.CassandraInitializer;
-import io.mifos.core.test.fixture.mariadb.MariaDBInitializer;
 import io.mifos.core.test.listener.EnableEventRecording;
 import io.mifos.core.test.listener.EventRecorder;
 import io.mifos.individuallending.api.v1.client.IndividualLending;
@@ -37,8 +34,6 @@ import io.mifos.portfolio.service.config.PortfolioServiceConfiguration;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.portfolio.service.internal.util.RhythmAdapter;
 import org.junit.*;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
@@ -76,8 +71,7 @@ import static org.mockito.Mockito.doReturn;
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
         classes = {AbstractPortfolioTest.TestConfiguration.class})
-public class AbstractPortfolioTest {
-  private static final String APP_NAME = "portfolio-v1";
+public class AbstractPortfolioTest extends SuiteTestEnvironment {
   private static final String LOGGER_NAME = "test-logger";
 
   @Configuration
@@ -107,17 +101,9 @@ public class AbstractPortfolioTest {
 
   static final String TEST_USER = "setau";
 
-  final static TestEnvironment testEnvironment = new TestEnvironment(APP_NAME);
-  private final static CassandraInitializer cassandraInitializer = new CassandraInitializer();
-  private final static MariaDBInitializer mariaDBInitializer = new MariaDBInitializer();
-  private final static TenantDataStoreContextTestRule tenantDataStoreContext = TenantDataStoreContextTestRule.forRandomTenantName(cassandraInitializer, mariaDBInitializer);
-
   @ClassRule
-  public static TestRule orderClassRules = RuleChain
-          .outerRule(testEnvironment)
-          .around(cassandraInitializer)
-          .around(mariaDBInitializer)
-          .around(tenantDataStoreContext);
+  public final static TenantDataStoreContextTestRule tenantDataStoreContext
+      = TenantDataStoreContextTestRule.forRandomTenantName(cassandraInitializer, mariaDBInitializer);
 
   @Rule
   public final TenantApplicationSecurityEnvironmentTestRule tenantApplicationSecurityEnvironment

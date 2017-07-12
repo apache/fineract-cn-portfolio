@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import io.mifos.portfolio.api.v1.validation.ValidChargeReference;
 import io.mifos.portfolio.api.v1.validation.ValidPaymentCycleUnit;
 import io.mifos.core.lang.validation.constraints.ValidIdentifier;
 import org.hibernate.validator.constraints.NotBlank;
@@ -61,7 +62,7 @@ public class ChargeDefinition {
   @NotNull
   private ChargeMethod chargeMethod;
 
-  @ValidIdentifier(optional = true)
+  @ValidChargeReference
   private String proportionalTo;
 
   @ValidIdentifier

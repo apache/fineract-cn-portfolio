@@ -151,6 +151,20 @@ public class TestCommands extends AbstractPortfolioTest {
   }
 
   @Test
+  public void testApproveBeforeOpen() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+    final Case customerCase = createCase(product.getIdentifier());
+
+    checkStateTransferFails(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.APPROVE,
+        Collections.singletonList(assignEntryToTeller()),
+        APPROVE_INDIVIDUALLOAN_CASE,
+        Case.State.CREATED);
+  }
+
+  @Test
   public void testDisburseBeforeApproval() throws InterruptedException {
     final Product product = createAndEnableProduct();
     final Case customerCase = createCase(product.getIdentifier());

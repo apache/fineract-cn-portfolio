@@ -23,6 +23,7 @@ import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Consumer;
@@ -37,8 +38,10 @@ import static java.math.BigDecimal.ROUND_HALF_EVEN;
 
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class Fixture {
+  static final int MINOR_CURRENCY_UNIT_DIGITS = 2;
+  static final BigDecimal INTEREST_RATE = BigDecimal.valueOf(0.10).setScale(4, RoundingMode.HALF_EVEN);
+  static final BigDecimal ACCRUAL_PERIODS = BigDecimal.valueOf(365.2425);
 
-  public static final int MINOR_CURRENCY_UNIT_DIGITS = 2;
   private static int uniquenessSuffix = 0;
 
   static public Product getTestProduct() {

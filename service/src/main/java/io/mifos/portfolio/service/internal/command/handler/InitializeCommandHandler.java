@@ -23,6 +23,7 @@ import io.mifos.core.mariadb.domain.FlywayFactoryBean;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.service.internal.command.InitializeServiceCommand;
 import io.mifos.portfolio.service.internal.util.RhythmAdapter;
+import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.sql.DataSource;
@@ -51,7 +52,9 @@ public class InitializeCommandHandler {
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.INITIALIZE)
   public String initialize(final InitializeServiceCommand initializeServiceCommand) {
-    this.flywayFactoryBean.create(this.dataSource).migrate();
+    final Flyway flyway = this.flywayFactoryBean.create(this.dataSource);
+    System.out.println("Baseline version: " + flyway.getBaselineVersion());
+    flyway.migrate();
     rhythmAdapter.request24Beats();
     return EventConstants.INITIALIZE;
   }

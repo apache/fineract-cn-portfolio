@@ -66,6 +66,7 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
 
     try {
       portfolioManager.getChargeDefinition(product.getIdentifier(), chargeDefinitionToDelete.getIdentifier());
+      //noinspection ConstantConditions
       Assert.assertFalse(true);
     }
     catch (final NotFoundException ignored) { }
@@ -91,5 +92,27 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
 
     final ChargeDefinition chargeDefinitionAsCreated = portfolioManager.getChargeDefinition(product.getIdentifier(), chargeDefinition.getIdentifier());
     Assert.assertEquals(chargeDefinition, chargeDefinitionAsCreated);
+  }
+
+
+  @Test
+  public void shouldChangeInterestChargeDefinition() throws InterruptedException {
+    final Product product = createProduct();
+
+    final ChargeDefinition interestChargeDefinition
+        = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.INTEREST_ID);
+    interestChargeDefinition.setAmount(Fixture.INTEREST_RATE);
+
+    portfolioManager.changeChargeDefinition(
+        product.getIdentifier(),
+        interestChargeDefinition.getIdentifier(),
+        interestChargeDefinition);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CHARGE_DEFINITION,
+        new ChargeDefinitionEvent(product.getIdentifier(), interestChargeDefinition.getIdentifier())));
+
+    final ChargeDefinition chargeDefinitionAsChanged
+        = portfolioManager.getChargeDefinition(product.getIdentifier(), interestChargeDefinition.getIdentifier());
+
+    Assert.assertEquals(interestChargeDefinition, chargeDefinitionAsChanged);
   }
 }

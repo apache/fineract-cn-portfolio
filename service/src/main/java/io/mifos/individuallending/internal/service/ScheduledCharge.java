@@ -22,7 +22,7 @@ import javax.annotation.Nonnull;
 /**
  * @author Myrle Krantz
  */
-class ScheduledCharge {
+public class ScheduledCharge {
   private final ScheduledAction scheduledAction;
   private final ChargeDefinition chargeDefinition;
 

@@ -15,6 +15,8 @@
  */
 package io.mifos.individuallending.internal.service;
 
+import io.mifos.core.lang.DateConverter;
+
 import javax.annotation.Nonnull;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -46,6 +48,10 @@ class Period implements Comparable<Period> {
     return endDate;
   }
 
+  String getEndDateAsString() {
+    return endDate == null ? null : DateConverter.toIsoString(endDate);
+  }
+
   Duration getDuration() {
     long days = beginDate.until(endDate, ChronoUnit.DAYS);
     return ChronoUnit.DAYS.getDuration().multipliedBy(days);
@@ -71,11 +77,24 @@ class Period implements Comparable<Period> {
 
   @Override
   public int compareTo(@Nonnull Period o) {
-    int comparison = endDate.compareTo(o.endDate);
+    final int comparison = compareNullableDates(endDate, o.endDate);
+
     if (comparison == 0)
-      return beginDate.compareTo(o.beginDate);
+      return compareNullableDates(beginDate, o.beginDate);
     else
       return comparison;
+  }
+
+  @SuppressWarnings("ConstantConditions")
+  private static int compareNullableDates(final LocalDate x, final LocalDate y) {
+    if ((x == null) && (y == null))
+      return 0;
+    else if ((x == null) && (y != null))
+      return -1;
+    else if ((x != null) && (y == null))
+      return 1;
+    else
+      return x.compareTo(y);
   }
 
   @Override

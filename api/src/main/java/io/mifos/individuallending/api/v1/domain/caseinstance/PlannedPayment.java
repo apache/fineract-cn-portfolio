@@ -17,6 +17,7 @@ package io.mifos.individuallending.api.v1.domain.caseinstance;
 
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
@@ -29,7 +30,7 @@ public final class PlannedPayment {
   private Double interestRate;
   private List<CostComponent> costComponents;
   private BigDecimal remainingPrincipal;
-  private String date;
+  private @Nullable String date;
 
   public PlannedPayment() {
   }

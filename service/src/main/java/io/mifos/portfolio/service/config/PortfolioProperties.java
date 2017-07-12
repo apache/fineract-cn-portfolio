@@ -16,6 +16,7 @@
 package io.mifos.portfolio.service.config;
 
 import io.mifos.core.lang.validation.constraints.ValidIdentifier;
+import org.hibernate.validator.constraints.Range;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import org.springframework.validation.annotation.Validated;
@@ -31,6 +32,9 @@ public class PortfolioProperties {
   @ValidIdentifier
   private String bookInterestAsUser;
 
+  @Range(min=0, max=23)
+  private int bookInterestInTimeSlot = 0;
+
   public PortfolioProperties() {
   }
 
@@ -40,5 +44,13 @@ public class PortfolioProperties {
 
   public void setBookInterestAsUser(String bookInterestAsUser) {
     this.bookInterestAsUser = bookInterestAsUser;
+  }
+
+  public int getBookInterestInTimeSlot() {
+    return bookInterestInTimeSlot;
+  }
+
+  public void setBookInterestInTimeSlot(int bookInterestInTimeSlot) {
+    this.bookInterestInTimeSlot = bookInterestInTimeSlot;
   }
 }

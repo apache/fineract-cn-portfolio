@@ -16,4 +16,6 @@
 
 # noinspection SqlNoDataSourceInspectionForFile
 
-ALTER TABLE bastet_p_chrg_defs ADD COLUMN proportional_to VARCHAR(32) NULL;
+ALTER TABLE bastet_p_chrg_defs ADD COLUMN proportional_to VARCHAR(32) NULL DEFAULT NULL;
+
+ALTER TABLE bastet_cases ADD COLUMN end_of_term TIMESTAMP(3) NULL DEFAULT NULL;

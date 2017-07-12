@@ -18,12 +18,12 @@ package io.mifos.individuallending.internal.service;
 import io.mifos.portfolio.api.v1.domain.PaymentCycle;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
-import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.SortedSet;
@@ -35,36 +35,55 @@ import java.util.stream.Stream;
  * @author Myrle Krantz
  */
 @SuppressWarnings("WeakerAccess")
-@Service
-public class ScheduledActionService {
-
-  List<ScheduledAction> getHypotheticalScheduledActions(final @Nonnull LocalDate initialDisbursalDate,
-                                                                final @Nonnull CaseParameters caseParameters)
-  {
-    return getHypotheticalScheduledActionsHelper(initialDisbursalDate, caseParameters).collect(Collectors.toList());
+public class ScheduledActionHelpers {
+  public static boolean actionHasNoActionPeriod(final Action action) {
+    return preDisbursalActions().anyMatch(x -> action == x);
   }
 
-  private Stream<ScheduledAction> getHypotheticalScheduledActionsHelper(final @Nonnull LocalDate initialDisbursalDate,
+  private static Stream<Action> preDisbursalActions() {
+    return Stream.of(Action.OPEN, Action.APPROVE, Action.DISBURSE);
+  }
+
+  public static List<ScheduledAction> getHypotheticalScheduledActions(final @Nonnull LocalDate initialDisbursalDate,
                                                         final @Nonnull CaseParameters caseParameters)
   {
-    //'Rough' end date, because if the repayment period takes the last period after that end date, then the repayment
-    // period will 'win'.
-    final LocalDate roughEndDate = getEndDate(caseParameters, initialDisbursalDate);
-
-    final SortedSet<Period> repaymentPeriods = generateRepaymentPeriods(initialDisbursalDate, roughEndDate, caseParameters);
-    final Period firstPeriod = repaymentPeriods.first();
-    final Period lastPeriod = repaymentPeriods.last();
-
-    return Stream.concat(Stream.of(
-        new ScheduledAction(Action.OPEN, initialDisbursalDate, firstPeriod, firstPeriod),
-        new ScheduledAction(Action.APPROVE, initialDisbursalDate, firstPeriod, firstPeriod),
-        new ScheduledAction(Action.DISBURSE, initialDisbursalDate, firstPeriod, firstPeriod)),
-        Stream.concat(repaymentPeriods.stream().flatMap(this::generateScheduledActionsForRepaymentPeriod),
-            Stream.of(new ScheduledAction(Action.CLOSE, lastPeriod.getEndDate(), lastPeriod, lastPeriod))));
+    final LocalDate endOfTerm = getRoughEndDate(initialDisbursalDate, caseParameters);
+    return Stream.concat(preDisbursalActions().map(action -> new ScheduledAction(action, initialDisbursalDate)),
+        getHypotheticalScheduledActionsForDisbursedLoan(initialDisbursalDate, endOfTerm, caseParameters))
+        .collect(Collectors.toList());
   }
 
-  private LocalDate getEndDate(final @Nonnull CaseParameters caseParameters,
-                               final @Nonnull LocalDate initialDisbursalDate) {
+  public static List<ScheduledAction> getScheduledActionsForDisbursedLoan(final @Nonnull LocalDate forDate,
+                                                                   final @Nonnull LocalDate endOfTerm,
+                                                                   final @Nonnull CaseParameters caseParameters,
+                                                                   final @Nonnull Action action) {
+    if (preDisbursalActions().anyMatch(x -> action == x))
+      throw new IllegalStateException("Should not be calling getScheduledActionsForDisbursedLoan with an action which occurs before disbursement.");
+
+    final LocalDate today = LocalDate.now(ZoneId.of("UTC"));
+    return getHypotheticalScheduledActionsForDisbursedLoan(today, endOfTerm, caseParameters)
+        .filter(x -> x.action.equals(action))
+        .filter(x -> x.actionPeriod != null && x.actionPeriod.containsDate(forDate))
+        .collect(Collectors.toList());
+  }
+
+  private static Stream<ScheduledAction> getHypotheticalScheduledActionsForDisbursedLoan(
+      final @Nonnull LocalDate initialDisbursalDate,
+      final @Nonnull LocalDate endOfTerm,
+      final @Nonnull CaseParameters caseParameters)
+  {
+    final SortedSet<Period> repaymentPeriods = generateRepaymentPeriods(initialDisbursalDate, endOfTerm, caseParameters);
+    final Period lastPeriod = repaymentPeriods.last();
+
+    return Stream.concat(repaymentPeriods.stream().flatMap(ScheduledActionHelpers::generateScheduledActionsForRepaymentPeriod),
+        Stream.of(new ScheduledAction(Action.CLOSE, lastPeriod.getEndDate(), lastPeriod, lastPeriod)));
+  }
+
+  /** 'Rough' end date, because if the repayment period takes the last period after that end date, then the repayment
+   period will 'win'.*/
+
+  public static LocalDate getRoughEndDate(final @Nonnull LocalDate initialDisbursalDate,
+                                          final @Nonnull CaseParameters caseParameters) {
     final Integer maximumTermSize = caseParameters.getTermRange().getMaximum();
     final ChronoUnit termUnit = caseParameters.getTermRange().getTemporalUnit();
 
@@ -73,22 +92,22 @@ public class ScheduledActionService {
             termUnit);
   }
 
-  private Stream<ScheduledAction> generateScheduledActionsForRepaymentPeriod(final @Nonnull Period repaymentPeriod) {
+  private static Stream<ScheduledAction> generateScheduledActionsForRepaymentPeriod(final @Nonnull Period repaymentPeriod) {
     return Stream.concat(generateScheduledInterestPaymentsForRepaymentPeriod(repaymentPeriod),
             Stream.of(new ScheduledAction(Action.ACCEPT_PAYMENT, repaymentPeriod.getEndDate(), repaymentPeriod, repaymentPeriod)));
   }
 
-  private Stream<ScheduledAction> generateScheduledInterestPaymentsForRepaymentPeriod(final @Nonnull Period repaymentPeriod) {
+  private static Stream<ScheduledAction> generateScheduledInterestPaymentsForRepaymentPeriod(final @Nonnull Period repaymentPeriod) {
     return getInterestDayInRepaymentPeriod(repaymentPeriod).map(x ->
             new ScheduledAction(Action.APPLY_INTEREST, x, new Period(x.minus(1, ChronoUnit.DAYS), x), repaymentPeriod));
   }
 
-  private Stream<LocalDate> getInterestDayInRepaymentPeriod(final @Nonnull Period repaymentPeriod) {
+  private static Stream<LocalDate> getInterestDayInRepaymentPeriod(final @Nonnull Period repaymentPeriod) {
     return Stream.iterate(repaymentPeriod.getBeginDate().plusDays(1), date -> date.plusDays(1))
             .limit(ChronoUnit.DAYS.between(repaymentPeriod.getBeginDate(), repaymentPeriod.getEndDate()));
   }
 
-  private SortedSet<Period> generateRepaymentPeriods(
+  private static SortedSet<Period> generateRepaymentPeriods(
           final LocalDate initialDisbursalDate,
           final LocalDate endDate,
           final CaseParameters caseParameters) {
@@ -108,7 +127,7 @@ public class ScheduledActionService {
     return ret;
   }
 
-  private LocalDate generateNextPaymentDate(final CaseParameters caseParameters, final LocalDate lastPaymentDate) {
+  private static LocalDate generateNextPaymentDate(final CaseParameters caseParameters, final LocalDate lastPaymentDate) {
     final PaymentCycle paymentCycle = caseParameters.getPaymentCycle();
 
     final ChronoUnit maximumSpecifiedAlignmentChronoUnit =
@@ -131,13 +150,13 @@ public class ScheduledActionService {
     return alignPaymentDate(orientedPaymentDate, maximumAlignmentChronoUnit, paymentCycle);
   }
 
-  private LocalDate incrementPaymentDate(LocalDate paymentDate, PaymentCycle paymentCycle) {
+  private static LocalDate incrementPaymentDate(LocalDate paymentDate, PaymentCycle paymentCycle) {
     return paymentDate.plus(
             paymentCycle.getPeriod(),
             paymentCycle.getTemporalUnit());
   }
 
-  private LocalDate orientPaymentDate(final LocalDate paymentDate, final ChronoUnit maximumSpecifiedAlignmentChronoUnit, PaymentCycle paymentCycle) {
+  private static LocalDate orientPaymentDate(final LocalDate paymentDate, final ChronoUnit maximumSpecifiedAlignmentChronoUnit, PaymentCycle paymentCycle) {
     if (maximumSpecifiedAlignmentChronoUnit == ChronoUnit.HOURS)
       return paymentDate; //No need to orient at all since no alignment is specified.
 
@@ -155,28 +174,28 @@ public class ScheduledActionService {
     }
   }
 
-  private @Nonnull ChronoUnit min(@Nonnull final ChronoUnit a, @Nonnull final ChronoUnit b) {
+  private static @Nonnull ChronoUnit min(@Nonnull final ChronoUnit a, @Nonnull final ChronoUnit b) {
     if (a.getDuration().compareTo(b.getDuration()) < 0)
       return a;
     else
       return b;
   }
 
-  private LocalDate orientInYear(final LocalDate paymentDate) {
+  private static LocalDate orientInYear(final LocalDate paymentDate) {
     return LocalDate.of(paymentDate.getYear(), 1, 1);
   }
 
-  private LocalDate orientInMonth(final LocalDate paymentDate) {
+  private static LocalDate orientInMonth(final LocalDate paymentDate) {
     return LocalDate.of(paymentDate.getYear(), paymentDate.getMonth(), 1);
   }
 
-  private LocalDate orientInWeek(final LocalDate paymentDate) {
+  private static LocalDate orientInWeek(final LocalDate paymentDate) {
     final DayOfWeek dayOfWeek = paymentDate.getDayOfWeek();
     final int dayOfWeekIndex = dayOfWeek.getValue() - 1;
     return paymentDate.minusDays(dayOfWeekIndex);
   }
 
-  private LocalDate alignPaymentDate(final LocalDate paymentDate, final ChronoUnit maximumAlignmentChronoUnit, final PaymentCycle paymentCycle) {
+  private static LocalDate alignPaymentDate(final LocalDate paymentDate, final ChronoUnit maximumAlignmentChronoUnit, final PaymentCycle paymentCycle) {
     LocalDate ret = paymentDate;
     switch (maximumAlignmentChronoUnit)
     {
@@ -192,7 +211,7 @@ public class ScheduledActionService {
     }
   }
 
-  private LocalDate alignInMonths(final LocalDate paymentDate, final PaymentCycle paymentCycle) {
+  private static LocalDate alignInMonths(final LocalDate paymentDate, final PaymentCycle paymentCycle) {
     final Integer alignmentMonth = paymentCycle.getAlignmentMonth();
     if (alignmentMonth == null)
       return paymentDate;
@@ -200,7 +219,7 @@ public class ScheduledActionService {
     return paymentDate.plusMonths(alignmentMonth);
   }
 
-  private LocalDate alignInWeeks(final LocalDate paymentDate, final PaymentCycle paymentCycle) {
+  private static LocalDate alignInWeeks(final LocalDate paymentDate, final PaymentCycle paymentCycle) {
     final Integer alignmentWeek = paymentCycle.getAlignmentWeek();
     if (alignmentWeek == null)
       return paymentDate;
@@ -220,7 +239,7 @@ public class ScheduledActionService {
     throw new IllegalStateException("PaymentCycle.alignmentWeek should only ever be 0, 1, 2, or -1.");
   }
 
-  private LocalDate alignInDays(final LocalDate paymentDate, final PaymentCycle paymentCycle) {
+  static private LocalDate alignInDays(final LocalDate paymentDate, final PaymentCycle paymentCycle) {
     final Integer alignmentDay = paymentCycle.getAlignmentDay();
     if (alignmentDay == null)
       return paymentDate;
@@ -231,7 +250,7 @@ public class ScheduledActionService {
       return alignInDaysOfMonth(paymentDate, alignmentDay);
   }
 
-  private LocalDate alignInDaysOfWeek(final LocalDate paymentDate, final Integer alignmentDay) {
+  static private LocalDate alignInDaysOfWeek(final LocalDate paymentDate, final Integer alignmentDay) {
     final int dayOfWeek = paymentDate.getDayOfWeek().getValue()-1;
 
     if (dayOfWeek < alignmentDay)
@@ -242,18 +261,8 @@ public class ScheduledActionService {
       return paymentDate;
   }
 
-  private LocalDate alignInDaysOfMonth(final LocalDate paymentDate, final Integer alignmentDay) {
+  private static LocalDate alignInDaysOfMonth(final LocalDate paymentDate, final Integer alignmentDay) {
     final int maxDay = YearMonth.of(paymentDate.getYear(), paymentDate.getMonth()).lengthOfMonth()-1;
     return paymentDate.plusDays(Math.min(maxDay, alignmentDay));
-  }
-
-  public List<ScheduledAction> getScheduledActions(final @Nonnull LocalDate initialDisbursalDate,
-                                                   final CaseParameters caseParameters,
-                                                   final Action action,
-                                                   final LocalDate time) {
-    return getHypotheticalScheduledActionsHelper(initialDisbursalDate, caseParameters)
-            .filter(x -> x.actionPeriod.containsDate(time))
-            .filter(x -> x.action.equals(action))
-            .collect(Collectors.toList());
   }
 }

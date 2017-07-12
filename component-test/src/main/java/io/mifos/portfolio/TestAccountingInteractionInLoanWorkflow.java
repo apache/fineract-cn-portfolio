@@ -19,34 +19,44 @@ import com.google.gson.Gson;
 import io.mifos.accounting.api.v1.domain.AccountType;
 import io.mifos.accounting.api.v1.domain.Creditor;
 import io.mifos.accounting.api.v1.domain.Debtor;
+import io.mifos.core.api.util.ApiFactory;
+import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
+import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
+import io.mifos.rhythm.spi.v1.client.BeatListener;
+import io.mifos.rhythm.spi.v1.domain.BeatPublish;
+import io.mifos.rhythm.spi.v1.events.BeatPublishEvent;
 import org.junit.Assert;
-import org.junit.FixMethodOrder;
+import org.junit.Before;
 import org.junit.Test;
-import org.junit.runners.MethodSorters;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import static io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants.*;
 import static io.mifos.portfolio.Fixture.MINOR_CURRENCY_UNIT_DIGITS;
 
 /**
  * @author Myrle Krantz
  */
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTest {
   private static final BigDecimal PROCESSING_FEE_AMOUNT = BigDecimal.valueOf(10_0000, MINOR_CURRENCY_UNIT_DIGITS);
   private static final BigDecimal LOAN_ORIGINATION_FEE_AMOUNT = BigDecimal.valueOf(100_0000, MINOR_CURRENCY_UNIT_DIGITS);
   private static final BigDecimal DISBURSEMENT_FEE_AMOUNT = BigDecimal.valueOf(1_0000, MINOR_CURRENCY_UNIT_DIGITS);
+
+  private BeatListener portfolioBeatListener;
 
   private static Product product;
   private static Case customerCase;
@@ -55,22 +65,52 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private static String customerLoanAccountIdentifier;
 
 
+  @Before
+  public void prepBeatListener() {
+    portfolioBeatListener = new ApiFactory(logger).create(BeatListener.class, testEnvironment.serverURI());
+  }
+
   @Test
-  public void step1CreateProduct() throws InterruptedException {
-    //Create product and set charges to fixed fees.
+  public void workflowTerminatingInApplicationDenial() throws InterruptedException {
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase();
+    step4DenyCase();
+  }
+
+  @Test
+  public void workflowTerminatingInEarlyLoanPayoff() throws InterruptedException {
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase();
+    step4ApproveCase();
+    step5DisburseFullAmount();
+    step6CalculateInterestAccrual();
+    //step7PaybackFullAmount();
+  }
+
+  //Create product and set charges to fixed fees.
+  private void step1CreateProduct() throws InterruptedException {
+    logger.info("step1CreateProduct");
     product = createProduct();
 
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.PROCESSING_FEE_ID, PROCESSING_FEE_AMOUNT);
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID, LOAN_ORIGINATION_FEE_AMOUNT);
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.DISBURSEMENT_FEE_ID, DISBURSEMENT_FEE_AMOUNT);
 
+    final ChargeDefinition interestChargeDefinition = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.INTEREST_ID);
+    interestChargeDefinition.setAmount(Fixture.INTEREST_RATE);
+
+    portfolioManager.changeChargeDefinition(product.getIdentifier(), interestChargeDefinition.getIdentifier(), interestChargeDefinition);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CHARGE_DEFINITION,
+        new ChargeDefinitionEvent(product.getIdentifier(), interestChargeDefinition.getIdentifier())));
+
     portfolioManager.enableProduct(product.getIdentifier(), true);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
   }
 
-  @Test
-  public void step2CreateCase() throws InterruptedException {
-    //Create case.
+  private void step2CreateCase() throws InterruptedException {
+    logger.info("step2CreateCase");
     caseParameters = Fixture.createAdjustedCaseParameters(x -> {
     });
     final String caseParametersAsString = new Gson().toJson(caseParameters);
@@ -82,14 +122,14 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   //Open the case and accept a processing fee.
-  @Test
-  public void step3OpenCase() throws InterruptedException {
+  private void step3OpenCase() throws InterruptedException {
+    logger.info("step3OpenCase");
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.OPEN,
         Collections.singletonList(assignEntryToTeller()),
-        OPEN_INDIVIDUALLOAN_CASE,
+        IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, Action.DENY);
     checkCostComponentForActionCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE,
@@ -103,15 +143,29 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
 
+  //Deny the case. Once this is done, no more actions are possible for the case.
+  private void step4DenyCase() throws InterruptedException {
+    logger.info("step4DenyCase");
+    checkStateTransfer(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.DENY,
+        Collections.singletonList(assignEntryToTeller()),
+        IndividualLoanEventConstants.DENY_INDIVIDUALLOAN_CASE,
+        Case.State.CLOSED);
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
+  }
+
+
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
-  @Test
-  public void step4ApproveCase() throws InterruptedException {
+  private void step4ApproveCase() throws InterruptedException {
+    logger.info("step4ApproveCase");
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.APPROVE,
         Collections.singletonList(assignEntryToTeller()),
-        APPROVE_INDIVIDUALLOAN_CASE,
+        IndividualLoanEventConstants.APPROVE_INDIVIDUALLOAN_CASE,
         Case.State.APPROVED);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE, Action.CLOSE);
 
@@ -131,14 +185,14 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
-  @Test
-  public void step5DisburseFullAmount() throws InterruptedException {
+  private void step5DisburseFullAmount() throws InterruptedException {
+    logger.info("step5DisburseFullAmount");
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DISBURSE,
         Collections.singletonList(assignEntryToTeller()),
-        DISBURSE_INDIVIDUALLOAN_CASE,
+        IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE,
         Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
@@ -153,5 +207,40 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
 
+  }
+
+  //Perform daily interest calculation.
+  private void step6CalculateInterestAccrual() throws InterruptedException {
+    logger.info("step6CalculateInterestAccrual");
+    final String beatIdentifier = "alignment0";
+    final String midnightTimeStamp = DateConverter.toIsoString(LocalDateTime.now().truncatedTo(ChronoUnit.DAYS));
+
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, caseParameters.getMaximumBalance());
+
+    final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
+    portfolioBeatListener.publishBeat(interestBeat);
+    Assert.assertTrue(this.eventRecorder.wait(io.mifos.rhythm.spi.v1.events.EventConstants.POST_PUBLISHEDBEAT,
+        new BeatPublishEvent(EventConstants.DESTINATION, beatIdentifier, midnightTimeStamp)));
+
+    Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.APPLY_INTEREST_INDIVIDUALLOAN_CASE,
+        new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier())));
+
+    final Case customerCaseAfterStateChange = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
+    Assert.assertEquals(customerCaseAfterStateChange.getCurrentState(), Case.State.ACTIVE.name());
+
+    final String calculatedInterest = caseParameters.getMaximumBalance().multiply(Fixture.INTEREST_RATE.divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN))
+        .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN)
+        .toPlainString();
+
+    final Set<Debtor> debtors = new HashSet<>();
+    debtors.add(new Debtor(
+        AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT,
+        calculatedInterest));
+
+    final Set<Creditor> creditors = new HashSet<>();
+    creditors.add(new Creditor(
+        customerLoanAccountIdentifier,
+        calculatedInterest));
+    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
   }
 }

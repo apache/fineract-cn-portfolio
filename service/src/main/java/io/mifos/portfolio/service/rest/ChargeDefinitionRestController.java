@@ -112,8 +112,8 @@ public class ChargeDefinitionRestController {
   @RequestMapping(
           value = "{chargedefinitionidentifier}",
           method = RequestMethod.PUT,
-          consumes = MediaType.APPLICATION_JSON_VALUE,
-          produces = MediaType.ALL_VALUE
+          consumes = MediaType.ALL_VALUE,
+          produces = MediaType.APPLICATION_JSON_VALUE
   )
   public ResponseEntity<Void> changeChargeDefinition(
           @PathVariable("productidentifier") final String productIdentifier,

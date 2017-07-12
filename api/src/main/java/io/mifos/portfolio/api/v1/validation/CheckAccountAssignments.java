@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
 /**
  * @author Myrle Krantz
  */
-@SuppressWarnings("WeakerAccess")
 public class CheckAccountAssignments implements ConstraintValidator<ValidAccountAssignments, Set<AccountAssignment>> {
   public CheckAccountAssignments() {
   }
@@ -42,9 +41,8 @@ public class CheckAccountAssignments implements ConstraintValidator<ValidAccount
             .map(AccountAssignment::getDesignator)
             .collect(Collectors.toList());
 
-    boolean allValidAccountAssignments = !(accountAssignments.stream()
-            .filter(x -> !isValidAccountAssignment(x))
-            .findAny().isPresent());
+    final boolean allValidAccountAssignments = accountAssignments.stream()
+        .allMatch(this::isValidAccountAssignment);
     if (!allValidAccountAssignments)
       return false;
 

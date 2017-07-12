@@ -13,19 +13,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio.service.internal.command.handler;
+package io.mifos.individuallending.internal.command.handler;
 
 import io.mifos.core.command.annotation.Aggregate;
 import io.mifos.core.command.annotation.CommandHandler;
 import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.core.command.annotation.EventEmitter;
+import io.mifos.core.command.internal.CommandBus;
 import io.mifos.core.lang.ApplicationName;
+import io.mifos.core.lang.DateConverter;
+import io.mifos.individuallending.internal.command.ApplyInterestCommand;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.service.config.PortfolioProperties;
+import io.mifos.portfolio.service.internal.command.CreateBeatPublishCommand;
+import io.mifos.portfolio.service.internal.repository.CaseEntity;
+import io.mifos.portfolio.service.internal.repository.CaseRepository;
 import io.mifos.rhythm.spi.v1.domain.BeatPublish;
 import io.mifos.rhythm.spi.v1.events.BeatPublishEvent;
 import io.mifos.rhythm.spi.v1.events.EventConstants;
-import io.mifos.portfolio.service.internal.command.CreateBeatPublishCommand;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -33,12 +44,21 @@ import org.springframework.transaction.annotation.Transactional;
 @SuppressWarnings("unused")
 @Aggregate
 public class BeatPublishCommandHandler {
-
+  private final CaseRepository caseRepository;
+  private final PortfolioProperties portfolioProperties;
   private final ApplicationName applicationName;
+  private final CommandBus commandBus;
 
   @Autowired
-  public BeatPublishCommandHandler(final ApplicationName applicationName) {
+  public BeatPublishCommandHandler(
+      final CaseRepository caseRepository,
+      final PortfolioProperties portfolioProperties,
+      final ApplicationName applicationName,
+      final CommandBus commandBus) {
+    this.caseRepository = caseRepository;
+    this.portfolioProperties = portfolioProperties;
     this.applicationName = applicationName;
+    this.commandBus = commandBus;
   }
 
   @Transactional
@@ -46,6 +66,16 @@ public class BeatPublishCommandHandler {
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.POST_PUBLISHEDBEAT)
   public BeatPublishEvent process(final CreateBeatPublishCommand createBeatPublishCommand) {
     final BeatPublish instance = createBeatPublishCommand.getInstance();
+    final LocalDateTime forTime = DateConverter.fromIsoString(instance.getForTime());
+    if (portfolioProperties.getBookInterestInTimeSlot() == forTime.getHour())
+    {
+      final Stream<CaseEntity> activeCases = caseRepository.findByCurrentStateIn(Collections.singleton(Case.State.ACTIVE.name()));
+      activeCases.forEach(activeCase -> {
+        final ApplyInterestCommand applyInterestCommand = new ApplyInterestCommand(activeCase.getProductIdentifier(), activeCase.getIdentifier());
+        commandBus.dispatch(applyInterestCommand);
+      });
+    }
+
     return new BeatPublishEvent(applicationName.toString(), instance.getIdentifier(), instance.getForTime());
   }
 }

@@ -70,7 +70,9 @@ import static org.mockito.Mockito.doReturn;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
-        classes = {AbstractPortfolioTest.TestConfiguration.class})
+        classes = {AbstractPortfolioTest.TestConfiguration.class},
+    properties = {"portfolio.bookInterestAsUser=interest_user", "portfolio.bookInterestInTimeSlot=0"}
+)
 public class AbstractPortfolioTest extends SuiteTestEnvironment {
   private static final String LOGGER_NAME = "test-logger";
 
@@ -111,12 +113,15 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
 
   private AutoUserContext userContext;
 
+  @SuppressWarnings({"SpringAutowiredFieldsWarningInspection", "SpringJavaAutowiringInspection"})
   @Autowired
   protected EventRecorder eventRecorder;
 
+  @SuppressWarnings("SpringAutowiredFieldsWarningInspection")
   @Autowired
   PortfolioManager portfolioManager;
 
+  @SuppressWarnings("SpringAutowiredFieldsWarningInspection")
   @Autowired
   IndividualLending individualLending;
 
@@ -127,6 +132,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   @MockBean
   LedgerManager ledgerManager;
 
+  @SuppressWarnings("SpringAutowiredFieldsWarningInspection")
   @Autowired
   @Qualifier(LOGGER_NAME)
   Logger logger;
@@ -202,7 +208,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     Assert.assertTrue(eventRecorder.wait(event, new IndividualLoanCommandEvent(productIdentifier, caseIdentifier)));
 
     final Case customerCase = portfolioManager.getCase(productIdentifier, caseIdentifier);
-    Assert.assertEquals(customerCase.getCurrentState(), nextState.name());
+    Assert.assertEquals(nextState.name(), customerCase.getCurrentState());
   }
 
   boolean individualLoanCommandEventMatches(

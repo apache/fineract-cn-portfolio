@@ -50,12 +50,22 @@ public class TaskDefinitionEventListener {
   }
 
   @JmsListener(
-          subscription = EventConstants.DESTINATION,
-          destination = EventConstants.DESTINATION,
-          selector = EventConstants.SELECTOR_PUT_TASK_DEFINITION
+      subscription = EventConstants.DESTINATION,
+      destination = EventConstants.DESTINATION,
+      selector = EventConstants.SELECTOR_PUT_TASK_DEFINITION
   )
   public void onChangeTaskDefinition(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,
-                              final String payload) {
+                                     final String payload) {
     this.eventRecorder.event(tenant, EventConstants.PUT_TASK_DEFINITION, payload, TaskDefinitionEvent.class);
+  }
+
+  @JmsListener(
+      subscription = EventConstants.DESTINATION,
+      destination = EventConstants.DESTINATION,
+      selector = EventConstants.SELECTOR_DELETE_TASK_DEFINITION
+  )
+  public void onDeleteTaskDefinition(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,
+                                     final String payload) {
+    this.eventRecorder.event(tenant, EventConstants.DELETE_TASK_DEFINITION, payload, TaskDefinitionEvent.class);
   }
 }

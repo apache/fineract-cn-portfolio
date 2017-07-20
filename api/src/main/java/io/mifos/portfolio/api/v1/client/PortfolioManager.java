@@ -138,6 +138,7 @@ public interface PortfolioManager {
           produces = MediaType.APPLICATION_JSON_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
   void createTaskDefinition(
           @PathVariable("productidentifier") final String productIdentifier,
           final TaskDefinition taskDefinition);
@@ -153,16 +154,25 @@ public interface PortfolioManager {
           @PathVariable("taskdefinitionidentifier") final String taskDefinitionIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/tasks/{taskdefinitionidentifier}",
-          method = RequestMethod.PUT,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
-  )
+      value = "/products/{productidentifier}/tasks/{taskdefinitionidentifier}",
+      method = RequestMethod.PUT,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
   void changeTaskDefinition(
-          @PathVariable("productidentifier") final String productIdentifier,
-          @PathVariable("taskdefinitionidentifier") final String taskDefinitionIdentifier,
-          final TaskDefinition taskDefinition);
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("taskdefinitionidentifier") final String taskDefinitionIdentifier,
+      final TaskDefinition taskDefinition);
 
+  @RequestMapping(
+      value = "/products/{productidentifier}/tasks/{taskdefinitionidentifier}",
+      method = RequestMethod.DELETE,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
+  void deleteTaskDefinition(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("taskdefinitionidentifier") final String taskDefinitionIdentifier);
 
   @RequestMapping(
           value = "/products/{productidentifier}/charges/",

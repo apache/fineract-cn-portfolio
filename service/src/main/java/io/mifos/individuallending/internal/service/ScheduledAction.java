@@ -42,6 +42,15 @@ public class ScheduledAction {
   }
 
   ScheduledAction(@Nonnull final Action action,
+                  @Nonnull final LocalDate when,
+                  @Nonnull final Period actionPeriod) {
+    this.action = action;
+    this.when = when;
+    this.actionPeriod = actionPeriod;
+    this.repaymentPeriod = null;
+  }
+
+  ScheduledAction(@Nonnull final Action action,
                   @Nonnull final LocalDate when) {
     this.action = action;
     this.when = when;

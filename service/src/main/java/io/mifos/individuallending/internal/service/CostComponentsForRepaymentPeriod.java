@@ -26,17 +26,32 @@ import java.util.stream.Stream;
  * @author Myrle Krantz
  */
 public class CostComponentsForRepaymentPeriod {
-  final Map<ChargeDefinition, CostComponent> costComponents;
-  final BigDecimal balanceAdjustment;
+  final private BigDecimal runningBalance;
+  final private Map<ChargeDefinition, CostComponent> costComponents;
+  final private BigDecimal balanceAdjustment;
 
   CostComponentsForRepaymentPeriod(
-          final Map<ChargeDefinition, CostComponent> costComponents,
-          final BigDecimal balanceAdjustment) {
+      final BigDecimal runningBalance,
+      final Map<ChargeDefinition, CostComponent> costComponents,
+      final BigDecimal balanceAdjustment) {
+    this.runningBalance = runningBalance;
     this.costComponents = costComponents;
     this.balanceAdjustment = balanceAdjustment;
   }
 
+  public BigDecimal getRunningBalance() {
+    return runningBalance;
+  }
+
+  Map<ChargeDefinition, CostComponent> getCostComponents() {
+    return costComponents;
+  }
+
   public Stream<Map.Entry<ChargeDefinition, CostComponent>> stream() {
     return costComponents.entrySet().stream();
+  }
+
+  BigDecimal getBalanceAdjustment() {
+    return balanceAdjustment;
   }
 }

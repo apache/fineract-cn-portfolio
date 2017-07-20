@@ -21,6 +21,7 @@ import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.api.v1.events.TaskDefinitionEvent;
 import io.mifos.portfolio.service.internal.command.ChangeTaskDefinitionCommand;
 import io.mifos.portfolio.service.internal.command.CreateTaskDefinitionCommand;
+import io.mifos.portfolio.service.internal.command.DeleteTaskDefinitionCommand;
 import io.mifos.portfolio.service.internal.mapper.TaskDefinitionMapper;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
@@ -75,18 +76,33 @@ public class TaskDefinitionCommandHandler {
     final String productIdentifier = changeTaskDefinitionCommand.getProductIdentifier();
 
     final TaskDefinitionEntity existingTaskDefinition
-            = taskDefinitionRepository.findByProductIdAndTaskIdentifier(productIdentifier, taskDefinition.getIdentifier())
-            .orElseThrow(() -> ServiceException.internalError("task definition not found."));
+        = taskDefinitionRepository.findByProductIdAndTaskIdentifier(productIdentifier, taskDefinition.getIdentifier())
+        .orElseThrow(() -> ServiceException.internalError("task definition not found."));
 
     final TaskDefinitionEntity taskDefinitionEntity =
-            TaskDefinitionMapper.map(existingTaskDefinition.getProduct(), taskDefinition);
+        TaskDefinitionMapper.map(existingTaskDefinition.getProduct(), taskDefinition);
     taskDefinitionEntity.setId(existingTaskDefinition.getId());
     taskDefinitionEntity.setId(existingTaskDefinition.getId());
     taskDefinitionRepository.save(taskDefinitionEntity);
 
     return new TaskDefinitionEvent(
-            changeTaskDefinitionCommand.getProductIdentifier(),
-            changeTaskDefinitionCommand.getInstance().getIdentifier());
+        changeTaskDefinitionCommand.getProductIdentifier(),
+        changeTaskDefinitionCommand.getInstance().getIdentifier());
+  }
+
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
+  @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.DELETE_TASK_DEFINITION)
+  public TaskDefinitionEvent process(final DeleteTaskDefinitionCommand deleteTaskDefinitionCommand) {
+    final String productIdentifier = deleteTaskDefinitionCommand.getProductIdentifier();
+    final String taskIdentifier = deleteTaskDefinitionCommand.getTaskIdentifier();
+
+    final TaskDefinitionEntity existingTaskDefinition
+        = taskDefinitionRepository.findByProductIdAndTaskIdentifier(productIdentifier, taskIdentifier)
+        .orElseThrow(() -> ServiceException.notFound("Task definition ''{0}.{1}'' not found.", productIdentifier, taskIdentifier));
+
+    taskDefinitionRepository.delete(existingTaskDefinition);
+
+    return new TaskDefinitionEvent(productIdentifier, taskIdentifier);
   }
 
 }

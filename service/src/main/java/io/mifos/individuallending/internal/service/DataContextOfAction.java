@@ -16,6 +16,7 @@
 package io.mifos.individuallending.internal.service;
 
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
@@ -56,7 +57,15 @@ public class DataContextOfAction {
     return caseParameters;
   }
 
-  public @Nonnull List<AccountAssignment> getOneTimeAccountAssignments() {
+  @Nonnull List<AccountAssignment> getOneTimeAccountAssignments() {
     return oneTimeAccountAssignments;
+  }
+
+  String getCompoundIdentifer() {
+    return product.getIdentifier() + "." + customerCase.getIdentifier();
+  }
+
+  public String getMessageForCharge(final Action action) {
+    return getCompoundIdentifer() + "." + action.name();
   }
 }

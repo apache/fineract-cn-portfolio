@@ -58,11 +58,13 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
   private BeatListener portfolioBeatListener;
 
-  private static Product product;
-  private static Case customerCase;
-  private static CaseParameters caseParameters;
-  private static String pendingDisbursalAccountIdentifier;
-  private static String customerLoanAccountIdentifier;
+  private Product product = null;
+  private Case customerCase = null;
+  private CaseParameters caseParameters = null;
+  private String pendingDisbursalAccountIdentifier = null;
+  private String customerLoanAccountIdentifier = null;
+
+  private BigDecimal expectedCurrentBalance = null;
 
 
   @Before
@@ -86,7 +88,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step4ApproveCase();
     step5DisburseFullAmount();
     step6CalculateInterestAccrual();
-    //step7PaybackFullAmount();
+    step7PaybackFullAmount();
   }
 
   //Create product and set charges to fixed fees.
@@ -182,6 +184,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     creditors.add(new Creditor(pendingDisbursalAccountIdentifier, caseParameters.getMaximumBalance().toPlainString()));
     creditors.add(new Creditor(AccountingFixture.LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER, LOAN_ORIGINATION_FEE_AMOUNT.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
+
+    expectedCurrentBalance = BigDecimal.ZERO;
   }
 
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
@@ -207,6 +211,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
 
+    expectedCurrentBalance = expectedCurrentBalance.add(caseParameters.getMaximumBalance());
   }
 
   //Perform daily interest calculation.
@@ -215,7 +220,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final String beatIdentifier = "alignment0";
     final String midnightTimeStamp = DateConverter.toIsoString(LocalDateTime.now().truncatedTo(ChronoUnit.DAYS));
 
-    AccountingFixture.mockBalance(customerLoanAccountIdentifier, caseParameters.getMaximumBalance());
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
 
     final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
     portfolioBeatListener.publishBeat(interestBeat);
@@ -228,19 +233,44 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final Case customerCaseAfterStateChange = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
     Assert.assertEquals(customerCaseAfterStateChange.getCurrentState(), Case.State.ACTIVE.name());
 
-    final String calculatedInterest = caseParameters.getMaximumBalance().multiply(Fixture.INTEREST_RATE.divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN))
-        .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN)
-        .toPlainString();
+    final BigDecimal calculatedInterest = caseParameters.getMaximumBalance().multiply(Fixture.INTEREST_RATE.divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN))
+        .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
 
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(
         AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT,
-        calculatedInterest));
+        calculatedInterest.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(
         customerLoanAccountIdentifier,
-        calculatedInterest));
+        calculatedInterest.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
+
+    expectedCurrentBalance = expectedCurrentBalance.add(calculatedInterest);
+  }
+
+  private void step7PaybackFullAmount() throws InterruptedException {
+    logger.info("step7PaybackFullAmount");
+
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
+
+    checkStateTransfer(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.ACCEPT_PAYMENT,
+        Collections.singletonList(assignEntryToTeller()),
+        IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE,
+        Case.State.CLOSED);
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
+
+    final Set<Debtor> debtors = new HashSet<>();
+    debtors.add(new Debtor(customerLoanAccountIdentifier, expectedCurrentBalance.toPlainString()));
+
+    final Set<Creditor> creditors = new HashSet<>();
+    creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, expectedCurrentBalance.toPlainString()));
+    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
+
+    expectedCurrentBalance = expectedCurrentBalance.subtract(expectedCurrentBalance);
   }
 }

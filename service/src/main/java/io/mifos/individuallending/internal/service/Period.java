@@ -40,6 +40,11 @@ class Period implements Comparable<Period> {
     this.endDate = beginDate.plusDays(periodLength);
   }
 
+  Period(final int periodLength, final LocalDate endDate) {
+    this.beginDate = endDate.minusDays(periodLength);
+    this.endDate = endDate;
+  }
+
   LocalDate getBeginDate() {
     return beginDate;
   }

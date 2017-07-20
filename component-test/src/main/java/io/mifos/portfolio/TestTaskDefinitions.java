@@ -15,6 +15,8 @@
  */
 package io.mifos.portfolio;
 
+import io.mifos.core.api.util.NotFoundException;
+import io.mifos.portfolio.api.v1.client.ProductInUseException;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.domain.TaskDefinition;
 import io.mifos.portfolio.api.v1.events.EventConstants;
@@ -22,7 +24,6 @@ import io.mifos.portfolio.api.v1.events.TaskDefinitionEvent;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -52,10 +53,27 @@ public class TestTaskDefinitions extends AbstractPortfolioTest {
 
     portfolioManager.changeTaskDefinition(product.getIdentifier(), taskDefinition.getIdentifier(), taskDefinition);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_TASK_DEFINITION,
-            new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier())));
+        new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier())));
 
     final TaskDefinition taskDefinitionRead = portfolioManager.getTaskDefinition(product.getIdentifier(), taskDefinition.getIdentifier());
     Assert.assertEquals(taskDefinition,taskDefinitionRead);
+  }
+
+  @Test(expected = ProductInUseException.class)
+  public void shouldNotChangeTaskDefinitionForProductWithCases() throws InterruptedException {
+    final Product product = createProduct();
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+
+    enableProduct(product);
+
+    createCase(product.getIdentifier());
+
+    taskDefinition.setDescription("bleblablub");
+    taskDefinition.setFourEyes(false);
+
+    portfolioManager.changeTaskDefinition(product.getIdentifier(), taskDefinition.getIdentifier(), taskDefinition);
+    Assert.assertFalse(this.eventRecorder.wait(EventConstants.PUT_TASK_DEFINITION,
+        new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier())));
   }
 
   @Test
@@ -71,21 +89,41 @@ public class TestTaskDefinitions extends AbstractPortfolioTest {
     Assert.assertTrue(tasks.size() == initialTaskCount + 1);
   }
 
-  private TaskDefinition createTaskDefinition(Product product) throws InterruptedException {
+  @Test(expected = ProductInUseException.class)
+  public void shouldNotCreateTaskDefinitionForProductWithCases() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+    createCase(product.getIdentifier());
+
     final TaskDefinition taskDefinition = getTaskDefinition();
     portfolioManager.createTaskDefinition(product.getIdentifier(), taskDefinition);
-    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_TASK_DEFINITION, new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier())));
-    return taskDefinition;
+    Assert.assertFalse(this.eventRecorder.wait(EventConstants.POST_TASK_DEFINITION, new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier())));
   }
 
-  private TaskDefinition getTaskDefinition() {
-    final TaskDefinition ret = new TaskDefinition();
-    ret.setIdentifier(Fixture.generateUniqueIdentifer("task"));
-    ret.setDescription("But how do you feel about this?");
-    ret.setName("feep");
-    ret.setMandatory(false);
-    ret.setActions(new HashSet<>());
-    ret.setFourEyes(true);
-    return ret;
+  @Test
+  public void shouldDeleteTaskDefinition() throws InterruptedException {
+    final Product product = createProduct();
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+
+    portfolioManager.deleteTaskDefinition(product.getIdentifier(), taskDefinition.getIdentifier());
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.DELETE_TASK_DEFINITION, new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier())));
+
+    try {
+      portfolioManager.getTaskDefinition(product.getIdentifier(), taskDefinition.getIdentifier());
+      Assert.fail();
+    }
+    catch (final NotFoundException ignored) {
+    }
+  }
+
+  @Test(expected = ProductInUseException.class)
+  public void shouldNotDeleteTaskDefinitionForProductWithCases() throws InterruptedException {
+    final Product product = createProduct();
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+
+    enableProduct(product);
+    createCase(product.getIdentifier());
+
+    portfolioManager.deleteTaskDefinition(product.getIdentifier(), taskDefinition.getIdentifier());
+    Assert.assertFalse(this.eventRecorder.wait(EventConstants.DELETE_TASK_DEFINITION, new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier())));
   }
 }

@@ -23,6 +23,7 @@ import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
+import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
@@ -41,11 +42,13 @@ import io.mifos.portfolio.service.internal.util.ChargeInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -90,13 +93,17 @@ public class IndividualLoanCommandHandler {
             = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
     final List<ChargeInstance> charges = costComponents.stream()
-        .map(x -> mapCostComponentEntryToChargeInstance(Action.OPEN, x, designatorToAccountIdentifierMapper))
+        .map(entry -> mapCostComponentEntryToChargeInstance(
+            Action.OPEN,
+            entry,
+            getRequestedChargeAmounts(command.getCommand().getCostComponents()),
+            designatorToAccountIdentifierMapper))
         .collect(Collectors.toList());
 
     accountingAdapter.bookCharges(charges,
-            command.getCommand().getNote(),
-            productIdentifier + "." + caseIdentifier + "." + Action.OPEN.name(),
-            Action.OPEN.getTransactionType());
+        command.getCommand().getNote(),
+        dataContextOfAction.getMessageForCharge(Action.OPEN),
+        Action.OPEN.getTransactionType());
     //Only move to new state if book charges command was accepted.
     final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
     customerCase.setCurrentState(Case.State.PENDING.name());
@@ -124,7 +131,11 @@ public class IndividualLoanCommandHandler {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
     final List<ChargeInstance> charges = costComponents.stream()
-        .map(x -> mapCostComponentEntryToChargeInstance(Action.DENY, x, designatorToAccountIdentifierMapper))
+        .map(entry -> mapCostComponentEntryToChargeInstance(
+            Action.DENY,
+            entry,
+            getRequestedChargeAmounts(command.getCommand().getCostComponents()),
+            designatorToAccountIdentifierMapper))
         .collect(Collectors.toList());
 
     final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
@@ -165,13 +176,17 @@ public class IndividualLoanCommandHandler {
         costComponentService.getCostComponentsForApprove(dataContextOfAction);
 
     final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
-        .map(x -> mapCostComponentEntryToChargeInstance(Action.APPROVE, x, designatorToAccountIdentifierMapper))
+        .map(entry -> mapCostComponentEntryToChargeInstance(
+            Action.APPROVE,
+            entry,
+            getRequestedChargeAmounts(command.getCommand().getCostComponents()),
+            designatorToAccountIdentifierMapper))
         .collect(Collectors.toList());
 
     accountingAdapter.bookCharges(charges,
-            command.getCommand().getNote(),
-            productIdentifier + "." + caseIdentifier + "." + Action.APPROVE.name(),
-            Action.APPROVE.getTransactionType());
+        command.getCommand().getNote(),
+        dataContextOfAction.getMessageForCharge(Action.APPROVE),
+        Action.APPROVE.getTransactionType());
 
     //Only move to new state if book charges command was accepted.
     final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
@@ -200,13 +215,18 @@ public class IndividualLoanCommandHandler {
 
     final BigDecimal disbursalAmount = dataContextOfAction.getCaseParameters().getMaximumBalance();
     final List<ChargeInstance> charges = Stream.concat(
-          costComponentsForRepaymentPeriod.stream().map(x -> mapCostComponentEntryToChargeInstance(Action.DISBURSE, x, designatorToAccountIdentifierMapper)),
+          costComponentsForRepaymentPeriod.stream()
+              .map(entry -> mapCostComponentEntryToChargeInstance(
+                  Action.DISBURSE,
+                  entry,
+                  getRequestedChargeAmounts(command.getCommand().getCostComponents()),
+                  designatorToAccountIdentifierMapper)),
           Stream.of(getDisbursalChargeInstance(disbursalAmount, designatorToAccountIdentifierMapper)))
         .collect(Collectors.toList());
 
     accountingAdapter.bookCharges(charges,
         command.getCommand().getNote(),
-        productIdentifier + "." + caseIdentifier + "." + Action.DISBURSE.name(),
+        dataContextOfAction.getMessageForCharge(Action.DISBURSE),
         Action.DISBURSE.getTransactionType());
     //Only move to new state if book charges command was accepted.
     if (Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()) != Case.State.ACTIVE) {
@@ -244,12 +264,16 @@ public class IndividualLoanCommandHandler {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
     final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
-        .map(x -> mapCostComponentEntryToChargeInstance(Action.APPLY_INTEREST, x, designatorToAccountIdentifierMapper))
+        .map(entry -> mapCostComponentEntryToChargeInstance(
+            Action.APPLY_INTEREST,
+            entry,
+            Collections.emptyMap(),
+            designatorToAccountIdentifierMapper))
         .collect(Collectors.toList());
 
     accountingAdapter.bookCharges(charges,
         "",
-        productIdentifier + "." + caseIdentifier + "." + Action.APPLY_INTEREST.name(),
+        dataContextOfAction.getMessageForCharge(Action.APPLY_INTEREST),
         Action.APPLY_INTEREST.getTransactionType());
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier);
@@ -257,15 +281,57 @@ public class IndividualLoanCommandHandler {
 
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
-  @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE)
+  @EventEmitter(
+      selectorName = EventConstants.SELECTOR_NAME,
+      selectorValue = IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final AcceptPaymentCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
+    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+        productIdentifier, caseIdentifier, null);
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.ACCEPT_PAYMENT);
-    final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
-    customerCase.setCurrentState(Case.State.ACTIVE.name());
-    caseRepository.save(customerCase);
+    if (dataContextOfAction.getCustomerCase().getEndOfTerm() == null)
+      throw ServiceException.internalError(
+          "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
+
+    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+        costComponentService.getCostComponentsForAcceptPayment(dataContextOfAction);
+
+    final Map<String, BigDecimal> requestedChargeAmounts
+        = getRequestedChargeAmounts(command.getCommand().getCostComponents());
+
+    final BigDecimal sumOfAdjustments = costComponentsForRepaymentPeriod.stream()
+        .filter(entry -> entry.getKey().getIdentifier().equals(ChargeIdentifiers.PAYMENT_ID))
+        .map(entry -> getChargeAmount(
+            requestedChargeAmounts.get(entry.getKey().getIdentifier()),
+            entry.getValue().getAmount()))
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+
+    final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
+        .map(entry -> mapCostComponentEntryToChargeInstance(
+            Action.ACCEPT_PAYMENT,
+            entry,
+            requestedChargeAmounts,
+            designatorToAccountIdentifierMapper))
+        .collect(Collectors.toList());
+
+
+    accountingAdapter.bookCharges(charges,
+        command.getCommand().getNote(),
+        dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT),
+        Action.ACCEPT_PAYMENT.getTransactionType());
+
+    final BigDecimal newBalance = costComponentsForRepaymentPeriod.getRunningBalance()
+        .add(sumOfAdjustments);
+    if (newBalance.compareTo(BigDecimal.ZERO) <= 0) {
+      final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
+      //TODO: customerCase.setCurrentState(Case.State.CLOSED.name());
+      caseRepository.save(customerCase);
+    }
+
     return new IndividualLoanCommandEvent(command.getProductIdentifier(), command.getCaseIdentifier());
   }
 
@@ -311,29 +377,41 @@ public class IndividualLoanCommandHandler {
     return new IndividualLoanCommandEvent(command.getProductIdentifier(), command.getCaseIdentifier());
   }
 
-
   private static ChargeInstance mapCostComponentEntryToChargeInstance(
       final Action action,
       final Map.Entry<ChargeDefinition, CostComponent> costComponentEntry,
+      final Map<String, BigDecimal> requestedChargeAmounts,
       final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
     final ChargeDefinition chargeDefinition = costComponentEntry.getKey();
+
+    final BigDecimal requestedChargeAmount = requestedChargeAmounts.get(chargeDefinition.getIdentifier());
+    final BigDecimal configuredChargeAmount = costComponentEntry.getValue().getAmount();
+
+    final BigDecimal finalChargeAmount = getChargeAmount(requestedChargeAmount, configuredChargeAmount);
+
     if (chargeDefinition.getAccrualAccountDesignator() != null) {
       if (Action.valueOf(chargeDefinition.getAccrueAction()) == action)
         return new ChargeInstance(
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            costComponentEntry.getValue().getAmount());
+            finalChargeAmount);
       else
         return new ChargeInstance(
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            costComponentEntry.getValue().getAmount());
+            finalChargeAmount);
     }
     else
       return new ChargeInstance(
           designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
           designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
-          costComponentEntry.getValue().getAmount());
+          finalChargeAmount);
+  }
+
+  private static BigDecimal getChargeAmount(
+      final BigDecimal requestedChargeAmount,
+      final BigDecimal configuredChargeAmount) {
+    return requestedChargeAmount != null ? requestedChargeAmount : configuredChargeAmount;
   }
 
   private static ChargeInstance getDisbursalChargeInstance(
@@ -343,5 +421,17 @@ public class IndividualLoanCommandHandler {
         designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.PENDING_DISBURSAL),
         designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN),
         amount);
+  }
+
+  private Map<String, BigDecimal> getRequestedChargeAmounts(final @Nullable List<CostComponent> costComponents) {
+    if (costComponents == null)
+      return Collections.emptyMap();
+    else
+      return costComponents.stream()
+          .collect(Collectors.groupingBy(
+              CostComponent::getChargeIdentifier,
+              Collectors.reducing(BigDecimal.ZERO,
+                  CostComponent::getAmount,
+                  BigDecimal::add)));
   }
 }

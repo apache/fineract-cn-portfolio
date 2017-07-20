@@ -199,9 +199,9 @@ public class IndividualLoanService {
               CostComponentService.getCostComponentsForScheduledCharges(scheduledChargesInPeriod, balance, balance, minorCurrencyUnitDigits);
 
       final PlannedPayment plannedPayment = new PlannedPayment();
-      plannedPayment.setCostComponents(new ArrayList<>(costComponentsForRepaymentPeriod.costComponents.values()));
+      plannedPayment.setCostComponents(new ArrayList<>(costComponentsForRepaymentPeriod.getCostComponents().values()));
       plannedPayment.setDate(repaymentPeriod.getEndDateAsString());
-      balance = balance.add(costComponentsForRepaymentPeriod.balanceAdjustment);
+      balance = balance.add(costComponentsForRepaymentPeriod.getBalanceAdjustment());
       plannedPayment.setRemainingPrincipal(balance);
       plannedPayments.add(plannedPayment);
     }
@@ -234,9 +234,14 @@ public class IndividualLoanService {
                                                     final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
                                                     final ChargeDefinition acceptPaymentDefinition) {
     return scheduledActions.stream()
-            .flatMap(scheduledAction -> getChargeDefinitionStream(chargeDefinitionsMappedByChargeAction, chargeDefinitionsMappedByAccrueAction, acceptPaymentDefinition, scheduledAction)
-                    .map(chargeDefinition -> new ScheduledCharge(scheduledAction, chargeDefinition)))
-            .collect(Collectors.toList());
+        .flatMap(scheduledAction ->
+            getChargeDefinitionStream(
+                chargeDefinitionsMappedByChargeAction,
+                chargeDefinitionsMappedByAccrueAction,
+                acceptPaymentDefinition,
+                scheduledAction)
+                .map(chargeDefinition -> new ScheduledCharge(scheduledAction, chargeDefinition)))
+        .collect(Collectors.toList());
   }
 
   private Stream<ChargeDefinition> getChargeDefinitionStream(
@@ -244,20 +249,25 @@ public class IndividualLoanService {
           final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
           final ChargeDefinition acceptPaymentDefinition,
           final ScheduledAction scheduledAction) {
-    List<ChargeDefinition> chargeMapping = chargeDefinitionsMappedByChargeAction.get(scheduledAction.action.name());
-    if ((chargeMapping == null) && (scheduledAction.action == Action.valueOf(acceptPaymentDefinition.getChargeAction())))
-      chargeMapping = Collections.singletonList(acceptPaymentDefinition);
-
+    final List<ChargeDefinition> chargeMappingList = chargeDefinitionsMappedByChargeAction
+        .get(scheduledAction.action.name());
+    Stream<ChargeDefinition> chargeMapping = chargeMappingList == null ? Stream.empty() : chargeMappingList.stream();
     if (chargeMapping == null)
-      chargeMapping = Collections.emptyList();
+      chargeMapping = Stream.empty();
 
-    List<ChargeDefinition> accrueMapping = chargeDefinitionsMappedByAccrueAction.get(scheduledAction.action.name());
-    if ((accrueMapping == null) && (scheduledAction.action == Action.valueOf(acceptPaymentDefinition.getChargeAction())))
-      accrueMapping = Collections.singletonList(acceptPaymentDefinition);
+    if (scheduledAction.action == Action.valueOf(acceptPaymentDefinition.getChargeAction()))
+      chargeMapping = Stream.concat(chargeMapping, Stream.of(acceptPaymentDefinition));
 
+    final List<ChargeDefinition> accrueMappingList = chargeDefinitionsMappedByAccrueAction
+        .get(scheduledAction.action.name());
+    Stream<ChargeDefinition> accrueMapping = accrueMappingList == null ? Stream.empty() : accrueMappingList.stream();
     if (accrueMapping == null)
-      accrueMapping = Collections.emptyList();
+      accrueMapping = Stream.empty();
 
-    return Stream.concat(accrueMapping.stream(), chargeMapping.stream());
+    if ((acceptPaymentDefinition.getAccrueAction() != null) && (scheduledAction.action == Action.valueOf(acceptPaymentDefinition.getAccrueAction())))
+      accrueMapping = Stream.concat(chargeMapping, Stream.of(acceptPaymentDefinition));
+
+
+    return Stream.concat(accrueMapping, chargeMapping);
   }
 }

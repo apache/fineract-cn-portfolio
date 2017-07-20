@@ -26,7 +26,6 @@ import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
 import io.mifos.portfolio.service.internal.service.ProductService;
-import io.mifos.portfolio.service.internal.util.ChargeInstance;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,14 +54,6 @@ public class IndividualLoanServiceTest {
     ActionDatePair(final Action action, final LocalDate localDate) {
       this.action = action;
       this.localDate = localDate;
-    }
-
-    Action getAction() {
-      return action;
-    }
-
-    LocalDate getLocalDate() {
-      return localDate;
     }
 
     @Override
@@ -97,7 +88,7 @@ public class IndividualLoanServiceTest {
     private LocalDate initialDisbursementDate;
     private Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAction;
     private Set<String> expectedChargeIdentifiers = new HashSet<>(Arrays.asList(ChargeIdentifiers.INTEREST_ID, ChargeIdentifiers.PAYMENT_ID));
-    private Map<ActionDatePair, List<ChargeInstance>> chargeInstancesForActions = new HashMap<>();
+    private Map<ActionDatePair, List<ChargeDefinition>> chargeDefinitionsForActions = new HashMap<>();
     //This is an abuse of the ChargeInstance since everywhere else it's intended to contain account identifiers and not
     //account designators.  Don't copy the code around charge instances in this test without thinking about what you're
     //doing carefully first.
@@ -138,8 +129,8 @@ public class IndividualLoanServiceTest {
 
     TestCase expectChargeInstancesForActionDatePair(final Action action,
                                                     final LocalDate forDate,
-                                                    final List<ChargeInstance> chargeInstances) {
-      this.chargeInstancesForActions.put(new ActionDatePair(action, forDate), chargeInstances);
+                                                    final List<ChargeDefinition> chargeDefinitions) {
+      this.chargeDefinitionsForActions.put(new ActionDatePair(action, forDate), chargeDefinitions);
       return this;
     }
 
@@ -177,13 +168,14 @@ public class IndividualLoanServiceTest {
 
     final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAction = new HashMap<>();
     chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST.name(), getInterestChargeDefinition(0.01, ChronoUnit.YEARS));
-    chargeDefinitionsMappedByAction.put(Action.OPEN.name(),
-            Collections.singletonList(
-                    getFixedSingleChargeDefinition(10.0, Action.OPEN, PROCESSING_FEE_ID, AccountDesignators.PROCESSING_FEE_INCOME)));
+    final ChargeDefinition processingFeeCharge = getFixedSingleChargeDefinition(10.0, Action.OPEN, PROCESSING_FEE_ID, AccountDesignators.PROCESSING_FEE_INCOME);
+    chargeDefinitionsMappedByAction.put(Action.OPEN.name(), Collections.singletonList(processingFeeCharge));
+    ChargeDefinition loanOriginationFeeCharge = getFixedSingleChargeDefinition(100.0, Action.APPROVE, LOAN_ORIGINATION_FEE_ID, AccountDesignators.ORIGINATION_FEE_INCOME);
+    ChargeDefinition loanFundsAllocationCharge = getProportionalSingleChargeDefinition(1.0, Action.APPROVE, LOAN_FUNDS_ALLOCATION_ID, AccountDesignators.LOAN_FUNDS_SOURCE, AccountDesignators.PENDING_DISBURSAL);
     chargeDefinitionsMappedByAction.put(Action.APPROVE.name(),
             Arrays.asList(
-                    getFixedSingleChargeDefinition(100.0, Action.APPROVE, LOAN_ORIGINATION_FEE_ID, AccountDesignators.ORIGINATION_FEE_INCOME),
-                    getProportionalSingleChargeDefinition(1.0, Action.APPROVE, LOAN_FUNDS_ALLOCATION_ID, AccountDesignators.LOAN_FUNDS_SOURCE, AccountDesignators.PENDING_DISBURSAL)));
+                loanOriginationFeeCharge,
+                loanFundsAllocationCharge));
 
     return new TestCase("simpleCase")
             .minorCurrencyUnitDigits(2)
@@ -193,22 +185,9 @@ public class IndividualLoanServiceTest {
             .expectAdditionalChargeIdentifier(PROCESSING_FEE_ID)
             .expectAdditionalChargeIdentifier(LOAN_FUNDS_ALLOCATION_ID)
             .expectAdditionalChargeIdentifier(LOAN_ORIGINATION_FEE_ID)
-            .expectChargeInstancesForActionDatePair(Action.OPEN, initialDisbursementDate,
-                    Collections.singletonList(new ChargeInstance(
-                            AccountDesignators.ENTRY,
-                            AccountDesignators.PROCESSING_FEE_INCOME,
-                            BigDecimal.valueOf(10).setScale(2, BigDecimal.ROUND_UNNECESSARY))))
+            .expectChargeInstancesForActionDatePair(Action.OPEN, initialDisbursementDate, Collections.singletonList(processingFeeCharge))
             .expectChargeInstancesForActionDatePair(Action.APPROVE, initialDisbursementDate,
-                    Arrays.asList(
-                            new ChargeInstance(
-                                    AccountDesignators.ENTRY,
-                                    AccountDesignators.ORIGINATION_FEE_INCOME,
-                                    BigDecimal.valueOf(100.0).setScale(2, BigDecimal.ROUND_UNNECESSARY)),
-                            new ChargeInstance(
-                                    AccountDesignators.LOAN_FUNDS_SOURCE,
-                                    AccountDesignators.PENDING_DISBURSAL,
-                                    caseParameters.getMaximumBalance().setScale(2, BigDecimal.ROUND_UNNECESSARY)
-                            )));
+                    Arrays.asList(loanOriginationFeeCharge, loanFundsAllocationCharge));
   }
 
   private static TestCase yearLoanTestCase()
@@ -224,7 +203,7 @@ public class IndividualLoanServiceTest {
     chargeDefinitionsMappedByAction.put(Action.APPLY_INTEREST.name(), getInterestChargeDefinition(0.10, ChronoUnit.YEARS));
 
     return new TestCase("yearLoanTestCase")
-            .minorCurrencyUnitDigits(2)
+            .minorCurrencyUnitDigits(3)
             .caseParameters(caseParameters)
             .initialDisbursementDate(initialDisbursementDate)
             .chargeDefinitionsMappedByAction(chargeDefinitionsMappedByAction);
@@ -379,6 +358,44 @@ public class IndividualLoanServiceTest {
             .collect(Collectors.toSet());
 
     Assert.assertEquals(testCase.expectedChargeIdentifiers, resultChargeIdentifiers);
+  }
+
+  @Test
+  public void getScheduledCharges() {
+    final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(testCase.initialDisbursementDate, testCase.caseParameters);
+    final List<ScheduledCharge> scheduledCharges = testSubject.getScheduledCharges(testCase.productIdentifier,
+        testCase.minorCurrencyUnitDigits,
+        testCase.caseParameters.getMaximumBalance(),
+        scheduledActions);
+
+    final List<LocalDate> interestCalculationDates = scheduledCharges.stream()
+        .filter(scheduledCharge -> scheduledCharge.getScheduledAction().action == Action.APPLY_INTEREST)
+        .map(scheduledCharge -> scheduledCharge.getScheduledAction().when)
+        .collect(Collectors.toList());
+
+    final List<LocalDate> allTheDaysAfterTheInitialDisbursementDate
+        = Stream.iterate(testCase.initialDisbursementDate.plusDays(1), interestDay -> interestDay.plusDays(1))
+        .limit(interestCalculationDates.size())
+        .collect(Collectors.toList());
+
+    Assert.assertEquals(interestCalculationDates, allTheDaysAfterTheInitialDisbursementDate);
+
+    final List<LocalDate> acceptPaymentDates = scheduledCharges.stream()
+        .filter(scheduledCharge -> scheduledCharge.getScheduledAction().action == Action.ACCEPT_PAYMENT)
+        .filter(scheduledCharge -> scheduledCharge.getChargeDefinition().getIdentifier().equals(ChargeIdentifiers.PAYMENT_ID))
+        .map(scheduledCharge -> scheduledCharge.getScheduledAction().when)
+        .collect(Collectors.toList());
+    final long expectedAcceptPayments = scheduledActions.stream()
+        .filter(x -> x.action == Action.ACCEPT_PAYMENT).count();
+    Assert.assertEquals("There should be no duplicate entries for payments", expectedAcceptPayments, acceptPaymentDates.size());
+
+    final Map<ActionDatePair, Set<ChargeDefinition>> searchableScheduledCharges = scheduledCharges.stream()
+        .collect(
+            Collectors.groupingBy(scheduledCharge ->
+                new ActionDatePair(scheduledCharge.getScheduledAction().action, scheduledCharge.getScheduledAction().when),
+                Collectors.mapping(ScheduledCharge::getChargeDefinition, Collectors.toSet())));
+
+    testCase.chargeDefinitionsForActions.forEach((key, value) -> Assert.assertEquals(new HashSet<>(value), searchableScheduledCharges.get(key)));
   }
 
   private double percentDifference(final BigDecimal maxPayment, final BigDecimal minPayment) {

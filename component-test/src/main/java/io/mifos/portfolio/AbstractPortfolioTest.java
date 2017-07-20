@@ -30,6 +30,7 @@ import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.api.v1.events.CaseEvent;
 import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
+import io.mifos.portfolio.api.v1.events.TaskDefinitionEvent;
 import io.mifos.portfolio.service.config.PortfolioServiceConfiguration;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.portfolio.service.internal.util.RhythmAdapter;
@@ -70,7 +71,9 @@ import static org.mockito.Mockito.doReturn;
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
-        classes = {AbstractPortfolioTest.TestConfiguration.class})
+        classes = {AbstractPortfolioTest.TestConfiguration.class},
+    properties = {"portfolio.bookInterestAsUser=interest_user", "portfolio.bookInterestInTimeSlot=0"}
+)
 public class AbstractPortfolioTest extends SuiteTestEnvironment {
   private static final String LOGGER_NAME = "test-logger";
 
@@ -111,12 +114,15 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
 
   private AutoUserContext userContext;
 
+  @SuppressWarnings({"SpringAutowiredFieldsWarningInspection", "SpringJavaAutowiringInspection"})
   @Autowired
   protected EventRecorder eventRecorder;
 
+  @SuppressWarnings("SpringAutowiredFieldsWarningInspection")
   @Autowired
   PortfolioManager portfolioManager;
 
+  @SuppressWarnings("SpringAutowiredFieldsWarningInspection")
   @Autowired
   IndividualLending individualLending;
 
@@ -127,6 +133,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   @MockBean
   LedgerManager ledgerManager;
 
+  @SuppressWarnings("SpringAutowiredFieldsWarningInspection")
   @Autowired
   @Qualifier(LOGGER_NAME)
   Logger logger;
@@ -157,8 +164,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
 
   Product createAndEnableProduct() throws InterruptedException {
     final Product product = createAdjustedProduct(x -> {});
-    portfolioManager.enableProduct(product.getIdentifier(), true);
-    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
+    enableProduct(product);
     return product;
   }
 
@@ -202,7 +208,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     Assert.assertTrue(eventRecorder.wait(event, new IndividualLoanCommandEvent(productIdentifier, caseIdentifier)));
 
     final Case customerCase = portfolioManager.getCase(productIdentifier, caseIdentifier);
-    Assert.assertEquals(customerCase.getCurrentState(), nextState.name());
+    Assert.assertEquals(nextState.name(), customerCase.getCurrentState());
   }
 
   boolean individualLoanCommandEventMatches(
@@ -248,6 +254,29 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     entryAccountAssignment.setDesignator(AccountDesignators.ENTRY);
     entryAccountAssignment.setAccountIdentifier(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER);
     return entryAccountAssignment;
+  }
+
+  TaskDefinition createTaskDefinition(Product product) throws InterruptedException {
+    final TaskDefinition taskDefinition = getTaskDefinition();
+    portfolioManager.createTaskDefinition(product.getIdentifier(), taskDefinition);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_TASK_DEFINITION, new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier())));
+    return taskDefinition;
+  }
+
+  TaskDefinition getTaskDefinition() {
+    final TaskDefinition ret = new TaskDefinition();
+    ret.setIdentifier(Fixture.generateUniqueIdentifer("task"));
+    ret.setDescription("But how do you feel about this?");
+    ret.setName("feep");
+    ret.setMandatory(false);
+    ret.setActions(new HashSet<>());
+    ret.setFourEyes(true);
+    return ret;
+  }
+
+  void enableProduct(final Product product) throws InterruptedException {
+    portfolioManager.enableProduct(product.getIdentifier(), true);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
   }
 
 }

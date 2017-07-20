@@ -15,6 +15,8 @@
  */
 package io.mifos.portfolio;
 
+import io.mifos.accounting.api.v1.domain.AccountEntry;
+import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
@@ -23,9 +25,13 @@ import io.mifos.portfolio.api.v1.domain.Command;
 import io.mifos.portfolio.api.v1.domain.Product;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Matchers;
+import org.mockito.Mockito;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants.*;
 
@@ -69,6 +75,13 @@ public class TestCommands extends AbstractPortfolioTest {
         Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
             Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
+
+    final AccountEntry firstEntry = new AccountEntry();
+    firstEntry.setAmount(2000.0);
+    firstEntry.setTransactionDate(DateConverter.toIsoString(LocalDateTime.now()));
+    Mockito.doAnswer((x) -> Stream.of(firstEntry))
+        .when(ledgerManager)
+        .fetchAccountEntriesStream(Matchers.anyString(), Matchers.anyString(), Matchers.anyString());
 
 
     checkStateTransfer(

@@ -44,7 +44,8 @@ public class PeriodChargeCalculator {
   private static boolean accruedCharge(final ScheduledCharge scheduledCharge)
   {
     return scheduledCharge.getChargeDefinition().getAccrualAccountDesignator() != null &&
-            scheduledCharge.getChargeDefinition().getAccrueAction() != null;
+        scheduledCharge.getChargeDefinition().getAccrueAction() != null &&
+        scheduledCharge.getScheduledAction().repaymentPeriod != null;
   }
 
   static BigDecimal chargeAmountPerPeriod(final ScheduledCharge scheduledCharge, final int precision)

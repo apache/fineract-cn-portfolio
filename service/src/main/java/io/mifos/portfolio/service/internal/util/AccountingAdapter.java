@@ -21,6 +21,7 @@ import io.mifos.accounting.api.v1.client.LedgerNotFoundException;
 import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.lang.DateConverter;
+import io.mifos.core.lang.DateRange;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
@@ -29,7 +30,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -41,7 +44,6 @@ import static io.mifos.individuallending.api.v1.domain.product.AccountDesignator
  */
 @Component
 public class AccountingAdapter {
-
   public enum IdentifierType {LEDGER, ACCOUNT}
 
   private final LedgerManager ledgerManager;
@@ -77,6 +79,26 @@ public class AccountingAdapter {
     journalEntry.setTransactionIdentifier("bastet" + RandomStringUtils.random(26, true, true));
 
     ledgerManager.createJournalEntry(journalEntry);
+  }
+
+  public Optional<LocalDateTime> getDateOfOldestEntryContainingMessage(final String accountIdentifier,
+                                                                       final String message) {
+    final Account account = ledgerManager.findAccount(accountIdentifier);
+    final LocalDateTime accountCreatedOn = DateConverter.fromIsoString(account.getCreatedOn());
+    final DateRange fromAccountCreationUntilNow = oneSidedDateRange(accountCreatedOn.toLocalDate());
+
+    return ledgerManager.fetchAccountEntriesStream(accountIdentifier, fromAccountCreationUntilNow.toString(), message)
+        .findFirst()
+        .map(AccountEntry::getTransactionDate)
+        .map(DateConverter::fromIsoString);
+  }
+
+  public BigDecimal sumMatchingEntriesSinceDate(final String accountIdentifier, final LocalDate startDate, final String message)
+  {
+    final DateRange fromLastPaymentUntilNow = oneSidedDateRange(startDate);
+    return ledgerManager.fetchAccountEntriesStream(accountIdentifier, fromLastPaymentUntilNow.toString(), message)
+        .map(AccountEntry::getAmount)
+        .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 
   private static Optional<Debtor> mapToDebtor(final ChargeInstance chargeInstance) {
@@ -186,5 +208,9 @@ public class AccountingAdapter {
     }
     else
       return false;
+  }
+
+  private static DateRange oneSidedDateRange(final LocalDate start) {
+    return new DateRange(start, LocalDate.now(ZoneId.of("UTC")));
   }
 }

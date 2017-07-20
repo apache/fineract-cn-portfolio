@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import javax.annotation.Nullable;
 import javax.validation.Valid;
 import java.util.List;
 import java.util.Objects;
@@ -26,6 +27,10 @@ import java.util.Objects;
 public final class Command {
   @Valid
   private List<AccountAssignment> oneTimeAccountAssignments;
+
+  @Valid
+  @Nullable
+  private List<CostComponent> costComponents;
 
   private String note;
   private String createdOn;
@@ -40,6 +45,14 @@ public final class Command {
 
   public void setOneTimeAccountAssignments(List<AccountAssignment> oneTimeAccountAssignments) {
     this.oneTimeAccountAssignments = oneTimeAccountAssignments;
+  }
+
+  public List<CostComponent> getCostComponents() {
+    return costComponents;
+  }
+
+  public void setCostComponents(List<CostComponent> costComponents) {
+    this.costComponents = costComponents;
   }
 
   public String getNote() {
@@ -72,23 +85,23 @@ public final class Command {
     if (o == null || getClass() != o.getClass()) return false;
     Command command = (Command) o;
     return Objects.equals(oneTimeAccountAssignments, command.oneTimeAccountAssignments) &&
-            Objects.equals(note, command.note) &&
-            Objects.equals(createdOn, command.createdOn) &&
-            Objects.equals(createdBy, command.createdBy);
+        Objects.equals(costComponents, command.costComponents) &&
+        Objects.equals(note, command.note);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(oneTimeAccountAssignments, note, createdOn, createdBy);
+    return Objects.hash(oneTimeAccountAssignments, costComponents, note);
   }
 
   @Override
   public String toString() {
     return "Command{" +
-            "oneTimeAccountAssignments=" + oneTimeAccountAssignments +
-            ", note='" + note + '\'' +
-            ", createdOn='" + createdOn + '\'' +
-            ", createdBy='" + createdBy + '\'' +
-            '}';
+        "oneTimeAccountAssignments=" + oneTimeAccountAssignments +
+        ", costComponents=" + costComponents +
+        ", note='" + note + '\'' +
+        ", createdOn='" + createdOn + '\'' +
+        ", createdBy='" + createdBy + '\'' +
+        '}';
   }
 }

@@ -33,4 +33,16 @@ public interface TaskInstanceMapper {
 
     return ret;
   }
+
+  static TaskInstanceEntity mapOverOldEntity(final TaskInstance from, final TaskInstanceEntity oldEntity) {
+    final TaskInstanceEntity ret = new TaskInstanceEntity();
+    ret.setComment(from.getComment());
+
+    ret.setId(oldEntity.getId());
+    ret.setCustomerCase(oldEntity.getCustomerCase());
+    ret.setTaskDefinition(oldEntity.getTaskDefinition());
+    ret.setExecutedBy(oldEntity.getExecutedBy());
+    ret.setExecutedOn(oldEntity.getExecutedOn());
+    return ret;
+  }
 }

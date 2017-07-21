@@ -19,6 +19,8 @@ import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.domain.TaskDefinition;
 import io.mifos.portfolio.api.v1.domain.TaskInstance;
+import io.mifos.portfolio.api.v1.events.EventConstants;
+import io.mifos.portfolio.api.v1.events.TaskInstanceEvent;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,5 +43,25 @@ public class TestTaskInstances extends AbstractPortfolioTest {
     final List<TaskInstance> taskInstances = portfolioManager.getAllTasksForCase(product.getIdentifier(), customerCase.getIdentifier(), false);
     Assert.assertEquals(1, taskInstances.size());
     Assert.assertEquals(taskDefinition.getIdentifier(), taskInstances.get(0).getTaskIdentifier());
+  }
+
+  @Test
+  public void shouldCommentTaskInstance() throws InterruptedException {
+    final Product product = createProduct();
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+
+    enableProduct(product);
+
+    final Case customerCase = createCase(product.getIdentifier());
+
+    final TaskInstance taskInstance = portfolioManager.getTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier());
+    taskInstance.setComment("And the words of the prophets are written on the subway walls");
+
+    portfolioManager.changeTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier(), taskInstance);
+    Assert.assertTrue(eventRecorder.wait(EventConstants.PUT_TASK_INSTANCE, new TaskInstanceEvent(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier())));
+
+    final TaskInstance taskInstanceChanged = portfolioManager.getTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier());
+    taskInstance.setComment("And the words of the prophets are written on the subway walls");
+    Assert.assertEquals(taskInstance, taskInstanceChanged);
   }
 }

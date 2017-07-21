@@ -102,7 +102,7 @@ public class ChargeDefinitionCommandHandler {
     final ChargeDefinitionEntity toDelete = chargeDefinitionRepository.findByProductIdAndChargeDefinitionIdentifier(
             command.getProductIdentifier(),
             command.getChargeDefinitionIdentifier())
-            .orElseThrow(() -> ServiceException.notFound("Charge definition not found for product identifer ''{0}'' and charge definition identifier ''{1}''.",
+            .orElseThrow(() -> ServiceException.notFound("Charge definition not found for product identifier ''{0}'' and charge definition identifier ''{1}''.",
                     command.getProductIdentifier(), command.getChargeDefinitionIdentifier()));
 
     chargeDefinitionRepository.delete(toDelete);

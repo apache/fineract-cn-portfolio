@@ -270,7 +270,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     ret.setName("feep");
     ret.setMandatory(false);
     ret.setActions(new HashSet<>());
-    ret.setFourEyes(true);
+    ret.setFourEyes(false);
     return ret;
   }
 

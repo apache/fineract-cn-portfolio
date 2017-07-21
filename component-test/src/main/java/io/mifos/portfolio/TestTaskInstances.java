@@ -15,13 +15,16 @@
  */
 package io.mifos.portfolio;
 
+import io.mifos.core.api.context.AutoUserContext;
 import io.mifos.core.api.util.NotFoundException;
 import io.mifos.core.test.domain.TimeStampChecker;
+import io.mifos.portfolio.api.v1.client.TaskExecutionBySameUserAsCaseCreation;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.domain.TaskDefinition;
 import io.mifos.portfolio.api.v1.domain.TaskInstance;
 import io.mifos.portfolio.api.v1.events.EventConstants;
+import io.mifos.portfolio.api.v1.events.TaskDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.TaskInstanceEvent;
 import org.junit.Assert;
 import org.junit.Test;
@@ -93,6 +96,32 @@ public class TestTaskInstances extends AbstractPortfolioTest {
     Assert.assertTrue(allTasksForCase.contains(executedTaskInstance));
   }
 
+  @Test
+  public void shouldMarkBasicTaskNotExecuted() throws InterruptedException {
+    final Product product = createProduct();
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+
+    enableProduct(product);
+
+    final Case customerCase = createCase(product.getIdentifier());
+
+    portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(),  taskDefinition.getIdentifier(), true);
+    Assert.assertTrue(eventRecorder.wait(EventConstants.PUT_TASK_INSTANCE_EXECUTION, new TaskInstanceEvent(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier())));
+
+    final TaskInstance executedTaskInstance = portfolioManager.getTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier());
+    Assert.assertNotNull(executedTaskInstance.getExecutedBy());
+    Assert.assertNotNull(executedTaskInstance.getExecutedOn());
+
+    portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(),  taskDefinition.getIdentifier(), false);
+    Assert.assertTrue(eventRecorder.wait(EventConstants.PUT_TASK_INSTANCE_EXECUTION, new TaskInstanceEvent(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier())));
+
+    final TaskInstance unExecutedTaskInstance = portfolioManager.getTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier());
+    Assert.assertNull(unExecutedTaskInstance.getExecutedOn());
+    Assert.assertNull(unExecutedTaskInstance.getExecutedBy());
+
+    final List<TaskInstance> tasksForCaseExcludingExecuted = portfolioManager.getAllTasksForCase(product.getIdentifier(), customerCase.getIdentifier(), false);
+    Assert.assertTrue(tasksForCaseExcludingExecuted.contains(unExecutedTaskInstance));
+  }
 
   @Test(expected = NotFoundException.class)
   public void shouldFailToMarkNonExistantTask() throws InterruptedException {
@@ -104,5 +133,41 @@ public class TestTaskInstances extends AbstractPortfolioTest {
     final Case customerCase = createCase(product.getIdentifier());
 
     portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(),  "blubble", true);
+  }
+
+
+  @Test(expected = TaskExecutionBySameUserAsCaseCreation.class)
+  public void fourEyesCannotBeMarkedByCaseCreator() throws InterruptedException {
+    final Product product = createProduct();
+
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+    taskDefinition.setFourEyes(true);
+    portfolioManager.changeTaskDefinition(product.getIdentifier(), taskDefinition.getIdentifier(), taskDefinition);
+    eventRecorder.wait(EventConstants.PUT_TASK_DEFINITION, new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier()));
+
+    enableProduct(product);
+
+    final Case customerCase = createCase(product.getIdentifier());
+
+    portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(),  taskDefinition.getIdentifier(), true);
+  }
+
+
+  @Test
+  public void fourEyesCanBeMarkedByDifferentUser() throws InterruptedException {
+    final Product product = createProduct();
+
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+    taskDefinition.setFourEyes(true);
+    portfolioManager.changeTaskDefinition(product.getIdentifier(), taskDefinition.getIdentifier(), taskDefinition);
+    eventRecorder.wait(EventConstants.PUT_TASK_DEFINITION, new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier()));
+
+    enableProduct(product);
+
+    final Case customerCase = createCase(product.getIdentifier());
+
+    try (final AutoUserContext ignored = this.tenantApplicationSecurityEnvironment.createAutoUserContext("fred")) {
+      portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier(), true);
+    }
   }
 }

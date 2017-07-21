@@ -82,8 +82,14 @@ public class TaskInstanceCommandHandler {
         .orElseThrow(() -> ServiceException.notFound("Task instance ''{0}.{1}.{2}'' not found.",
             productIdentifier, caseIdentifier, taskIdentifier));
 
-    taskInstanceEntity.setExecutedOn(LocalDateTime.now(Clock.systemUTC()));
-    taskInstanceEntity.setExecutedBy(UserContextHolder.checkedGetUser());
+    if (executed) {
+      taskInstanceEntity.setExecutedOn(LocalDateTime.now(Clock.systemUTC()));
+      taskInstanceEntity.setExecutedBy(UserContextHolder.checkedGetUser());
+    }
+    else {
+      taskInstanceEntity.setExecutedOn(null);
+      taskInstanceEntity.setExecutedBy(null);
+    }
 
     taskInstanceRepository.save(taskInstanceEntity);
 

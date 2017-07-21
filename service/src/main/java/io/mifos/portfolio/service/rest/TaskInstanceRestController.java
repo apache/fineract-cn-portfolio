@@ -72,7 +72,7 @@ public class TaskInstanceRestController {
   public @ResponseBody
   List<TaskInstance> getAllTasksForCase(@PathVariable("productidentifier") final String productIdentifier,
                                         @PathVariable("caseidentifier") final String caseIdentifier,
-                                        @RequestParam(value = "includeExecuted", required = false) final Boolean includeExecuted)
+                                        @RequestParam(value = "includeExecuted", required = false, defaultValue = "true") final Boolean includeExecuted)
   {
     checkedGetCase(productIdentifier, caseIdentifier);
 

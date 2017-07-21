@@ -15,6 +15,8 @@
  */
 package io.mifos.portfolio;
 
+import io.mifos.core.api.util.NotFoundException;
+import io.mifos.core.test.domain.TimeStampChecker;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.domain.TaskDefinition;
@@ -63,5 +65,44 @@ public class TestTaskInstances extends AbstractPortfolioTest {
     final TaskInstance taskInstanceChanged = portfolioManager.getTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier());
     taskInstance.setComment("And the words of the prophets are written on the subway walls");
     Assert.assertEquals(taskInstance, taskInstanceChanged);
+  }
+
+  @Test
+  public void shouldMarkBasicTaskExecuted() throws InterruptedException {
+    final Product product = createProduct();
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+
+    enableProduct(product);
+
+    final Case customerCase = createCase(product.getIdentifier());
+
+    final TaskInstance taskInstance = portfolioManager.getTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier());
+
+    final TimeStampChecker timeStampChecker = TimeStampChecker.roughlyNow();
+    portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(),  taskDefinition.getIdentifier(), true);
+    Assert.assertTrue(eventRecorder.wait(EventConstants.PUT_TASK_INSTANCE_EXECUTION, new TaskInstanceEvent(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier())));
+
+    final TaskInstance executedTaskInstance = portfolioManager.getTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier());
+    timeStampChecker.assertCorrect(executedTaskInstance.getExecutedOn());
+    Assert.assertEquals(TEST_USER, executedTaskInstance.getExecutedBy());
+
+    final List<TaskInstance> tasksForCaseExcludingExecuted = portfolioManager.getAllTasksForCase(product.getIdentifier(), customerCase.getIdentifier(), false);
+    Assert.assertFalse(tasksForCaseExcludingExecuted.contains(taskInstance));
+
+    final List<TaskInstance> allTasksForCase = portfolioManager.getAllTasksForCase(product.getIdentifier(), customerCase.getIdentifier(), true);
+    Assert.assertTrue(allTasksForCase.contains(executedTaskInstance));
+  }
+
+
+  @Test(expected = NotFoundException.class)
+  public void shouldFailToMarkNonExistantTask() throws InterruptedException {
+    final Product product = createProduct();
+    createTaskDefinition(product);
+
+    enableProduct(product);
+
+    final Case customerCase = createCase(product.getIdentifier());
+
+    portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(),  "blubble", true);
   }
 }

@@ -31,6 +31,22 @@ public class ExecuteTaskInstanceCommand {
     this.executed = executed;
   }
 
+  public String getProductIdentifier() {
+    return productIdentifier;
+  }
+
+  public String getCaseIdentifier() {
+    return caseIdentifier;
+  }
+
+  public String getTaskIdentifier() {
+    return taskIdentifier;
+  }
+
+  public Boolean getExecuted() {
+    return executed;
+  }
+
   @Override
   public String toString() {
     return "ExecuteTaskInstanceCommand{" +

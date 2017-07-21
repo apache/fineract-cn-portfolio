@@ -287,6 +287,7 @@ public interface PortfolioManager {
           produces = MediaType.APPLICATION_JSON_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = TaskOutstanding.class)
   void executeCaseCommand(@PathVariable("productidentifier") final String productIdentifier,
                           @PathVariable("caseidentifier") final String caseIdentifier,
                           @PathVariable("actionidentifier") final String actionIdentifier,

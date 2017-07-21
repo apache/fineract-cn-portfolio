@@ -198,25 +198,4 @@ public class TestCommands extends AbstractPortfolioTest {
         DISBURSE_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);
   }
-
-  public void checkStateTransferFails(final String productIdentifier,
-                                      final String caseIdentifier,
-                                      final Action action,
-                                      final List<AccountAssignment> oneTimeAccountAssignments,
-                                      final String event,
-                                      final Case.State initialState) throws InterruptedException {
-    final Command command = new Command();
-    command.setOneTimeAccountAssignments(oneTimeAccountAssignments);
-    try {
-      portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, action.name(), command);
-      Assert.fail();
-    }
-    catch (final IllegalArgumentException ignored) {}
-
-    Assert.assertFalse(eventRecorder.waitForMatch(event,
-            (IndividualLoanCommandEvent x) -> individualLoanCommandEventMatches(x, productIdentifier, caseIdentifier)));
-
-    final Case customerCase = portfolioManager.getCase(productIdentifier, caseIdentifier);
-    Assert.assertEquals(customerCase.getCurrentState(), initialState.name());
-  }
 }

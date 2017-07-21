@@ -18,7 +18,10 @@ package io.mifos.portfolio;
 import io.mifos.core.api.context.AutoUserContext;
 import io.mifos.core.api.util.NotFoundException;
 import io.mifos.core.test.domain.TimeStampChecker;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.portfolio.api.v1.client.TaskExecutionBySameUserAsCaseCreation;
+import io.mifos.portfolio.api.v1.client.TaskOutstanding;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.domain.TaskDefinition;
@@ -29,6 +32,9 @@ import io.mifos.portfolio.api.v1.events.TaskInstanceEvent;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -82,8 +88,7 @@ public class TestTaskInstances extends AbstractPortfolioTest {
     final TaskInstance taskInstance = portfolioManager.getTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier());
 
     final TimeStampChecker timeStampChecker = TimeStampChecker.roughlyNow();
-    portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(),  taskDefinition.getIdentifier(), true);
-    Assert.assertTrue(eventRecorder.wait(EventConstants.PUT_TASK_INSTANCE_EXECUTION, new TaskInstanceEvent(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier())));
+    markTaskExecuted(product, customerCase, taskDefinition);
 
     final TaskInstance executedTaskInstance = portfolioManager.getTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier());
     timeStampChecker.assertCorrect(executedTaskInstance.getExecutedOn());
@@ -105,8 +110,7 @@ public class TestTaskInstances extends AbstractPortfolioTest {
 
     final Case customerCase = createCase(product.getIdentifier());
 
-    portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(),  taskDefinition.getIdentifier(), true);
-    Assert.assertTrue(eventRecorder.wait(EventConstants.PUT_TASK_INSTANCE_EXECUTION, new TaskInstanceEvent(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier())));
+    markTaskExecuted(product, customerCase, taskDefinition);
 
     final TaskInstance executedTaskInstance = portfolioManager.getTaskForCase(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier());
     Assert.assertNotNull(executedTaskInstance.getExecutedBy());
@@ -152,7 +156,6 @@ public class TestTaskInstances extends AbstractPortfolioTest {
     portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(),  taskDefinition.getIdentifier(), true);
   }
 
-
   @Test
   public void fourEyesCanBeMarkedByDifferentUser() throws InterruptedException {
     final Product product = createProduct();
@@ -167,7 +170,42 @@ public class TestTaskInstances extends AbstractPortfolioTest {
     final Case customerCase = createCase(product.getIdentifier());
 
     try (final AutoUserContext ignored = this.tenantApplicationSecurityEnvironment.createAutoUserContext("fred")) {
-      portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier(), true);
+      markTaskExecuted(product, customerCase, taskDefinition);
     }
+  }
+
+  @Test
+  public void caseCannotBeOpenedUntilTaskCompleted() throws InterruptedException {
+    final Product product = createProduct();
+
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+    taskDefinition.setActions(new HashSet<>(Arrays.asList(Action.OPEN.name(), Action.APPROVE.name())));
+    portfolioManager.changeTaskDefinition(product.getIdentifier(), taskDefinition.getIdentifier(), taskDefinition);
+    eventRecorder.wait(EventConstants.PUT_TASK_DEFINITION, new TaskDefinitionEvent(product.getIdentifier(), taskDefinition.getIdentifier()));
+
+    enableProduct(product);
+
+    final Case customerCase = createCase(product.getIdentifier());
+
+    try {
+      checkStateTransferFails(
+          product.getIdentifier(),
+          customerCase.getIdentifier(),
+          Action.OPEN,
+          Collections.singletonList(assignEntryToTeller()),
+          IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
+          Case.State.CREATED);
+    }
+    catch (final TaskOutstanding ignored) {}
+
+    markTaskExecuted(product, customerCase, taskDefinition);
+
+    checkStateTransfer(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.OPEN,
+        Collections.singletonList(assignEntryToTeller()),
+        IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
+        Case.State.PENDING);
   }
 }

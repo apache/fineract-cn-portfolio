@@ -39,4 +39,13 @@ public interface TaskInstanceRepository extends JpaRepository<TaskInstanceEntity
   @SuppressWarnings("JpaQlInspection")
   @Query("SELECT t FROM TaskInstanceEntity t WHERE t.taskDefinition.product.identifier = :productIdentifier AND t.customerCase.identifier = :caseIdentifier AND t.taskDefinition.identifier = :taskIdentifier")
   Optional<TaskInstanceEntity> findByProductIdAndCaseIdAndTaskId(@Param("productIdentifier") String productId, @Param("caseIdentifier") String caseId, @Param("taskIdentifier") String taskId);
+
+  default boolean areTasksOutstanding(final String productIdentifier, final String caseIdentifier, final String action) {
+    return this.findByProductIdAndCaseId(
+        productIdentifier, caseIdentifier)
+        .filter(taskInstance -> taskInstance.getExecutedOn() == null)
+        .map(TaskInstanceEntity::getTaskDefinition)
+        .filter(TaskDefinitionEntity::getMandatory)
+        .anyMatch(taskDefinition -> taskDefinition.getActions().contains(action));
+  }
 }

@@ -26,10 +26,7 @@ import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
-import io.mifos.portfolio.api.v1.domain.Case;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.rhythm.spi.v1.client.BeatListener;
@@ -60,6 +57,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
   private Product product = null;
   private Case customerCase = null;
+  private TaskDefinition taskDefinition = null;
   private CaseParameters caseParameters = null;
   private String pendingDisbursalAccountIdentifier = null;
   private String customerLoanAccountIdentifier = null;
@@ -106,6 +104,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     portfolioManager.changeChargeDefinition(product.getIdentifier(), interestChargeDefinition.getIdentifier(), interestChargeDefinition);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CHARGE_DEFINITION,
         new ChargeDefinitionEvent(product.getIdentifier(), interestChargeDefinition.getIdentifier())));
+
+    taskDefinition = createTaskDefinition(product);
 
     portfolioManager.enableProduct(product.getIdentifier(), true);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
@@ -162,6 +162,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
   private void step4ApproveCase() throws InterruptedException {
     logger.info("step4ApproveCase");
+
+    markTaskExecuted(product, customerCase, taskDefinition);
+
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),

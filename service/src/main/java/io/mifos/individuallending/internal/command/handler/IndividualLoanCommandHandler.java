@@ -35,8 +35,7 @@ import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.service.internal.mapper.CaseMapper;
-import io.mifos.portfolio.service.internal.repository.CaseEntity;
-import io.mifos.portfolio.service.internal.repository.CaseRepository;
+import io.mifos.portfolio.service.internal.repository.*;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.portfolio.service.internal.util.ChargeInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,15 +62,18 @@ public class IndividualLoanCommandHandler {
   private final CaseRepository caseRepository;
   private final CostComponentService costComponentService;
   private final AccountingAdapter accountingAdapter;
+  private final TaskInstanceRepository taskInstanceRepository;
 
   @Autowired
   public IndividualLoanCommandHandler(
       final CaseRepository caseRepository,
       final CostComponentService costComponentService,
-      final AccountingAdapter accountingAdapter) {
+      final AccountingAdapter accountingAdapter,
+      final TaskInstanceRepository taskInstanceRepository) {
     this.caseRepository = caseRepository;
     this.costComponentService = costComponentService;
     this.accountingAdapter = accountingAdapter;
+    this.taskInstanceRepository = taskInstanceRepository;
   }
 
   @Transactional
@@ -85,6 +87,8 @@ public class IndividualLoanCommandHandler {
     final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
             productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.OPEN);
+
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.OPEN);
 
     final CostComponentsForRepaymentPeriod costComponents
         = costComponentService.getCostComponentsForOpen(dataContextOfAction);
@@ -124,6 +128,8 @@ public class IndividualLoanCommandHandler {
         productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.DENY);
 
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.DENY);
+
     final CostComponentsForRepaymentPeriod costComponents
         = costComponentService.getCostComponentsForDeny(dataContextOfAction);
 
@@ -156,7 +162,7 @@ public class IndividualLoanCommandHandler {
     final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.APPROVE);
 
-    //TODO: Check for incomplete task instances.
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.APPROVE);
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
             = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -206,6 +212,7 @@ public class IndividualLoanCommandHandler {
         productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.DISBURSE);
 
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.DISBURSE);
 
     final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
         costComponentService.getCostComponentsForDisburse(dataContextOfAction);
@@ -253,6 +260,7 @@ public class IndividualLoanCommandHandler {
     final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
         productIdentifier, caseIdentifier, null);
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.APPLY_INTEREST);
+
     if (dataContextOfAction.getCustomerCase().getEndOfTerm() == null)
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
@@ -290,6 +298,9 @@ public class IndividualLoanCommandHandler {
     final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
         productIdentifier, caseIdentifier, null);
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.ACCEPT_PAYMENT);
+
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.ACCEPT_PAYMENT);
+
     if (dataContextOfAction.getCustomerCase().getEndOfTerm() == null)
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
@@ -343,6 +354,9 @@ public class IndividualLoanCommandHandler {
     final String caseIdentifier = command.getCaseIdentifier();
     final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.WRITE_OFF);
+
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.WRITE_OFF);
+
     final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
     customerCase.setCurrentState(Case.State.CLOSED.name());
     caseRepository.save(customerCase);
@@ -357,6 +371,9 @@ public class IndividualLoanCommandHandler {
     final String caseIdentifier = command.getCaseIdentifier();
     final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.CLOSE);
+
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.CLOSE);
+
     final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
     customerCase.setCurrentState(Case.State.CLOSED.name());
     caseRepository.save(customerCase);
@@ -371,6 +388,9 @@ public class IndividualLoanCommandHandler {
     final String caseIdentifier = command.getCaseIdentifier();
     final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.RECOVER);
+
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.RECOVER);
+
     final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
     customerCase.setCurrentState(Case.State.CLOSED.name());
     caseRepository.save(customerCase);
@@ -433,5 +453,15 @@ public class IndividualLoanCommandHandler {
               Collectors.reducing(BigDecimal.ZERO,
                   CostComponent::getAmount,
                   BigDecimal::add)));
+  }
+
+  private void checkIfTasksAreOutstanding(final DataContextOfAction dataContextOfAction, final Action action) {
+    final String productIdentifier = dataContextOfAction.getProduct().getIdentifier();
+    final String caseIdentifier = dataContextOfAction.getCustomerCase().getIdentifier();
+    final boolean tasksOutstanding = taskInstanceRepository.areTasksOutstanding(
+        productIdentifier, caseIdentifier, action.name());
+    if (tasksOutstanding)
+      throw ServiceException.conflict("Cannot execute action ''{0}'' for case ''{1}.{2}'' because tasks are incomplete.",
+          action.name(), productIdentifier, caseIdentifier);
   }
 }

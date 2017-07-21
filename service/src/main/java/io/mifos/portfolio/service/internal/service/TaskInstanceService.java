@@ -59,4 +59,10 @@ public class TaskInstanceService {
     return taskInstanceRepository.findByProductIdAndCaseIdAndTaskId(productIdentifier, caseIdentifier, taskIdentifier)
         .map(TaskInstanceMapper::map);
   }
+
+  public boolean areTasksOutstanding(final String productIdentifier,
+                                     final String caseIdentifier,
+                                     final String actionIdentifier) {
+    return taskInstanceRepository.areTasksOutstanding(productIdentifier, caseIdentifier, actionIdentifier);
+  }
 }

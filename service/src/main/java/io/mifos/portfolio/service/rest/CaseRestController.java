@@ -29,6 +29,7 @@ import io.mifos.portfolio.service.internal.command.ChangeCaseCommand;
 import io.mifos.portfolio.service.internal.command.CreateCaseCommand;
 import io.mifos.portfolio.service.internal.service.CaseService;
 import io.mifos.portfolio.service.internal.service.ProductService;
+import io.mifos.portfolio.service.internal.service.TaskInstanceService;
 import io.mifos.products.spi.ProductCommandDispatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -52,15 +53,18 @@ public class CaseRestController {
   private final CommandGateway commandGateway;
   private final CaseService caseService;
   private final ProductService productService;
+  private final TaskInstanceService taskInstanceService;
 
   @Autowired public CaseRestController(
-          final CommandGateway commandGateway,
-          final CaseService caseService,
-          final ProductService productService) {
+      final CommandGateway commandGateway,
+      final CaseService caseService,
+      final ProductService productService,
+      final TaskInstanceService taskInstanceService) {
     super();
     this.commandGateway = commandGateway;
     this.caseService = caseService;
     this.productService = productService;
+    this.taskInstanceService = taskInstanceService;
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)
@@ -93,9 +97,8 @@ public class CaseRestController {
             .ifPresent(x -> {throw ServiceException.conflict("Duplicate identifier: " + productIdentifier + "." + x.getIdentifier());});
 
     final Optional<Boolean> productEnabled = productService.findEnabledByIdentifier(productIdentifier);
-    productEnabled.orElseThrow(() -> ServiceException.internalError("Product should exist, but doesn't"));
-    productEnabled.ifPresent(x -> {
-      if (!x) throw ServiceException.badRequest("Product must be enabled before cases for it can be created: " + productIdentifier);});
+    if (!productEnabled.orElseThrow(() -> ServiceException.internalError("Product should exist, but doesn't"))) {
+      throw ServiceException.badRequest("Product must be enabled before cases for it can be created: " + productIdentifier);}
 
     if (!instance.getProductIdentifier().equals(productIdentifier))
       throw ServiceException.badRequest("Product identifier in request body must match product identifier in request path.");
@@ -209,6 +212,13 @@ public class CaseRestController {
     final Set<String> nextActions = caseService.getNextActionsForCase(productIdentifier, caseIdentifier);
     if (!nextActions.contains(actionIdentifier))
       throw ServiceException.badRequest("Action " + actionIdentifier + " cannot be taken from current state.");
+
+
+    final boolean tasksOutstanding = taskInstanceService.areTasksOutstanding(
+        productIdentifier, caseIdentifier, actionIdentifier);
+    if (tasksOutstanding)
+      throw ServiceException.conflict("Cannot execute action ''{0}'' for case ''{1}.{2}'' because tasks are incomplete.",
+          actionIdentifier, productIdentifier, caseIdentifier);
 
     final ProductCommandDispatcher productCommandDispatcher = caseService.getProductCommandDispatcher(productIdentifier);
     productCommandDispatcher.dispatch(productIdentifier, caseIdentifier, actionIdentifier, command);

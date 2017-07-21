@@ -27,10 +27,7 @@ import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.portfolio.api.v1.client.PortfolioManager;
 import io.mifos.portfolio.api.v1.domain.*;
-import io.mifos.portfolio.api.v1.events.CaseEvent;
-import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
-import io.mifos.portfolio.api.v1.events.EventConstants;
-import io.mifos.portfolio.api.v1.events.TaskDefinitionEvent;
+import io.mifos.portfolio.api.v1.events.*;
 import io.mifos.portfolio.service.config.PortfolioServiceConfiguration;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.portfolio.service.internal.util.RhythmAdapter;
@@ -56,10 +53,7 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -211,10 +205,31 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     Assert.assertEquals(nextState.name(), customerCase.getCurrentState());
   }
 
-  boolean individualLoanCommandEventMatches(
-          final IndividualLoanCommandEvent event,
-          final String productIdentifier,
-          final String caseIdentifier)
+  void checkStateTransferFails(final String productIdentifier,
+                                      final String caseIdentifier,
+                                      final Action action,
+                                      final List<AccountAssignment> oneTimeAccountAssignments,
+                                      final String event,
+                                      final Case.State initialState) throws InterruptedException {
+    final Command command = new Command();
+    command.setOneTimeAccountAssignments(oneTimeAccountAssignments);
+    try {
+      portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, action.name(), command);
+      Assert.fail();
+    }
+    catch (final IllegalArgumentException ignored) {}
+
+    Assert.assertFalse(eventRecorder.waitForMatch(event,
+        (IndividualLoanCommandEvent x) -> individualLoanCommandEventMatches(x, productIdentifier, caseIdentifier)));
+
+    final Case customerCase = portfolioManager.getCase(productIdentifier, caseIdentifier);
+    Assert.assertEquals(customerCase.getCurrentState(), initialState.name());
+  }
+
+  private boolean individualLoanCommandEventMatches(
+      final IndividualLoanCommandEvent event,
+      final String productIdentifier,
+      final String caseIdentifier)
   {
     return event.getProductIdentifier().equals(productIdentifier) &&
             event.getCaseIdentifier().equals(caseIdentifier);
@@ -268,8 +283,8 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     ret.setIdentifier(Fixture.generateUniqueIdentifer("task"));
     ret.setDescription("But how do you feel about this?");
     ret.setName("feep");
-    ret.setMandatory(false);
-    ret.setActions(new HashSet<>());
+    ret.setMandatory(true);
+    ret.setActions(Collections.singleton(Action.APPROVE.name()));
     ret.setFourEyes(false);
     return ret;
   }
@@ -277,6 +292,13 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   void enableProduct(final Product product) throws InterruptedException {
     portfolioManager.enableProduct(product.getIdentifier(), true);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
+  }
+
+  void markTaskExecuted(final Product product,
+                        final Case customerCase,
+                        final TaskDefinition taskDefinition) throws InterruptedException {
+    portfolioManager.markTaskExecution(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier(), true);
+    Assert.assertTrue(eventRecorder.wait(EventConstants.PUT_TASK_INSTANCE_EXECUTION, new TaskInstanceEvent(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier())));
   }
 
 }

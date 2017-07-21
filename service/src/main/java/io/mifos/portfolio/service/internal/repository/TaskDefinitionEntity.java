@@ -125,12 +125,13 @@ public class TaskDefinitionEntity {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     TaskDefinitionEntity that = (TaskDefinitionEntity) o;
-    return Objects.equals(id, that.id);
+    return Objects.equals(identifier, that.identifier) &&
+        Objects.equals(product, that.product);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(id);
+    return Objects.hash(identifier, product);
   }
 
   @Override

@@ -63,8 +63,8 @@ public class CaseMapper {
     ret.setIdentifier(instance.getIdentifier());
     ret.setProductIdentifier(instance.getProductIdentifier());
     ret.setAccountAssignments(instance.getAccountAssignments().stream()
-            .map(x -> CaseMapper.map(x, ret))
-            .collect(Collectors.toSet()));
+        .map(x -> CaseMapper.map(x, ret))
+        .collect(Collectors.toSet()));
     ret.setCurrentState(instance.getCurrentState());
 
     final LocalDateTime time = LocalDateTime.now(Clock.systemUTC());
@@ -111,6 +111,7 @@ public class CaseMapper {
 
 
     newEntity.setAccountAssignments(newAccountAssignmentEntities);
+    newEntity.setTaskInstances(oldEntity.getTaskInstances());
     return newEntity;
   }
 }

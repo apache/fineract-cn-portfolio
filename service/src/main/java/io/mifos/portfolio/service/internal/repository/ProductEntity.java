@@ -311,13 +311,13 @@ public class ProductEntity {
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
-    if (o == null || !(o instanceof ProductEntity)) return false;
+    if (o == null || getClass() != o.getClass()) return false;
     ProductEntity that = (ProductEntity) o;
-    return Objects.equals(getIdentifier(), that.getIdentifier());
+    return Objects.equals(identifier, that.identifier);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(getIdentifier());
+    return Objects.hash(identifier);
   }
 }

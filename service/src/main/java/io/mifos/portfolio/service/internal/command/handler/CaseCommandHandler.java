@@ -32,7 +32,8 @@ import io.mifos.products.spi.PatternFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -43,28 +44,34 @@ public class CaseCommandHandler {
   private final PatternFactoryRegistry patternFactoryRegistry;
   private final ProductRepository productRepository;
   private final CaseRepository caseRepository;
+  private final TaskDefinitionRepository taskDefinitionRepository;
 
   @Autowired
   public CaseCommandHandler(final PatternFactoryRegistry patternFactoryRegistry,
                             final ProductRepository productRepository,
-                            final CaseRepository caseRepository) {
+                            final CaseRepository caseRepository,
+                            final TaskDefinitionRepository taskDefinitionRepository) {
     super();
     this.patternFactoryRegistry = patternFactoryRegistry;
     this.productRepository = productRepository;
     this.caseRepository = caseRepository;
+    this.taskDefinitionRepository = taskDefinitionRepository;
   }
 
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.POST_CASE)
   public CaseEvent process(final CreateCaseCommand createCaseCommand) {
-    //TODO: Check that all designators are assigned to existing accounts.
-    //TODO: Create accounts if necessary.
-
     final Case caseInstance = createCaseCommand.getCase();
+
+    final Stream<TaskDefinitionEntity> tasksToCreate
+        = taskDefinitionRepository.findByProductId(createCaseCommand.getCase().getProductIdentifier());
 
     final CaseEntity entity = CaseMapper.map(caseInstance);
     entity.setCurrentState(Case.State.CREATED.name());
+    entity.setTaskInstances(tasksToCreate
+        .map(taskDefinition -> instanceOfDefinition(taskDefinition, entity))
+        .collect(Collectors.toSet()));
     this.caseRepository.save(entity);
 
     getPatternFactory(caseInstance.getProductIdentifier()).persistParameters(entity.getId(), caseInstance.getParameters());
@@ -76,8 +83,7 @@ public class CaseCommandHandler {
   private PatternFactory getPatternFactory(String productIdentifier) {
     return productRepository.findByIdentifier(productIdentifier)
               .map(ProductEntity::getPatternPackage)
-              .map(patternFactoryRegistry::getPatternFactoryForPackage)
-              .orElse(Optional.empty())
+              .flatMap(patternFactoryRegistry::getPatternFactoryForPackage)
               .orElseThrow(() -> new IllegalArgumentException("Case references unsupported product type."));
   }
 
@@ -98,5 +104,14 @@ public class CaseCommandHandler {
     getPatternFactory(instance.getProductIdentifier()).changeParameters(oldEntity.getId(), instance.getParameters());
 
     return new CaseEvent(instance.getProductIdentifier(), instance.getIdentifier());
+  }
+
+  private static TaskInstanceEntity instanceOfDefinition(final TaskDefinitionEntity definition,
+                                                         final CaseEntity customerCase) {
+    final TaskInstanceEntity ret = new TaskInstanceEntity();
+    ret.setCustomerCase(customerCase);
+    ret.setTaskDefinition(definition);
+    ret.setComment("");
+    return ret;
   }
 }

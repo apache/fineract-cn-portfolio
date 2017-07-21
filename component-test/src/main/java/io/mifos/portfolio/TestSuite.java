@@ -30,7 +30,8 @@ import org.junit.runners.Suite;
     TestIndividualLoans.class,
     TestPatterns.class,
     TestProducts.class,
-    TestTaskDefinitions.class
+    TestTaskDefinitions.class,
+    TestTaskInstances.class
 })
 public class TestSuite extends SuiteTestEnvironment {
 }

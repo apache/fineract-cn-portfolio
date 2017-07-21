@@ -100,14 +100,14 @@ public class TaskDefinitionRestController {
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
   @RequestMapping(
-          value = "{taskdefinitionidentifier}",
+          value = "{taskidentifier}",
           method = RequestMethod.GET,
           consumes = MediaType.APPLICATION_JSON_VALUE,
           produces = MediaType.APPLICATION_JSON_VALUE
   )
   public @ResponseBody TaskDefinition getTaskDefinition(
           @PathVariable("productidentifier") final String productIdentifier,
-          @PathVariable("taskdefinitionidentifier") final String taskDefinitionIdentifier)
+          @PathVariable("taskidentifier") final String taskDefinitionIdentifier)
   {
     checkProductExists(productIdentifier);
 
@@ -117,14 +117,14 @@ public class TaskDefinitionRestController {
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
   @RequestMapping(
-      value = "{taskdefinitionidentifier}",
+      value = "{taskidentifier}",
       method = RequestMethod.PUT,
       consumes = MediaType.ALL_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE
   )
   public @ResponseBody ResponseEntity<Void> changeTaskDefinition(
           @PathVariable("productidentifier") final String productIdentifier,
-          @PathVariable("taskdefinitionidentifier") final String taskDefinitionIdentifier,
+          @PathVariable("taskidentifier") final String taskDefinitionIdentifier,
           @RequestBody @Valid final TaskDefinition instance)
   {
     checkTaskDefinitionExists(productIdentifier, taskDefinitionIdentifier);
@@ -141,14 +141,14 @@ public class TaskDefinitionRestController {
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
   @RequestMapping(
-      value = "/{taskdefinitionidentifier}",
+      value = "/{taskidentifier}",
       method = RequestMethod.DELETE,
       consumes = MediaType.ALL_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE
   )
   public @ResponseBody ResponseEntity<Void> deleteTaskDefinition(
       @PathVariable("productidentifier") final String productIdentifier,
-      @PathVariable("taskdefinitionidentifier") final String taskDefinitionIdentifier
+      @PathVariable("taskidentifier") final String taskDefinitionIdentifier
   )
   {
     checkTaskDefinitionExists(productIdentifier, taskDefinitionIdentifier);

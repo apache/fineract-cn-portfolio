@@ -16,39 +16,41 @@
 package io.mifos.portfolio.api.v1.domain;
 
 import io.mifos.core.lang.validation.constraints.ValidIdentifier;
+import org.hibernate.validator.constraints.Length;
 
-import javax.validation.constraints.NotNull;
+import java.util.Objects;
 
 /**
  * @author Myrle Krantz
  */
 @SuppressWarnings({"WeakerAccess", "unused"})
 public final class TaskInstance {
-  @NotNull
-  private TaskDefinition taskDefinition;
+  @ValidIdentifier
+  private String taskIdentifier;
 
+  @Length(max = 4096)
   private String comment;
+
   private String executedOn;
 
-  @ValidIdentifier
   private String executedBy;
 
   public TaskInstance() {
   }
 
-  public TaskInstance(TaskDefinition taskDefinition, String comment, String executedOn, String executedBy) {
-    this.taskDefinition = taskDefinition;
+  public TaskInstance(String taskIdentifier, String comment, String executedOn, String executedBy) {
+    this.taskIdentifier = taskIdentifier;
     this.comment = comment;
     this.executedOn = executedOn;
     this.executedBy = executedBy;
   }
 
-  public TaskDefinition getTaskDefinition() {
-    return taskDefinition;
+  public String getTaskIdentifier() {
+    return taskIdentifier;
   }
 
-  public void setTaskDefinition(TaskDefinition taskDefinition) {
-    this.taskDefinition = taskDefinition;
+  public void setTaskIdentifier(String taskIdentifier) {
+    this.taskIdentifier = taskIdentifier;
   }
 
   public String getComment() {
@@ -79,29 +81,25 @@ public final class TaskInstance {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-
     TaskInstance that = (TaskInstance) o;
-
-    return taskDefinition != null ? taskDefinition.equals(that.taskDefinition) : that.taskDefinition == null && (comment != null ? comment.equals(that.comment) : that.comment == null && (executedOn != null ? executedOn.equals(that.executedOn) : that.executedOn == null && (executedBy != null ? executedBy.equals(that.executedBy) : that.executedBy == null)));
-
+    return Objects.equals(taskIdentifier, that.taskIdentifier) &&
+        Objects.equals(comment, that.comment) &&
+        Objects.equals(executedOn, that.executedOn) &&
+        Objects.equals(executedBy, that.executedBy);
   }
 
   @Override
   public int hashCode() {
-    int result = taskDefinition != null ? taskDefinition.hashCode() : 0;
-    result = 31 * result + (comment != null ? comment.hashCode() : 0);
-    result = 31 * result + (executedOn != null ? executedOn.hashCode() : 0);
-    result = 31 * result + (executedBy != null ? executedBy.hashCode() : 0);
-    return result;
+    return Objects.hash(taskIdentifier, comment, executedOn, executedBy);
   }
 
   @Override
   public String toString() {
     return "TaskInstance{" +
-            "taskDefinition=" + taskDefinition +
-            ", comment='" + comment + '\'' +
-            ", executedOn='" + executedOn + '\'' +
-            ", executedBy='" + executedBy + '\'' +
-            '}';
+        "taskIdentifier='" + taskIdentifier + '\'' +
+        ", comment='" + comment + '\'' +
+        ", executedOn='" + executedOn + '\'' +
+        ", executedBy='" + executedBy + '\'' +
+        '}';
   }
 }

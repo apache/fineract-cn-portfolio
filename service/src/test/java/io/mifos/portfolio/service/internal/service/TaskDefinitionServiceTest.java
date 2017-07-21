@@ -66,7 +66,7 @@ public class TaskDefinitionServiceTest {
     final List<TaskDefinitionEntity> taskDefinitionReturn = findTaskDefinition
             ? Collections.singletonList(exampleTaskDefinition()) : Collections.emptyList();
 
-    Mockito.doReturn(taskDefinitionReturn).when(testHarness.getTaskDefinitionRepository()).findByProductId("ble");
+    Mockito.doReturn(taskDefinitionReturn.stream()).when(testHarness.getTaskDefinitionRepository()).findByProductId("ble");
 
     final List<TaskDefinition> result = testHarness.getTestSubject().findAllEntities("ble");
 

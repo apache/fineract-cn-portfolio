@@ -16,18 +16,14 @@
 package io.mifos.portfolio.service.internal.service;
 
 import io.mifos.portfolio.api.v1.domain.TaskDefinition;
-import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.service.internal.mapper.TaskDefinitionMapper;
 import io.mifos.portfolio.service.internal.repository.TaskDefinitionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.AbstractMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -43,25 +39,9 @@ public class TaskDefinitionService {
   }
 
   public List<TaskDefinition> findAllEntities(final String productIdentifier) {
-    return taskDefinitionRepository.findByProductId(productIdentifier).stream()
+    return taskDefinitionRepository.findByProductId(productIdentifier)
             .map(TaskDefinitionMapper::map)
             .collect(Collectors.toList());
-  }
-
-  public Map<Action, List<TaskDefinition>> getTaskDefinitionsMappedByAction(
-          final String productIdentifier)
-  {
-    final List<TaskDefinition> taskDefinitions = findAllEntities(productIdentifier);
-
-    return taskDefinitions.stream().flatMap(this::createMappingsForTaskDefinition)
-                    .collect(Collectors.groupingBy(Map.Entry::getKey,
-                            Collectors.mapping(Map.Entry::getValue, Collectors.toList())));
-  }
-
-  private Stream<AbstractMap.SimpleEntry<Action, TaskDefinition>> createMappingsForTaskDefinition(
-          final TaskDefinition taskDefinition)
-  {
-    return taskDefinition.getActions().stream().map(x -> new AbstractMap.SimpleEntry<>(Action.valueOf(x), taskDefinition));
   }
 
   public Optional<TaskDefinition> findByIdentifier(final String productIdentifier, final String identifier) {

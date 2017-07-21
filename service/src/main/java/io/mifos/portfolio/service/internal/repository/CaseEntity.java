@@ -20,6 +20,7 @@ import io.mifos.core.mariadb.util.LocalDateTimeConverter;
 import javax.annotation.Nullable;
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -42,6 +43,9 @@ public class CaseEntity {
 
   @OneToMany(targetEntity = CaseAccountAssignmentEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "caseEntity")
   private Set<CaseAccountAssignmentEntity> accountAssignments;
+
+  @OneToMany(targetEntity = TaskInstanceEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "customerCase")
+  private Set<TaskInstanceEntity> taskInstances;
 
   @Column(name = "current_state", nullable = false)
   private String currentState;
@@ -99,6 +103,14 @@ public class CaseEntity {
     this.accountAssignments = accountAssignments;
   }
 
+  public Set<TaskInstanceEntity> getTaskInstances() {
+    return taskInstances;
+  }
+
+  public void setTaskInstances(Set<TaskInstanceEntity> taskInstances) {
+    this.taskInstances = taskInstances;
+  }
+
   public String getCurrentState() {
     return currentState;
   }
@@ -145,5 +157,19 @@ public class CaseEntity {
 
   public void setLastModifiedBy(String lastModifiedBy) {
     this.lastModifiedBy = lastModifiedBy;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    CaseEntity that = (CaseEntity) o;
+    return Objects.equals(identifier, that.identifier) &&
+        Objects.equals(productIdentifier, that.productIdentifier);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(identifier, productIdentifier);
   }
 }

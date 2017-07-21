@@ -144,35 +144,35 @@ public interface PortfolioManager {
           final TaskDefinition taskDefinition);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/tasks/{taskdefinitionidentifier}",
+          value = "/products/{productidentifier}/tasks/{taskidentifier}",
           method = RequestMethod.GET,
           produces = MediaType.APPLICATION_JSON_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
   TaskDefinition getTaskDefinition(
           @PathVariable("productidentifier") final String productIdentifier,
-          @PathVariable("taskdefinitionidentifier") final String taskDefinitionIdentifier);
+          @PathVariable("taskidentifier") final String taskDefinitionIdentifier);
 
   @RequestMapping(
-      value = "/products/{productidentifier}/tasks/{taskdefinitionidentifier}",
+      value = "/products/{productidentifier}/tasks/{taskidentifier}",
       method = RequestMethod.PUT,
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE)
   @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
   void changeTaskDefinition(
       @PathVariable("productidentifier") final String productIdentifier,
-      @PathVariable("taskdefinitionidentifier") final String taskDefinitionIdentifier,
+      @PathVariable("taskidentifier") final String taskDefinitionIdentifier,
       final TaskDefinition taskDefinition);
 
   @RequestMapping(
-      value = "/products/{productidentifier}/tasks/{taskdefinitionidentifier}",
+      value = "/products/{productidentifier}/tasks/{taskidentifier}",
       method = RequestMethod.DELETE,
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE)
   @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
   void deleteTaskDefinition(
       @PathVariable("productidentifier") final String productIdentifier,
-      @PathVariable("taskdefinitionidentifier") final String taskDefinitionIdentifier);
+      @PathVariable("taskidentifier") final String taskDefinitionIdentifier);
 
   @RequestMapping(
           value = "/products/{productidentifier}/charges/",
@@ -299,13 +299,13 @@ public interface PortfolioManager {
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
   List<TaskInstance> getAllTasksForCase(@PathVariable("productidentifier") final String productIdentifier,
-                                         @PathVariable("caseidentifier") final String caseIdentifier,
-                                         @RequestParam(value = "includeExecuted", required = false) final Boolean includeExecuted);
+                                        @PathVariable("caseidentifier") final String caseIdentifier,
+                                        @RequestParam(value = "includeExecuted", required = false) final Boolean includeExecuted);
 
   @RequestMapping(
           value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/{taskidentifier}",
           method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
+          produces = MediaType.APPLICATION_JSON_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
   TaskInstance getTaskForCase(@PathVariable("productidentifier") final String productIdentifier,
@@ -313,14 +313,26 @@ public interface PortfolioManager {
                               @PathVariable("taskidentifier") final String taskIdentifier);
 
   @RequestMapping(
+      value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/{taskidentifier}",
+      method = RequestMethod.PUT,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  void changeTaskForCase(@PathVariable("productidentifier") final String productIdentifier,
+                         @PathVariable("caseidentifier") final String caseIdentifier,
+                         @PathVariable("taskidentifier") final String taskIdentifier,
+                         final TaskInstance instance);
+
+  @RequestMapping(
           value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/{taskidentifier}/executed",
           method = RequestMethod.PUT,
           produces = MediaType.ALL_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  void taskForCaseExecuted(@PathVariable("productidentifier") final String productIdentifier,
-                           @PathVariable("caseidentifier") final String caseIdentifier,
-                           @PathVariable("taskidentifier") final String taskIdentifier);
+  void markTaskExecution(@PathVariable("productidentifier") final String productIdentifier,
+                         @PathVariable("caseidentifier") final String caseIdentifier,
+                         @PathVariable("taskidentifier") final String taskIdentifier,
+                         final Boolean executed);
 
   @RequestMapping(
           value = "/cases/",

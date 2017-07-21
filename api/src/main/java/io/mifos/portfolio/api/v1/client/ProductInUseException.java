@@ -18,6 +18,5 @@ package io.mifos.portfolio.api.v1.client;
 /**
  * @author Myrle Krantz
  */
-@SuppressWarnings("unused")
 public class ProductInUseException extends RuntimeException {
 }

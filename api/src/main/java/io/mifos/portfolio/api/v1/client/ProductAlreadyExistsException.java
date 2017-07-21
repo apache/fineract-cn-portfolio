@@ -18,6 +18,5 @@ package io.mifos.portfolio.api.v1.client;
 /**
  * @author Myrle Krantz
  */
-@SuppressWarnings("WeakerAccess")
 public class ProductAlreadyExistsException extends RuntimeException {
 }

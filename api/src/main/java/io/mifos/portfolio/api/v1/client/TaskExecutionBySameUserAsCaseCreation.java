@@ -18,5 +18,5 @@ package io.mifos.portfolio.api.v1.client;
 /**
  * @author Myrle Krantz
  */
-public class ProductDefinitionIncomplete extends RuntimeException {
+public class TaskExecutionBySameUserAsCaseCreation extends RuntimeException {
 }

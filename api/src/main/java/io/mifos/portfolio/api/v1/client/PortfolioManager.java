@@ -329,6 +329,7 @@ public interface PortfolioManager {
           produces = MediaType.ALL_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = TaskExecutionBySameUserAsCaseCreation.class)
   void markTaskExecution(@PathVariable("productidentifier") final String productIdentifier,
                          @PathVariable("caseidentifier") final String caseIdentifier,
                          @PathVariable("taskidentifier") final String taskIdentifier,

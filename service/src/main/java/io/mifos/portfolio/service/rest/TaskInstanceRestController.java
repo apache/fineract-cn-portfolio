@@ -17,9 +17,12 @@ package io.mifos.portfolio.service.rest;
 
 import io.mifos.anubis.annotation.AcceptedTokenType;
 import io.mifos.anubis.annotation.Permittable;
+import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.command.gateway.CommandGateway;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.TaskDefinition;
 import io.mifos.portfolio.api.v1.domain.TaskInstance;
 import io.mifos.portfolio.service.internal.command.ChangeTaskInstanceCommand;
 import io.mifos.portfolio.service.internal.command.ExecuteTaskInstanceCommand;
@@ -71,7 +74,7 @@ public class TaskInstanceRestController {
                                         @PathVariable("caseidentifier") final String caseIdentifier,
                                         @RequestParam(value = "includeExecuted", required = false) final Boolean includeExecuted)
   {
-    checkCaseExists(productIdentifier, caseIdentifier);
+    checkedGetCase(productIdentifier, caseIdentifier);
 
     return taskInstanceService.findAllEntities(productIdentifier, caseIdentifier, includeExecuted);
   }
@@ -85,10 +88,10 @@ public class TaskInstanceRestController {
   )
   public @ResponseBody
   TaskInstance getTaskForCase(@PathVariable("productidentifier") final String productIdentifier,
-                 @PathVariable("caseidentifier") final String caseIdentifier,
-                 @PathVariable("taskidentifier") final String taskIdentifier)
+                              @PathVariable("caseidentifier") final String caseIdentifier,
+                              @PathVariable("taskidentifier") final String taskIdentifier)
   {
-    checkCaseExists(productIdentifier, caseIdentifier);
+    checkedGetCase(productIdentifier, caseIdentifier);
 
     return taskInstanceService.findByIdentifier(productIdentifier, caseIdentifier, taskIdentifier).orElseThrow(
         () -> ServiceException.notFound("No task instance ''{0}.{1}.{2}'' found.", productIdentifier, caseIdentifier, taskIdentifier));
@@ -107,9 +110,9 @@ public class TaskInstanceRestController {
                                          @PathVariable("taskidentifier") final String taskIdentifier,
                                          @RequestBody @Valid final TaskInstance instance)
   {
-    checkCaseExists(productIdentifier, caseIdentifier);
+    checkedGetCase(productIdentifier, caseIdentifier);
 
-    checkTaskDefinitionExists(productIdentifier, taskIdentifier);
+    checkedGetTaskDefinition(productIdentifier, taskIdentifier);
 
     if (!taskIdentifier.equals(instance.getTaskIdentifier()))
       throw ServiceException.badRequest("Instance identifiers may not be changed.");
@@ -132,21 +135,26 @@ public class TaskInstanceRestController {
                                          @PathVariable("taskidentifier") final String taskIdentifier,
                                          @RequestBody @Valid final Boolean executed)
   {
-    checkTaskDefinitionExists(productIdentifier, taskIdentifier);
+    final TaskDefinition taskDefinition = checkedGetTaskDefinition(productIdentifier, taskIdentifier);
+    if (taskDefinition.getFourEyes()) {
+      final Case customerCase = checkedGetCase(productIdentifier, caseIdentifier);
+      if (UserContextHolder.checkedGetUser().equals(customerCase.getCreatedBy()))
+        throw ServiceException.conflict("Signing user must be different than case creator.");
+    }
 
     commandGateway.process(new ExecuteTaskInstanceCommand(productIdentifier, caseIdentifier, taskIdentifier, executed));
 
     return ResponseEntity.accepted().build();
   }
 
-  private void checkTaskDefinitionExists(final String productIdentifier,
-                                         final String taskDefinitionIdentifier) throws ServiceException {
-    taskDefinitionService.findByIdentifier(productIdentifier, taskDefinitionIdentifier)
+  private TaskDefinition checkedGetTaskDefinition(final String productIdentifier,
+                                                  final String taskDefinitionIdentifier) throws ServiceException {
+    return taskDefinitionService.findByIdentifier(productIdentifier, taskDefinitionIdentifier)
         .orElseThrow(() -> ServiceException.notFound("No task with the identifier ''{0}.{1}'' exists.", productIdentifier, taskDefinitionIdentifier));
   }
 
-  private void checkCaseExists(final String productIdentifier, final String caseIdentifier) throws ServiceException {
-    caseService.findByIdentifier(productIdentifier, caseIdentifier)
-        .orElseThrow(() -> ServiceException.notFound("Case ''{0}.{2}'' does not exist.", productIdentifier, caseIdentifier));
+  private Case checkedGetCase(final String productIdentifier, final String caseIdentifier) throws ServiceException {
+    return caseService.findByIdentifier(productIdentifier, caseIdentifier)
+        .orElseThrow(() -> ServiceException.notFound("Case ''{0}.{1}'' does not exist.", productIdentifier, caseIdentifier));
   }
 }

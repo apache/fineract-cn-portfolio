@@ -34,6 +34,7 @@ public interface EventConstants {
   String DELETE_TASK_DEFINITION = "delete-task-definition";
   String POST_CHARGE_DEFINITION = "post-charge-definition";
   String PUT_TASK_INSTANCE = "put-task-instance";
+  String PUT_TASK_INSTANCE_EXECUTION = "put-task-instance-execution";
   String PUT_CHARGE_DEFINITION = "put-charge-definition";
   String DELETE_PRODUCT_CHARGE_DEFINITION = "delete-product-charge-definition";
   String SELECTOR_INITIALIZE = SELECTOR_NAME + " = '" + INITIALIZE + "'";
@@ -47,6 +48,7 @@ public interface EventConstants {
   String SELECTOR_PUT_TASK_DEFINITION = SELECTOR_NAME + " = '" + PUT_TASK_DEFINITION + "'";
   String SELECTOR_DELETE_TASK_DEFINITION = SELECTOR_NAME + " = '" + DELETE_TASK_DEFINITION + "'";
   String SELECTOR_PUT_TASK_INSTANCE = SELECTOR_NAME + " = '" + PUT_TASK_INSTANCE + "'";
+  String SELECTOR_PUT_TASK_INSTANCE_EXECUTION = SELECTOR_NAME + " = '" + PUT_TASK_INSTANCE_EXECUTION + "'";
   String SELECTOR_POST_CHARGE_DEFINITION = SELECTOR_NAME + " = '" + POST_CHARGE_DEFINITION + "'";
   String SELECTOR_PUT_CHARGE_DEFINITION = SELECTOR_NAME + " = '" + PUT_CHARGE_DEFINITION + "'";
   String SELECTOR_DELETE_PRODUCT_CHARGE_DEFINITION = SELECTOR_NAME + " = '" + DELETE_PRODUCT_CHARGE_DEFINITION + "'";

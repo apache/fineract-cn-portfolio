@@ -45,7 +45,17 @@ public class TaskInstanceEventListener {
       selector = EventConstants.SELECTOR_PUT_TASK_INSTANCE
   )
   public void onChangeTaskInstance(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,
-                                     final String payload) {
+                                   final String payload) {
     this.eventRecorder.event(tenant, EventConstants.PUT_TASK_INSTANCE, payload, TaskInstanceEvent.class);
+  }
+
+  @JmsListener(
+      subscription = EventConstants.DESTINATION,
+      destination = EventConstants.DESTINATION,
+      selector = EventConstants.SELECTOR_PUT_TASK_INSTANCE_EXECUTION
+  )
+  public void onChangeTaskInstanceE(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,
+                                   final String payload) {
+    this.eventRecorder.event(tenant, EventConstants.PUT_TASK_INSTANCE_EXECUTION, payload, TaskInstanceEvent.class);
   }
 }

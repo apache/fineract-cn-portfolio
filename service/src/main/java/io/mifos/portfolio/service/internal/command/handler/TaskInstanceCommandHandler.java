@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
+import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.command.annotation.Aggregate;
 import io.mifos.core.command.annotation.CommandHandler;
 import io.mifos.core.command.annotation.CommandLogLevel;
@@ -24,10 +25,14 @@ import io.mifos.portfolio.api.v1.domain.TaskInstance;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.api.v1.events.TaskInstanceEvent;
 import io.mifos.portfolio.service.internal.command.ChangeTaskInstanceCommand;
+import io.mifos.portfolio.service.internal.command.ExecuteTaskInstanceCommand;
 import io.mifos.portfolio.service.internal.mapper.TaskInstanceMapper;
 import io.mifos.portfolio.service.internal.repository.TaskInstanceEntity;
 import io.mifos.portfolio.service.internal.repository.TaskInstanceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+
+import java.time.Clock;
+import java.time.LocalDateTime;
 
 /**
  * @author Myrle Krantz
@@ -62,5 +67,32 @@ public class TaskInstanceCommandHandler {
         changeTaskInstanceCommand.getProductIdentifier(),
         changeTaskInstanceCommand.getCaseIdentifier(),
         changeTaskInstanceCommand.getInstance().getTaskIdentifier());
+  }
+
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
+  @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.PUT_TASK_INSTANCE_EXECUTION)
+  public TaskInstanceEvent process(final ExecuteTaskInstanceCommand changeTaskInstanceExecutionCommand) {
+    final String productIdentifier = changeTaskInstanceExecutionCommand.getProductIdentifier();
+    final String caseIdentifier = changeTaskInstanceExecutionCommand.getCaseIdentifier();
+    final String taskIdentifier = changeTaskInstanceExecutionCommand.getTaskIdentifier();
+    final boolean executed = changeTaskInstanceExecutionCommand.getExecuted();
+
+    final TaskInstanceEntity taskInstanceEntity
+        = taskInstanceRepository.findByProductIdAndCaseIdAndTaskId(productIdentifier, caseIdentifier, taskIdentifier)
+        .orElseThrow(() -> ServiceException.notFound("Task instance ''{0}.{1}.{2}'' not found.",
+            productIdentifier, caseIdentifier, taskIdentifier));
+
+    if (executed) {
+      taskInstanceEntity.setExecutedOn(LocalDateTime.now(Clock.systemUTC()));
+      taskInstanceEntity.setExecutedBy(UserContextHolder.checkedGetUser());
+    }
+    else {
+      taskInstanceEntity.setExecutedOn(null);
+      taskInstanceEntity.setExecutedBy(null);
+    }
+
+    taskInstanceRepository.save(taskInstanceEntity);
+
+    return new TaskInstanceEvent(productIdentifier, caseIdentifier, taskIdentifier);
   }
 }

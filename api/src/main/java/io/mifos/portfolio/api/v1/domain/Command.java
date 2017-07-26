@@ -17,6 +17,7 @@ package io.mifos.portfolio.api.v1.domain;
 
 import javax.annotation.Nullable;
 import javax.validation.Valid;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
 
@@ -30,7 +31,7 @@ public final class Command {
 
   @Valid
   @Nullable
-  private List<CostComponent> costComponents;
+  private BigDecimal paymentSize;
 
   private String note;
   private String createdOn;
@@ -47,12 +48,13 @@ public final class Command {
     this.oneTimeAccountAssignments = oneTimeAccountAssignments;
   }
 
-  public List<CostComponent> getCostComponents() {
-    return costComponents;
+  @Nullable
+  public BigDecimal getPaymentSize() {
+    return paymentSize;
   }
 
-  public void setCostComponents(List<CostComponent> costComponents) {
-    this.costComponents = costComponents;
+  public void setPaymentSize(@Nullable BigDecimal paymentSize) {
+    this.paymentSize = paymentSize;
   }
 
   public String getNote() {
@@ -85,20 +87,20 @@ public final class Command {
     if (o == null || getClass() != o.getClass()) return false;
     Command command = (Command) o;
     return Objects.equals(oneTimeAccountAssignments, command.oneTimeAccountAssignments) &&
-        Objects.equals(costComponents, command.costComponents) &&
+        Objects.equals(paymentSize, command.paymentSize) &&
         Objects.equals(note, command.note);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(oneTimeAccountAssignments, costComponents, note);
+    return Objects.hash(oneTimeAccountAssignments, paymentSize, note);
   }
 
   @Override
   public String toString() {
     return "Command{" +
         "oneTimeAccountAssignments=" + oneTimeAccountAssignments +
-        ", costComponents=" + costComponents +
+        ", paymentSize=" + paymentSize +
         ", note='" + note + '\'' +
         ", createdOn='" + createdOn + '\'' +
         ", createdBy='" + createdBy + '\'' +

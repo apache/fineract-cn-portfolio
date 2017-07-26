@@ -79,7 +79,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     individualLendingRequiredAccounts.add(CUSTOMER_LOAN);
     individualLendingRequiredAccounts.add(PENDING_DISBURSAL);
     individualLendingRequiredAccounts.add(LOAN_FUNDS_SOURCE);
-    individualLendingRequiredAccounts.add(LOANS_PAYABLE);
+    individualLendingRequiredAccounts.add(LOAN_FUNDS_SOURCE);
     individualLendingRequiredAccounts.add(PROCESSING_FEE_INCOME);
     individualLendingRequiredAccounts.add(ORIGINATION_FEE_INCOME);
     individualLendingRequiredAccounts.add(DISBURSEMENT_FEE_INCOME);
@@ -132,8 +132,8 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     disbursePayment.setIdentifier(DISBURSE_PAYMENT_ID);
     disbursePayment.setName(DISBURSE_PAYMENT_NAME);
     disbursePayment.setDescription(DISBURSE_PAYMENT_NAME);
-    disbursePayment.setFromAccountDesignator(ENTRY);
-    disbursePayment.setToAccountDesignator(CUSTOMER_LOAN);
+    disbursePayment.setFromAccountDesignator(LOANS_PAYABLE);
+    disbursePayment.setToAccountDesignator(ENTRY);
     disbursePayment.setProportionalTo(ChargeIdentifiers.PRINCIPAL_ADJUSTMENT_DESIGNATOR);
     disbursePayment.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
     disbursePayment.setAmount(BigDecimal.ONE);
@@ -144,7 +144,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     trackPrincipalDisbursePayment.setName(TRACK_DISBURSAL_PAYMENT_NAME);
     trackPrincipalDisbursePayment.setDescription(TRACK_DISBURSAL_PAYMENT_NAME);
     trackPrincipalDisbursePayment.setFromAccountDesignator(PENDING_DISBURSAL);
-    trackPrincipalDisbursePayment.setToAccountDesignator(LOANS_PAYABLE);
+    trackPrincipalDisbursePayment.setToAccountDesignator(CUSTOMER_LOAN);
     trackPrincipalDisbursePayment.setProportionalTo(ChargeIdentifiers.PRINCIPAL_ADJUSTMENT_DESIGNATOR);
     trackPrincipalDisbursePayment.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
     trackPrincipalDisbursePayment.setAmount(BigDecimal.ONE);

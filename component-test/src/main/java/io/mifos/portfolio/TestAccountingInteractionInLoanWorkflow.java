@@ -208,13 +208,13 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(pendingDisbursalAccountIdentifier, caseParameters.getMaximumBalance().toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER,
-        caseParameters.getMaximumBalance().subtract(DISBURSEMENT_FEE_AMOUNT).toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, caseParameters.getMaximumBalance().toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(customerLoanAccountIdentifier, caseParameters.getMaximumBalance().toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, caseParameters.getMaximumBalance().toPlainString()));
     creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
-    creditors.add(new Creditor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, caseParameters.getMaximumBalance().toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
 
     expectedCurrentBalance = expectedCurrentBalance.add(caseParameters.getMaximumBalance());
@@ -268,6 +268,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         customerCase.getIdentifier(),
         Action.ACCEPT_PAYMENT,
         Collections.singletonList(assignEntryToTeller()),
+        expectedCurrentBalance,
         IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE,
         Case.State.ACTIVE); //Close has to be done explicitly.
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,

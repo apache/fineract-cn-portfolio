@@ -34,7 +34,7 @@ public class PeriodChargeCalculator {
   {
   }
 
-  Map<Period, BigDecimal> getPeriodAccrualRates(final List<ScheduledCharge> scheduledCharges, final int precision) {
+  static Map<Period, BigDecimal> getPeriodAccrualRates(final List<ScheduledCharge> scheduledCharges, final int precision) {
     return scheduledCharges.stream()
             .filter(PeriodChargeCalculator::accruedCharge)
             .collect(Collectors.groupingBy(scheduledCharge -> scheduledCharge.getScheduledAction().repaymentPeriod,

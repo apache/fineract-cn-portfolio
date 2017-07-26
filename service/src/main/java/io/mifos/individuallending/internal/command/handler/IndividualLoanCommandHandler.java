@@ -102,7 +102,6 @@ public class IndividualLoanCommandHandler {
         .map(entry -> mapCostComponentEntryToChargeInstance(
             Action.OPEN,
             entry,
-            getRequestedChargeAmounts(command.getCommand().getCostComponents()),
             designatorToAccountIdentifierMapper))
         .collect(Collectors.toList());
 
@@ -142,7 +141,6 @@ public class IndividualLoanCommandHandler {
         .map(entry -> mapCostComponentEntryToChargeInstance(
             Action.DENY,
             entry,
-            getRequestedChargeAmounts(command.getCommand().getCostComponents()),
             designatorToAccountIdentifierMapper))
         .collect(Collectors.toList());
 
@@ -188,7 +186,6 @@ public class IndividualLoanCommandHandler {
         .map(entry -> mapCostComponentEntryToChargeInstance(
             Action.APPROVE,
             entry,
-            getRequestedChargeAmounts(command.getCommand().getCostComponents()),
             designatorToAccountIdentifierMapper))
         .collect(Collectors.toList());
 
@@ -229,7 +226,6 @@ public class IndividualLoanCommandHandler {
               .map(entry -> mapCostComponentEntryToChargeInstance(
                   Action.DISBURSE,
                   entry,
-                  getRequestedChargeAmounts(command.getCommand().getCostComponents()),
                   designatorToAccountIdentifierMapper)),
           Stream.of(getDisbursalChargeInstance(disbursalAmount, designatorToAccountIdentifierMapper)))
         .collect(Collectors.toList());
@@ -278,7 +274,6 @@ public class IndividualLoanCommandHandler {
         .map(entry -> mapCostComponentEntryToChargeInstance(
             Action.APPLY_INTEREST,
             entry,
-            Collections.emptyMap(),
             designatorToAccountIdentifierMapper))
         .collect(Collectors.toList());
 
@@ -309,16 +304,11 @@ public class IndividualLoanCommandHandler {
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
     final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-        costComponentService.getCostComponentsForAcceptPayment(dataContextOfAction);
-
-    final Map<String, BigDecimal> requestedChargeAmounts
-        = getRequestedChargeAmounts(command.getCommand().getCostComponents());
+        costComponentService.getCostComponentsForAcceptPayment(dataContextOfAction, command.getCommand().getPaymentSize());
 
     final BigDecimal sumOfAdjustments = costComponentsForRepaymentPeriod.stream()
         .filter(entry -> entry.getKey().getIdentifier().equals(ChargeIdentifiers.REPAYMENT_ID))
-        .map(entry -> getChargeAmount(
-            requestedChargeAmounts.get(entry.getKey().getIdentifier()),
-            entry.getValue().getAmount()))
+        .map(entry -> entry.getValue().getAmount())
         .reduce(BigDecimal.ZERO, BigDecimal::add);
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
@@ -328,7 +318,6 @@ public class IndividualLoanCommandHandler {
         .map(entry -> mapCostComponentEntryToChargeInstance(
             Action.ACCEPT_PAYMENT,
             entry,
-            requestedChargeAmounts,
             designatorToAccountIdentifierMapper))
         .collect(Collectors.toList());
 
@@ -398,38 +387,27 @@ public class IndividualLoanCommandHandler {
   private static ChargeInstance mapCostComponentEntryToChargeInstance(
       final Action action,
       final Map.Entry<ChargeDefinition, CostComponent> costComponentEntry,
-      final Map<String, BigDecimal> requestedChargeAmounts,
       final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
     final ChargeDefinition chargeDefinition = costComponentEntry.getKey();
-
-    final BigDecimal requestedChargeAmount = requestedChargeAmounts.get(chargeDefinition.getIdentifier());
-    final BigDecimal configuredChargeAmount = costComponentEntry.getValue().getAmount();
-
-    final BigDecimal finalChargeAmount = getChargeAmount(requestedChargeAmount, configuredChargeAmount);
+    final BigDecimal chargeAmount = costComponentEntry.getValue().getAmount();
 
     if (chargeDefinition.getAccrualAccountDesignator() != null) {
       if (Action.valueOf(chargeDefinition.getAccrueAction()) == action)
         return new ChargeInstance(
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            finalChargeAmount);
+            chargeAmount);
       else
         return new ChargeInstance(
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            finalChargeAmount);
+            chargeAmount);
     }
     else
       return new ChargeInstance(
           designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
           designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
-          finalChargeAmount);
-  }
-
-  private static BigDecimal getChargeAmount(
-      final BigDecimal requestedChargeAmount,
-      final BigDecimal configuredChargeAmount) {
-    return requestedChargeAmount != null ? requestedChargeAmount : configuredChargeAmount;
+          chargeAmount);
   }
 
   private static ChargeInstance getDisbursalChargeInstance(

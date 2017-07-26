@@ -195,8 +195,19 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
                           final List<AccountAssignment> oneTimeAccountAssignments,
                           final String event,
                           final Case.State nextState) throws InterruptedException {
+    checkStateTransfer(productIdentifier, caseIdentifier, action, oneTimeAccountAssignments, BigDecimal.ZERO, event, nextState);
+  }
+
+  void checkStateTransfer(final String productIdentifier,
+                          final String caseIdentifier,
+                          final Action action,
+                          final List<AccountAssignment> oneTimeAccountAssignments,
+                          final BigDecimal paymentSize,
+                          final String event,
+                          final Case.State nextState) throws InterruptedException {
     final Command command = new Command();
     command.setOneTimeAccountAssignments(oneTimeAccountAssignments);
+    command.setPaymentSize(paymentSize);
     portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, action.name(), command);
 
     Assert.assertTrue(eventRecorder.wait(event, new IndividualLoanCommandEvent(productIdentifier, caseIdentifier)));

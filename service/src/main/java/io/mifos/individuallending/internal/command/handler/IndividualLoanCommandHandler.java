@@ -35,7 +35,9 @@ import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.service.internal.mapper.CaseMapper;
-import io.mifos.portfolio.service.internal.repository.*;
+import io.mifos.portfolio.service.internal.repository.CaseEntity;
+import io.mifos.portfolio.service.internal.repository.CaseRepository;
+import io.mifos.portfolio.service.internal.repository.TaskInstanceRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.portfolio.service.internal.util.ChargeInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -159,7 +161,8 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final ApproveCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
+    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+        productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.APPROVE);
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.APPROVE);
@@ -296,7 +299,7 @@ public class IndividualLoanCommandHandler {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
     final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
-        productIdentifier, caseIdentifier, null);
+        productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.ACCEPT_PAYMENT);
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.ACCEPT_PAYMENT);
@@ -312,7 +315,7 @@ public class IndividualLoanCommandHandler {
         = getRequestedChargeAmounts(command.getCommand().getCostComponents());
 
     final BigDecimal sumOfAdjustments = costComponentsForRepaymentPeriod.stream()
-        .filter(entry -> entry.getKey().getIdentifier().equals(ChargeIdentifiers.PAYMENT_ID))
+        .filter(entry -> entry.getKey().getIdentifier().equals(ChargeIdentifiers.REPAYMENT_ID))
         .map(entry -> getChargeAmount(
             requestedChargeAmounts.get(entry.getKey().getIdentifier()),
             entry.getValue().getAmount()))
@@ -335,14 +338,6 @@ public class IndividualLoanCommandHandler {
         dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT),
         Action.ACCEPT_PAYMENT.getTransactionType());
 
-    final BigDecimal newBalance = costComponentsForRepaymentPeriod.getRunningBalance()
-        .add(sumOfAdjustments);
-    if (newBalance.compareTo(BigDecimal.ZERO) <= 0) {
-      final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
-      //TODO: customerCase.setCurrentState(Case.State.CLOSED.name());
-      caseRepository.save(customerCase);
-    }
-
     return new IndividualLoanCommandEvent(command.getProductIdentifier(), command.getCaseIdentifier());
   }
 
@@ -352,7 +347,8 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final WriteOffCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
+    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+        productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.WRITE_OFF);
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.WRITE_OFF);
@@ -369,7 +365,8 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final CloseCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
+    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+        productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.CLOSE);
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.CLOSE);
@@ -386,7 +383,8 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final RecoverCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
+    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+        productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.RECOVER);
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.RECOVER);

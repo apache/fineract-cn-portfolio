@@ -63,6 +63,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private String customerLoanAccountIdentifier = null;
 
   private BigDecimal expectedCurrentBalance = null;
+  private BigDecimal interestAccrued = BigDecimal.ZERO;
 
 
   @Before
@@ -207,11 +208,13 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(pendingDisbursalAccountIdentifier, caseParameters.getMaximumBalance().toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER,
+        caseParameters.getMaximumBalance().subtract(DISBURSEMENT_FEE_AMOUNT).toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(customerLoanAccountIdentifier, caseParameters.getMaximumBalance().toPlainString()));
     creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, caseParameters.getMaximumBalance().toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
 
     expectedCurrentBalance = expectedCurrentBalance.add(caseParameters.getMaximumBalance());
@@ -239,9 +242,11 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final BigDecimal calculatedInterest = caseParameters.getMaximumBalance().multiply(Fixture.INTEREST_RATE.divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN))
         .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
 
+    interestAccrued = interestAccrued.add(calculatedInterest);
+
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(
-        AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT,
+        AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER,
         calculatedInterest.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
@@ -264,14 +269,20 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Action.ACCEPT_PAYMENT,
         Collections.singletonList(assignEntryToTeller()),
         IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE,
-        Case.State.CLOSED);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
+        Case.State.ACTIVE); //Close has to be done explicitly.
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
+        Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
 
     final Set<Debtor> debtors = new HashSet<>();
+    debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, expectedCurrentBalance.subtract(interestAccrued).toPlainString()));
     debtors.add(new Debtor(customerLoanAccountIdentifier, expectedCurrentBalance.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
+    creditors.add(new Creditor(AccountingFixture.CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER, expectedCurrentBalance.subtract(interestAccrued).toPlainString()));
     creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, expectedCurrentBalance.toPlainString()));
+
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
 
     expectedCurrentBalance = expectedCurrentBalance.subtract(expectedCurrentBalance);

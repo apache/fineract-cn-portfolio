@@ -272,10 +272,21 @@ public interface PortfolioManager {
                                 @PathVariable("caseidentifier") final String caseIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/{caseidentifier}/actions/{actionidentifier}/costcomponents",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/cases/{caseidentifier}/actions/{actionidentifier}/costcomponents",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
+                                                 @PathVariable("caseidentifier") final String caseIdentifier,
+                                                 @PathVariable("actionidentifier") final String actionIdentifier,
+                                                 @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final String forAccountDesignators);
+
+  @RequestMapping(
+      value = "/products/{productidentifier}/cases/{caseidentifier}/actions/{actionidentifier}/costcomponents",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
                                                  @PathVariable("caseidentifier") final String caseIdentifier,

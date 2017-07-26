@@ -19,7 +19,6 @@ import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
-import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Product;
@@ -39,11 +38,7 @@ import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.CUSTOMER_LOAN;
-import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.PENDING_DISBURSAL;
-import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PAYMENT_ID;
-import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PAYMENT_NAME;
-import static io.mifos.portfolio.api.v1.domain.ChargeDefinition.ChargeMethod.FIXED;
+import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.REPAYMENT_ID;
 
 /**
  * @author Myrle Krantz
@@ -76,9 +71,17 @@ public class IndividualLoanService {
 
     final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(initialDisbursalDate, caseParameters);
 
-    final List<ScheduledCharge> scheduledCharges = getScheduledCharges(productIdentifier, minorCurrencyUnitDigits, caseParameters.getMaximumBalance(), scheduledActions);
+    final List<ScheduledCharge> scheduledCharges = getScheduledCharges(productIdentifier, scheduledActions);
 
-    final List<PlannedPayment> plannedPaymentsElements = getPlannedPaymentsElements(caseParameters.getMaximumBalance(), minorCurrencyUnitDigits, scheduledCharges);
+    final int precision = caseParameters.getMaximumBalance().precision() + minorCurrencyUnitDigits + EXTRA_PRECISION;
+    final Map<Period, BigDecimal> accrualRatesByPeriod
+        = periodChargeCalculator.getPeriodAccrualRates(scheduledCharges,
+        precision);
+
+    final BigDecimal geometricMeanAccrualRate = accrualRatesByPeriod.values().stream().collect(RateCollectors.geometricMean(precision));
+    final BigDecimal loanPaymentSize = loanPaymentInContextOfAccruedInterest(caseParameters.getMaximumBalance(), accrualRatesByPeriod.size(), geometricMeanAccrualRate);
+
+    final List<PlannedPayment> plannedPaymentsElements = getPlannedPaymentsElements(caseParameters.getMaximumBalance(), minorCurrencyUnitDigits, scheduledCharges, loanPaymentSize);
 
     final Set<ChargeName> chargeNames = scheduledCharges.stream()
             .map(IndividualLoanService::chargeNameFromChargeDefinition)
@@ -112,8 +115,6 @@ public class IndividualLoanService {
 
   List<ScheduledCharge> getScheduledCharges(
       final String productIdentifier,
-      final int minorCurrencyUnitDigits,
-      final BigDecimal initialBalance,
       final @Nonnull List<ScheduledAction> scheduledActions) {
     final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction
             = chargeDefinitionService.getChargeDefinitionsMappedByChargeAction(productIdentifier);
@@ -121,36 +122,10 @@ public class IndividualLoanService {
     final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction
             = chargeDefinitionService.getChargeDefinitionsMappedByAccrueAction(productIdentifier);
 
-    final ChargeDefinition acceptPaymentDefinition = getPaymentChargeDefinition();
-
-    final List<ScheduledCharge> scheduledCharges = getScheduledCharges(
+    return getScheduledCharges(
             scheduledActions,
             chargeDefinitionsMappedByChargeAction,
-            chargeDefinitionsMappedByAccrueAction,
-            acceptPaymentDefinition);
-    int digitsInInitialBalance = initialBalance.precision();
-    final Map<Period, BigDecimal> accrualRatesByPeriod
-            = periodChargeCalculator.getPeriodAccrualRates(scheduledCharges,
-            digitsInInitialBalance + minorCurrencyUnitDigits + EXTRA_PRECISION);
-
-    if (accrualRatesByPeriod.size() != 0) {
-      final BigDecimal geometricMeanAccrualRate = accrualRatesByPeriod.values().stream().collect(RateCollectors.geometricMean(digitsInInitialBalance + minorCurrencyUnitDigits + EXTRA_PRECISION));
-      acceptPaymentDefinition.setAmount(loanPaymentInContextOfAccruedInterest(initialBalance, accrualRatesByPeriod.size(), geometricMeanAccrualRate));
-    }
-    else
-      acceptPaymentDefinition.setAmount(initialBalance);
-    return scheduledCharges;
-  }
-
-  private ChargeDefinition getPaymentChargeDefinition() {
-    final ChargeDefinition ret = new ChargeDefinition();
-    ret.setChargeAction(Action.ACCEPT_PAYMENT.name());
-    ret.setIdentifier(PAYMENT_ID);
-    ret.setName(PAYMENT_NAME);
-    ret.setFromAccountDesignator(CUSTOMER_LOAN);
-    ret.setToAccountDesignator(PENDING_DISBURSAL);
-    ret.setChargeMethod(FIXED);
-    return ret;
+            chargeDefinitionsMappedByAccrueAction);
   }
 
   private static class ScheduledChargeComparator implements Comparator<ScheduledCharge>
@@ -168,9 +143,10 @@ public class IndividualLoanService {
   }
 
   static private List<PlannedPayment> getPlannedPaymentsElements(
-          final BigDecimal initialBalance,
-          final int minorCurrencyUnitDigits,
-          final List<ScheduledCharge> scheduledCharges) {
+      final BigDecimal initialBalance,
+      final int minorCurrencyUnitDigits,
+      final List<ScheduledCharge> scheduledCharges,
+      final BigDecimal loanPaymentSize) {
     final Map<Period, SortedSet<ScheduledCharge>> orderedScheduledChargesGroupedByPeriod
             = scheduledCharges.stream()
             .collect(Collectors.groupingBy(scheduledCharge -> {
@@ -196,7 +172,13 @@ public class IndividualLoanService {
     {
       final SortedSet<ScheduledCharge> scheduledChargesInPeriod = orderedScheduledChargesGroupedByPeriod.get(repaymentPeriod);
       final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-              CostComponentService.getCostComponentsForScheduledCharges(scheduledChargesInPeriod, balance, balance, minorCurrencyUnitDigits);
+              CostComponentService.getCostComponentsForScheduledCharges(
+                  Collections.emptyMap(),
+                  scheduledChargesInPeriod,
+                  balance,
+                  balance,
+                  loanPaymentSize,
+                  minorCurrencyUnitDigits);
 
       final PlannedPayment plannedPayment = new PlannedPayment();
       plannedPayment.setCostComponents(new ArrayList<>(costComponentsForRepaymentPeriod.getCostComponents().values()));
@@ -209,7 +191,7 @@ public class IndividualLoanService {
     {
       final PlannedPayment lastPayment = plannedPayments.get(plannedPayments.size() - 1);
       final Optional<CostComponent> lastPaymentPayment = lastPayment.getCostComponents().stream()
-              .filter(x -> x.getChargeIdentifier().equals(PAYMENT_ID)).findAny();
+              .filter(x -> x.getChargeIdentifier().equals(REPAYMENT_ID)).findAny();
       lastPaymentPayment.ifPresent(x -> {
         x.setAmount(x.getAmount().subtract(lastPayment.getRemainingPrincipal()));
         lastPayment.setRemainingPrincipal(BigDecimal.ZERO.setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN));
@@ -231,14 +213,12 @@ public class IndividualLoanService {
 
   private List<ScheduledCharge> getScheduledCharges(final List<ScheduledAction> scheduledActions,
                                                     final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction,
-                                                    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
-                                                    final ChargeDefinition acceptPaymentDefinition) {
+                                                    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction) {
     return scheduledActions.stream()
         .flatMap(scheduledAction ->
             getChargeDefinitionStream(
                 chargeDefinitionsMappedByChargeAction,
                 chargeDefinitionsMappedByAccrueAction,
-                acceptPaymentDefinition,
                 scheduledAction)
                 .map(chargeDefinition -> new ScheduledCharge(scheduledAction, chargeDefinition)))
         .collect(Collectors.toList());
@@ -247,7 +227,6 @@ public class IndividualLoanService {
   private Stream<ChargeDefinition> getChargeDefinitionStream(
           final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction,
           final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
-          final ChargeDefinition acceptPaymentDefinition,
           final ScheduledAction scheduledAction) {
     final List<ChargeDefinition> chargeMappingList = chargeDefinitionsMappedByChargeAction
         .get(scheduledAction.action.name());
@@ -255,17 +234,11 @@ public class IndividualLoanService {
     if (chargeMapping == null)
       chargeMapping = Stream.empty();
 
-    if (scheduledAction.action == Action.valueOf(acceptPaymentDefinition.getChargeAction()))
-      chargeMapping = Stream.concat(chargeMapping, Stream.of(acceptPaymentDefinition));
-
     final List<ChargeDefinition> accrueMappingList = chargeDefinitionsMappedByAccrueAction
         .get(scheduledAction.action.name());
     Stream<ChargeDefinition> accrueMapping = accrueMappingList == null ? Stream.empty() : accrueMappingList.stream();
     if (accrueMapping == null)
       accrueMapping = Stream.empty();
-
-    if ((acceptPaymentDefinition.getAccrueAction() != null) && (scheduledAction.action == Action.valueOf(acceptPaymentDefinition.getAccrueAction())))
-      accrueMapping = Stream.concat(chargeMapping, Stream.of(acceptPaymentDefinition));
 
 
     return Stream.concat(accrueMapping, chargeMapping);

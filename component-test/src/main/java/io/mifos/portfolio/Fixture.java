@@ -16,11 +16,11 @@
 package io.mifos.portfolio;
 
 import com.google.gson.Gson;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessFactor;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessSnapshot;
-import io.mifos.portfolio.api.v1.domain.*;
-import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
+import io.mifos.portfolio.api.v1.domain.*;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -66,8 +66,9 @@ public class Fixture {
     accountAssignments.add(new AccountAssignment(PROCESSING_FEE_INCOME, PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(ORIGINATION_FEE_INCOME, LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(DISBURSEMENT_FEE_INCOME, DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER));
-    accountAssignments.add(new AccountAssignment(INTEREST_INCOME, CONSUMER_LOAN_INTEREST_ACCOUNT));
-    accountAssignments.add(new AccountAssignment(INTEREST_ACCRUAL, LOAN_INTEREST_ACCRUAL_ACCOUNT));
+    accountAssignments.add(new AccountAssignment(INTEREST_INCOME, CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER));
+    accountAssignments.add(new AccountAssignment(INTEREST_ACCRUAL, LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER));
+    accountAssignments.add(new AccountAssignment(LOANS_PAYABLE, LOANS_PAYABLE_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(LATE_FEE_INCOME, "001-008"));
     accountAssignments.add(new AccountAssignment(LATE_FEE_ACCRUAL, "001-009"));
     accountAssignments.add(new AccountAssignment(ARREARS_ALLOWANCE, "001-010"));

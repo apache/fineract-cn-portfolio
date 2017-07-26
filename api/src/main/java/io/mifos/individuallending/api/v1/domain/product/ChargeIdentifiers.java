@@ -34,15 +34,21 @@ public interface ChargeIdentifiers {
   String LATE_FEE_ID = nameToIdentifier(LATE_FEE_NAME);
   String DISBURSEMENT_FEE_NAME = "Disbursement fee";
   String DISBURSEMENT_FEE_ID = nameToIdentifier(DISBURSEMENT_FEE_NAME);
+  String DISBURSE_PAYMENT_NAME = "Disburse payment";
+  String DISBURSE_PAYMENT_ID = nameToIdentifier(DISBURSE_PAYMENT_NAME);
+  String TRACK_DISBURSAL_PAYMENT_NAME = "Track disburse payment";
+  String TRACK_DISBURSAL_PAYMENT_ID = nameToIdentifier(TRACK_DISBURSAL_PAYMENT_NAME);
   String LOAN_ORIGINATION_FEE_NAME = "Loan origination fee";
   String LOAN_ORIGINATION_FEE_ID = nameToIdentifier(LOAN_ORIGINATION_FEE_NAME);
   String PROCESSING_FEE_NAME = "Processing fee";
   String PROCESSING_FEE_ID = nameToIdentifier(PROCESSING_FEE_NAME);
-  String PAYMENT_NAME = "Payment";
-  String PAYMENT_ID = nameToIdentifier(PAYMENT_NAME);
-
+  String REPAYMENT_NAME = "Repayment";
+  String REPAYMENT_ID = nameToIdentifier(REPAYMENT_NAME);
+  String TRACK_RETURN_PRINCIPAL_NAME = "Return principal";
+  String TRACK_RETURN_PRINCIPAL_ID = nameToIdentifier(TRACK_RETURN_PRINCIPAL_NAME);
   String MAXIMUM_BALANCE_DESIGNATOR = "{maximumbalance}";
   String RUNNING_BALANCE_DESIGNATOR = "{runningbalance}";
+  String PRINCIPAL_ADJUSTMENT_DESIGNATOR = "{principaladjustment}";
 
   static String nameToIdentifier(String name) {
     return name.toLowerCase(Locale.US).replace(" ", "-");

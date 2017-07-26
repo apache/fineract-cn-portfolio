@@ -210,7 +210,7 @@ public class CostComponentService {
         chargesSplitIntoScheduledAndAccrued.get(false),
         caseParameters.getMaximumBalance(),
         currentBalance,
-        BigDecimal.ZERO,//TODO: This needs to be provided by the user.
+        caseParameters.getMaximumBalance(),//TODO: This needs to be provided by the user.
         minorCurrencyUnitDigits);
   }
 

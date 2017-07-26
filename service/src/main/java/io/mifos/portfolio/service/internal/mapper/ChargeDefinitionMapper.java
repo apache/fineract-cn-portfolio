@@ -78,7 +78,7 @@ public class ChargeDefinitionMapper {
     else if (identifier.equals(PROCESSING_FEE_ID))
       return MAXIMUM_BALANCE_DESIGNATOR;
     else if (identifier.equals(LATE_FEE_ID))
-      return PAYMENT_ID;
+      return REPAYMENT_ID;
     else
       return RUNNING_BALANCE_DESIGNATOR;
   }

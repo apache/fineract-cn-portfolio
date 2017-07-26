@@ -20,10 +20,7 @@ import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.PaymentCycle;
 
 import javax.annotation.Nonnull;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.YearMonth;
-import java.time.ZoneId;
+import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -57,19 +54,17 @@ public class ScheduledActionHelpers {
         .collect(Collectors.toList());
   }
 
-  public static Optional<ScheduledAction> getNextScheduledActionForDisbursedLoan(final @Nonnull LocalDate startOfTerm,
-                                                                                 final @Nonnull LocalDate endOfTerm,
-                                                                                 final @Nonnull CaseParameters caseParameters,
-                                                                                 final @Nonnull Action action) {
-    if (preTermActions().anyMatch(x -> action == x))
-      throw new IllegalStateException("Should not be calling getNextScheduledActionsForDisbursedLoan with an action which occurs before disbursement.");
+  public static ScheduledAction getNextScheduledPayment(final @Nonnull LocalDate startOfTerm,
+                                                        final @Nonnull LocalDate endOfTerm,
+                                                        final @Nonnull CaseParameters caseParameters) {
+    final LocalDate now = LocalDate.now(Clock.systemUTC());
+    final LocalDate effectiveEndOfTerm = now.isAfter(endOfTerm) ? now : endOfTerm;
 
-    final LocalDate now = LocalDate.now(ZoneId.of("UTC"));
-    return getHypotheticalScheduledActionsForDisbursedLoan(startOfTerm, endOfTerm, caseParameters)
-        .filter(x -> x.action.equals(action))
-        .filter(x -> x.actionPeriod != null && x.actionPeriod.containsDate(now))
-        .sorted(Comparator.comparing(x -> x.actionPeriod))
-        .findFirst();
+    return getHypotheticalScheduledActionsForDisbursedLoan(startOfTerm, effectiveEndOfTerm, caseParameters)
+        .filter(x -> x.action.equals(Action.ACCEPT_PAYMENT))
+        .filter(x -> x.actionIsOnOrAfter(now))
+        .findFirst()
+        .orElseGet(() -> new ScheduledAction(Action.ACCEPT_PAYMENT, now));
   }
 
   private static Stream<ScheduledAction> getHypotheticalScheduledActionsForDisbursedLoan(

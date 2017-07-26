@@ -44,6 +44,7 @@ import static io.mifos.individuallending.api.v1.domain.product.AccountDesignator
  */
 @Component
 public class AccountingAdapter {
+
   public enum IdentifierType {LEDGER, ACCOUNT}
 
   private final LedgerManager ledgerManager;
@@ -87,16 +88,31 @@ public class AccountingAdapter {
     final LocalDateTime accountCreatedOn = DateConverter.fromIsoString(account.getCreatedOn());
     final DateRange fromAccountCreationUntilNow = oneSidedDateRange(accountCreatedOn.toLocalDate());
 
-    return ledgerManager.fetchAccountEntriesStream(accountIdentifier, fromAccountCreationUntilNow.toString(), message)
+    return ledgerManager.fetchAccountEntriesStream(accountIdentifier, fromAccountCreationUntilNow.toString(), message, "ASC")
         .findFirst()
         .map(AccountEntry::getTransactionDate)
         .map(DateConverter::fromIsoString);
   }
 
+  public List<LocalDateTime> getDatesOfMostRecentTwoEntriesContainingMessage(final String accountIdentifier,
+                                                                             final String message) {
+
+    final Account account = ledgerManager.findAccount(accountIdentifier);
+    final LocalDateTime accountCreatedOn = DateConverter.fromIsoString(account.getCreatedOn());
+    final DateRange fromAccountCreationUntilNow = oneSidedDateRange(accountCreatedOn.toLocalDate());
+
+    return ledgerManager.fetchAccountEntriesStream(accountIdentifier, fromAccountCreationUntilNow.toString(), message, "DESC")
+        .limit(2)
+        .map(AccountEntry::getTransactionDate)
+        .map(DateConverter::fromIsoString)
+        .collect(Collectors.toList());
+  }
+
   public BigDecimal sumMatchingEntriesSinceDate(final String accountIdentifier, final LocalDate startDate, final String message)
   {
     final DateRange fromLastPaymentUntilNow = oneSidedDateRange(startDate);
-    return ledgerManager.fetchAccountEntriesStream(accountIdentifier, fromLastPaymentUntilNow.toString(), message)
+    final Stream<AccountEntry> accountEntriesStream = ledgerManager.fetchAccountEntriesStream(accountIdentifier, fromLastPaymentUntilNow.toString(), message, "ASC");
+    return accountEntriesStream
         .map(AccountEntry::getAmount)
         .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
   }

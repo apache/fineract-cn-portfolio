@@ -42,15 +42,20 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
     final List<ChargeDefinition> charges = portfolioManager.getAllChargeDefinitionsForProduct(product.getIdentifier());
     final Set<String> chargeDefinitionIdentifiers = charges.stream().map(ChargeDefinition::getIdentifier).collect(Collectors.toSet());
     final Set<String> expectedChargeDefinitionIdentifiers = Stream.of(
-            ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID,
-            ChargeIdentifiers.DISBURSEMENT_FEE_ID,
-            ChargeIdentifiers.INTEREST_ID,
-            ChargeIdentifiers.LATE_FEE_ID,
-            ChargeIdentifiers.LOAN_FUNDS_ALLOCATION_ID,
-            ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID,
-            ChargeIdentifiers.PROCESSING_FEE_ID,
-            ChargeIdentifiers.RETURN_DISBURSEMENT_ID)
-            .collect(Collectors.toSet());
+        ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID,
+        ChargeIdentifiers.DISBURSEMENT_FEE_ID,
+        ChargeIdentifiers.INTEREST_ID,
+        ChargeIdentifiers.LATE_FEE_ID,
+        ChargeIdentifiers.LOAN_FUNDS_ALLOCATION_ID,
+        ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID,
+        ChargeIdentifiers.PROCESSING_FEE_ID,
+        ChargeIdentifiers.RETURN_DISBURSEMENT_ID,
+        ChargeIdentifiers.DISBURSE_PAYMENT_ID,
+        ChargeIdentifiers.TRACK_DISBURSAL_PAYMENT_ID,
+        ChargeIdentifiers.TRACK_RETURN_PRINCIPAL_ID,
+        ChargeIdentifiers.REPAYMENT_ID
+        )
+        .collect(Collectors.toSet());
     Assert.assertEquals(expectedChargeDefinitionIdentifiers, chargeDefinitionIdentifiers);
   }
 

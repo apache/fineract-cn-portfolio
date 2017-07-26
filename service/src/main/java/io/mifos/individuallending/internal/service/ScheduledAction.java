@@ -58,6 +58,10 @@ public class ScheduledAction {
     this.repaymentPeriod = null;
   }
 
+  boolean actionIsOnOrAfter(final LocalDate date) {
+    return when.compareTo(date) > 0;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;

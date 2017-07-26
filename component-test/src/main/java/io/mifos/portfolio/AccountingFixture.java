@@ -56,8 +56,9 @@ class AccountingFixture {
   static final String PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER = "1312";
   static final String DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER = "1313";
   static final String TELLER_ONE_ACCOUNT_IDENTIFIER = "7352";
-  static final String LOAN_INTEREST_ACCRUAL_ACCOUNT = "7810";
-  static final String CONSUMER_LOAN_INTEREST_ACCOUNT = "1103";
+  static final String LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER = "7810";
+  static final String CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER = "1103";
+  static final String LOANS_PAYABLE_ACCOUNT_IDENTIFIER ="missingInChartOfAccounts";
 
   static final Map<String, AccountData> accountMap = new HashMap<>();
 
@@ -73,9 +74,10 @@ class AccountingFixture {
       this.account.setBalance(balance);
     }
 
-    void addAccountEntry(final double amount) {
+    void addAccountEntry(final String message, final double amount) {
       final AccountEntry accountEntry = new AccountEntry();
       accountEntry.setAmount(amount);
+      accountEntry.setMessage(message);
       accountEntry.setTransactionDate(DateConverter.toIsoString(LocalDateTime.now(Clock.systemUTC())));
       accountEntries.add(accountEntry);
     }
@@ -87,8 +89,7 @@ class AccountingFixture {
     accountMap.put(account.getIdentifier(), accountData);
     Mockito.doAnswer(new AccountEntriesStreamAnswer(accountData))
             .when(ledgerManagerMock)
-            .fetchAccountEntriesStream(Mockito.eq(account.getIdentifier()), Matchers.anyString(), Matchers.anyString());
-
+            .fetchAccountEntriesStream(Mockito.eq(account.getIdentifier()), Matchers.anyString(), Matchers.anyString(), Matchers.eq("ASC"));
   }
 
 
@@ -198,7 +199,7 @@ class AccountingFixture {
 
   private static Account loanInterestAccrualAccount() {
     final Account ret = new Account();
-    ret.setIdentifier(LOAN_INTEREST_ACCRUAL_ACCOUNT);
+    ret.setIdentifier(LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER);
     ret.setLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
     return ret;
@@ -206,9 +207,17 @@ class AccountingFixture {
 
   private static Account consumerLoanInterestAccount() {
     final Account ret = new Account();
-    ret.setIdentifier(CONSUMER_LOAN_INTEREST_ACCOUNT);
+    ret.setIdentifier(CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER);
     ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    return ret;
+  }
+
+  private static Account loansPayableAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(LOANS_PAYABLE_ACCOUNT_IDENTIFIER);
+    //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER);
+    ret.setType(AccountType.LIABILITY.name());
     return ret;
   }
 
@@ -316,9 +325,6 @@ class AccountingFixture {
 
       checkedArgument = (JournalEntry) argument;
 
-      checkedArgument.getDebtors();
-      checkedArgument.getCreditors();
-
       return this.debtors.equals(checkedArgument.getDebtors()) &&
               this.creditors.equals(checkedArgument.getCreditors());
     }
@@ -334,6 +340,22 @@ class AccountingFixture {
               "debtors=" + debtors +
               ", creditors=" + creditors +
               '}';
+    }
+  }
+
+  private static class CreateJournalEntryAnswer implements Answer {
+    @Override
+    public Void answer(final InvocationOnMock invocation) throws Throwable {
+      final JournalEntry journalEntry = invocation.getArgumentAt(0, JournalEntry.class);
+      journalEntry.getCreditors().forEach(creditor ->
+          accountMap.get(creditor.getAccountNumber()).addAccountEntry(
+              journalEntry.getMessage(),
+              Double.valueOf(creditor.getAmount())));
+      journalEntry.getDebtors().forEach(debtor ->
+          accountMap.get(debtor.getAccountNumber()).addAccountEntry(
+              journalEntry.getMessage(),
+              Double.valueOf(debtor.getAmount())));
+      return null;
     }
   }
 
@@ -363,7 +385,11 @@ class AccountingFixture {
 
     @Override
     public Stream<AccountEntry> answer(final InvocationOnMock invocation) throws Throwable {
-      return accountData.accountEntries.stream();
+      final String message = invocation.getArgumentAt(2, String.class);
+      if (message != null)
+        return accountData.accountEntries.stream().filter(x -> x.getMessage().equals(message));
+      else
+        return accountData.accountEntries.stream();
     }
   }
 
@@ -375,6 +401,7 @@ class AccountingFixture {
     makeAccountResponsive(tellerOneAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(loanInterestAccrualAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(consumerLoanInterestAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(loansPayableAccount(), universalCreationDate, ledgerManagerMock);
 
     Mockito.doReturn(incomeLedger()).when(ledgerManagerMock).findLedger(INCOME_LEDGER_IDENTIFIER);
     Mockito.doReturn(feesAndChargesLedger()).when(ledgerManagerMock).findLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
@@ -390,6 +417,7 @@ class AccountingFixture {
 
     Mockito.doAnswer(new FindAccountAnswer()).when(ledgerManagerMock).findAccount(Matchers.anyString());
     Mockito.doAnswer(new CreateAccountAnswer()).when(ledgerManagerMock).createAccount(Matchers.any());
+    Mockito.doAnswer(new CreateJournalEntryAnswer()).when(ledgerManagerMock).createJournalEntry(Matchers.any(JournalEntry.class));
   }
 
   static void mockBalance(final String accountIdentifier, final BigDecimal balance) {
@@ -412,8 +440,6 @@ class AccountingFixture {
             Collections.singleton(new Debtor(fromAccountIdentifier, amount.toPlainString())),
             Collections.singleton(new Creditor(toAccountIdentifier, amount.toPlainString())));
     Mockito.verify(ledgerManager).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
-    accountMap.get(fromAccountIdentifier).addAccountEntry(amount.doubleValue() * -1);
-    accountMap.get(toAccountIdentifier).addAccountEntry(amount.doubleValue());
   }
 
   static void verifyTransfer(final LedgerManager ledgerManager,
@@ -421,8 +447,6 @@ class AccountingFixture {
                              final Set<Creditor> creditors) {
     final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(debtors, creditors);
     Mockito.verify(ledgerManager).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
-    debtors.forEach(debtor -> accountMap.get(debtor.getAccountNumber()).addAccountEntry(Double.valueOf(debtor.getAmount())));
-    creditors.forEach(creditor -> accountMap.get(creditor.getAccountNumber()).addAccountEntry(Double.valueOf(creditor.getAmount())));
 
   }
 }

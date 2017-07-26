@@ -35,9 +35,9 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -354,13 +354,14 @@ public class CostComponentService {
       final BigDecimal loanPaymentSize,
       final int minorCurrencyUnitDigits) {
     BigDecimal balanceAdjustment = BigDecimal.ZERO;
+    BigDecimal currentRunningBalance = runningBalance;
 
     final Map<ChargeDefinition, CostComponent> costComponentMap = new HashMap<>();
 
     for (Map.Entry<ChargeDefinition, CostComponent> entry : accruedCostComponents.entrySet()) {
       costComponentMap.put(entry.getKey(), entry.getValue());
 
-      if (chargeDefinitionTouchesCustomerLoanAccount(entry.getKey()))
+      if (chargeDefinitionTouchesAccount(entry.getKey(), AccountDesignators.CUSTOMER_LOAN))
         balanceAdjustment = balanceAdjustment.add(entry.getValue().getAmount());
     }
 
@@ -370,35 +371,35 @@ public class CostComponentService {
     for (final ScheduledCharge scheduledCharge : partitionedCharges.get(false))
     {
       final CostComponent costComponent = costComponentMap
-          .computeIfAbsent(scheduledCharge.getChargeDefinition(),
-              chargeIdentifier -> constructEmptyCostComponent(scheduledCharge));
+          .computeIfAbsent(scheduledCharge.getChargeDefinition(), CostComponentService::constructEmptyCostComponent);
 
       final BigDecimal chargeAmount = howToApplyScheduledChargeToBalance(scheduledCharge)
-          .apply(maximumBalance, runningBalance)
+          .apply(maximumBalance, currentRunningBalance)
           .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
-      if (chargeDefinitionTouchesCustomerLoanAccount(scheduledCharge.getChargeDefinition()))
+      if (chargeDefinitionTouchesAccount(scheduledCharge.getChargeDefinition(), AccountDesignators.CUSTOMER_LOAN))
         balanceAdjustment = balanceAdjustment.add(chargeAmount);
       costComponent.setAmount(costComponent.getAmount().add(chargeAmount));
+      currentRunningBalance = currentRunningBalance.add(chargeAmount);
     }
 
     final BigDecimal principalAdjustment = loanPaymentSize.subtract(balanceAdjustment);
     for (final ScheduledCharge scheduledCharge : partitionedCharges.get(true))
     {
       final CostComponent costComponent = costComponentMap
-          .computeIfAbsent(scheduledCharge.getChargeDefinition(),
-              chargeIdentifier -> constructEmptyCostComponent(scheduledCharge));
+          .computeIfAbsent(scheduledCharge.getChargeDefinition(), CostComponentService::constructEmptyCostComponent);
 
       final BigDecimal chargeAmount = applyPrincipalAdjustmentCharge(scheduledCharge, principalAdjustment)
           .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
-      if (chargeDefinitionTouchesCustomerLoanAccount(scheduledCharge.getChargeDefinition()))
+      if (chargeDefinitionTouchesAccount(scheduledCharge.getChargeDefinition(), AccountDesignators.CUSTOMER_LOAN))
         balanceAdjustment = balanceAdjustment.add(chargeAmount);
       costComponent.setAmount(costComponent.getAmount().add(chargeAmount));
+      currentRunningBalance = currentRunningBalance.add(chargeAmount);
     }
 
     return new CostComponentsForRepaymentPeriod(
         runningBalance,
         costComponentMap,
-        balanceAdjustment);
+        balanceAdjustment.negate());
   }
 
   private static BigDecimal applyPrincipalAdjustmentCharge(
@@ -407,9 +408,9 @@ public class CostComponentService {
     return scheduledCharge.getChargeDefinition().getAmount().multiply(principalAdjustment);
   }
 
-  private static CostComponent constructEmptyCostComponent(ScheduledCharge scheduledCharge) {
+  private static CostComponent constructEmptyCostComponent(final ChargeDefinition chargeDefinition) {
     final CostComponent ret = new CostComponent();
-    ret.setChargeIdentifier(scheduledCharge.getChargeDefinition().getIdentifier());
+    ret.setChargeIdentifier(chargeDefinition.getIdentifier());
     ret.setAmount(BigDecimal.ZERO);
     return ret;
   }
@@ -453,13 +454,20 @@ public class CostComponentService {
     }
   }
 
-  private static boolean chargeDefinitionTouchesCustomerLoanAccount(final ChargeDefinition chargeDefinition)
+  private static boolean chargeDefinitionTouchesCustomerVisibleAccount(final ChargeDefinition chargeDefinition)
   {
-    return chargeDefinition.getToAccountDesignator().equals(AccountDesignators.CUSTOMER_LOAN) ||
-        chargeDefinition.getFromAccountDesignator().equals(AccountDesignators.CUSTOMER_LOAN) ||
-        (chargeDefinition.getAccrualAccountDesignator() != null && chargeDefinition.getAccrualAccountDesignator().equals(AccountDesignators.CUSTOMER_LOAN));
+    return chargeDefinitionTouchesAccount(chargeDefinition, AccountDesignators.CUSTOMER_LOAN) ||
+        chargeDefinitionTouchesAccount(chargeDefinition, AccountDesignators.ENTRY);
   }
+
+  private static boolean chargeDefinitionTouchesAccount(final ChargeDefinition chargeDefinition, final String accountDesignator)
+  {
+    return chargeDefinition.getToAccountDesignator().equals(accountDesignator) ||
+        chargeDefinition.getFromAccountDesignator().equals(accountDesignator) ||
+        (chargeDefinition.getAccrualAccountDesignator() != null && chargeDefinition.getAccrualAccountDesignator().equals(accountDesignator));
+  }
+
   private static LocalDate today() {
-    return LocalDate.now(ZoneId.of("UTC"));
+    return LocalDate.now(Clock.systemUTC());
   }
 }

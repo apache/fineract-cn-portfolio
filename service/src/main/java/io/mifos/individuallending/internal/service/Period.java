@@ -66,6 +66,10 @@ class Period implements Comparable<Period> {
     return this.getBeginDate().compareTo(date) <= 0 && this.getEndDate().compareTo(date) > 0;
   }
 
+  boolean isDefined() {
+    return beginDate != null || endDate != null;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;

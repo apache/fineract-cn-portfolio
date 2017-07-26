@@ -23,13 +23,10 @@ import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
 import io.mifos.portfolio.service.internal.service.ProductService;
-import org.javamoney.calc.common.Rate;
-import org.javamoney.moneta.Money;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
-import javax.money.MonetaryAmount;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
@@ -42,18 +39,14 @@ import java.util.stream.Stream;
  */
 @Service
 public class IndividualLoanService {
-  private static final int EXTRA_PRECISION = 4;
   private final ProductService productService;
   private final ChargeDefinitionService chargeDefinitionService;
-  private final PeriodChargeCalculator periodChargeCalculator;
 
   @Autowired
   public IndividualLoanService(final ProductService productService,
-                               final ChargeDefinitionService chargeDefinitionService,
-                               final PeriodChargeCalculator periodChargeCalculator) {
+                               final ChargeDefinitionService chargeDefinitionService) {
     this.productService = productService;
     this.chargeDefinitionService = chargeDefinitionService;
-    this.periodChargeCalculator = periodChargeCalculator;
   }
 
   public PlannedPaymentPage getPlannedPaymentsPage(
@@ -70,16 +63,10 @@ public class IndividualLoanService {
 
     final List<ScheduledCharge> scheduledCharges = getScheduledCharges(productIdentifier, scheduledActions);
 
-    final int precision = caseParameters.getMaximumBalance().precision() + minorCurrencyUnitDigits + EXTRA_PRECISION;
-    final Map<Period, BigDecimal> accrualRatesByPeriod
-        = periodChargeCalculator.getPeriodAccrualRates(scheduledCharges,
-        precision);
-
-    final BigDecimal geometricMeanAccrualRate = accrualRatesByPeriod.values().stream().collect(RateCollectors.geometricMean(precision));
-    final BigDecimal loanPaymentSize = loanPaymentInContextOfAccruedInterest(
+    final BigDecimal loanPaymentSize = CostComponentService.getLoanPaymentSize(
         caseParameters.getMaximumBalance(),
-        accrualRatesByPeriod.size(),
-        geometricMeanAccrualRate);
+        minorCurrencyUnitDigits,
+        scheduledCharges);
 
     final List<PlannedPayment> plannedPaymentsElements = getPlannedPaymentsElements(
         caseParameters.getMaximumBalance(),
@@ -187,17 +174,6 @@ public class IndividualLoanService {
       return new Period(null, null);
     else
       return scheduledAction.repaymentPeriod;
-  }
-
-  private BigDecimal loanPaymentInContextOfAccruedInterest(
-          final BigDecimal initialBalance,
-          final int periodCount,
-          final BigDecimal geometricMeanOfInterest) {
-    if (periodCount == 0)
-      throw new IllegalStateException("To calculate a loan payment there must be at least one payment period.");
-
-    final MonetaryAmount presentValue = AnnuityPayment.calculate(Money.of(initialBalance, "XXX"), Rate.of(geometricMeanOfInterest), periodCount);
-    return BigDecimal.valueOf(presentValue.getNumber().doubleValueExact());
   }
 
   private List<ScheduledCharge> getScheduledCharges(final List<ScheduledAction> scheduledActions,

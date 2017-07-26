@@ -273,7 +273,7 @@ public class IndividualLoanServiceTest {
     Mockito.doReturn(chargeDefinitionsByChargeAction).when(chargeDefinitionServiceMock).getChargeDefinitionsMappedByChargeAction(testCase.productIdentifier);
     Mockito.doReturn(chargeDefinitionsByAccrueAction).when(chargeDefinitionServiceMock).getChargeDefinitionsMappedByAccrueAction(testCase.productIdentifier);
 
-    testSubject = new IndividualLoanService(productServiceMock, chargeDefinitionServiceMock, new PeriodChargeCalculator());
+    testSubject = new IndividualLoanService(productServiceMock, chargeDefinitionServiceMock);
   }
 
   @Test

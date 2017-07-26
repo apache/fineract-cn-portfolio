@@ -30,10 +30,13 @@ import io.mifos.portfolio.service.internal.repository.CaseRepository;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
+import org.javamoney.calc.common.Rate;
+import org.javamoney.moneta.Money;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
+import javax.money.MonetaryAmount;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -47,6 +50,7 @@ import java.util.stream.Collectors;
  */
 @Service
 public class CostComponentService {
+  private static final int EXTRA_PRECISION = 4;
   private static final int RUNNING_CALCULATION_PRECISION = 8;
 
   private final ProductRepository productRepository;
@@ -106,7 +110,7 @@ public class CostComponentService {
       case APPLY_INTEREST:
         return getCostComponentsForApplyInterest(dataContextOfAction);
       case ACCEPT_PAYMENT:
-        return getCostComponentsForAcceptPayment(dataContextOfAction);
+        return getCostComponentsForAcceptPayment(dataContextOfAction, null);
       case CLOSE:
         return getCostComponentsForClose(dataContextOfAction);
       case MARK_LATE:
@@ -253,7 +257,8 @@ public class CostComponentService {
   }
 
   public CostComponentsForRepaymentPeriod getCostComponentsForAcceptPayment(
-      final DataContextOfAction dataContextOfAction)
+      final DataContextOfAction dataContextOfAction,
+      final @Nullable BigDecimal requestedLoanPaymentSize)
   {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -272,11 +277,24 @@ public class CostComponentService {
         caseParameters
     );
 
-    final List<ScheduledCharge> scheduledCharges = individualLoanService.getScheduledCharges(
+    final BigDecimal loanPaymentSize;
+    if (requestedLoanPaymentSize != null)
+      loanPaymentSize = requestedLoanPaymentSize;
+    else {
+      final List<ScheduledAction> hypotheticalScheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(
+          today(),
+          caseParameters);
+      final List<ScheduledCharge> hypotheticalScheduledCharges = individualLoanService.getScheduledCharges(
+          productIdentifier,
+          hypotheticalScheduledActions);
+      loanPaymentSize = getLoanPaymentSize(currentBalance, minorCurrencyUnitDigits, hypotheticalScheduledCharges);
+    }
+
+    final List<ScheduledCharge> scheduledChargesForThisAction = individualLoanService.getScheduledCharges(
         productIdentifier,
         Collections.singletonList(scheduledAction));
 
-    final Map<Boolean, List<ScheduledCharge>> chargesSplitIntoScheduledAndAccrued = scheduledCharges.stream()
+    final Map<Boolean, List<ScheduledCharge>> chargesSplitIntoScheduledAndAccrued = scheduledChargesForThisAction.stream()
         .collect(Collectors.partitioningBy(x -> isAccruedChargeForAction(x, Action.ACCEPT_PAYMENT)));
 
     final Map<ChargeDefinition, CostComponent> accruedCostComponents = chargesSplitIntoScheduledAndAccrued.get(true)
@@ -285,12 +303,14 @@ public class CostComponentService {
         .collect(Collectors.toMap(chargeDefinition -> chargeDefinition,
             chargeDefinition -> getAccruedCostComponentToApply(dataContextOfAction, designatorToAccountIdentifierMapper, startOfTerm, chargeDefinition)));
 
+
+
     return getCostComponentsForScheduledCharges(
         accruedCostComponents,
         chargesSplitIntoScheduledAndAccrued.get(false),
         caseParameters.getMaximumBalance(),
         currentBalance,
-        BigDecimal.ZERO,//TODO: This needs to be provided by the user, or calculated.  ZERO is wrong.
+        loanPaymentSize,
         minorCurrencyUnitDigits);
   }
 
@@ -465,6 +485,27 @@ public class CostComponentService {
     return chargeDefinition.getToAccountDesignator().equals(accountDesignator) ||
         chargeDefinition.getFromAccountDesignator().equals(accountDesignator) ||
         (chargeDefinition.getAccrualAccountDesignator() != null && chargeDefinition.getAccrualAccountDesignator().equals(accountDesignator));
+  }
+
+  static BigDecimal getLoanPaymentSize(final BigDecimal startingBalance,
+                                       final int minorCurrencyUnitDigits,
+                                       final List<ScheduledCharge> scheduledCharges) {
+    final int precision = startingBalance.precision() + minorCurrencyUnitDigits + EXTRA_PRECISION;
+    final Map<Period, BigDecimal> accrualRatesByPeriod
+        = PeriodChargeCalculator.getPeriodAccrualRates(scheduledCharges, precision);
+
+    final int periodCount = accrualRatesByPeriod.size();
+    if (periodCount == 0)
+      return startingBalance;
+
+    final BigDecimal geometricMeanAccrualRate = accrualRatesByPeriod.values().stream()
+        .collect(RateCollectors.geometricMean(precision));
+
+    final MonetaryAmount presentValue = AnnuityPayment.calculate(
+        Money.of(startingBalance, "XXX"),
+        Rate.of(geometricMeanAccrualRate),
+        periodCount);
+    return BigDecimal.valueOf(presentValue.getNumber().doubleValueExact());
   }
 
   private static LocalDate today() {

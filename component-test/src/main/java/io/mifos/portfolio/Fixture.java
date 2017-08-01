@@ -69,9 +69,9 @@ public class Fixture {
     accountAssignments.add(new AccountAssignment(INTEREST_INCOME, CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(INTEREST_ACCRUAL, LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(LOANS_PAYABLE, LOANS_PAYABLE_ACCOUNT_IDENTIFIER));
-    accountAssignments.add(new AccountAssignment(LATE_FEE_INCOME, "001-008"));
-    accountAssignments.add(new AccountAssignment(LATE_FEE_ACCRUAL, "001-009"));
-    accountAssignments.add(new AccountAssignment(ARREARS_ALLOWANCE, "001-010"));
+    accountAssignments.add(new AccountAssignment(LATE_FEE_INCOME, LATE_FEE_INCOME_ACCOUNT_IDENTIFIER));
+    accountAssignments.add(new AccountAssignment(LATE_FEE_ACCRUAL, LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER));
+    accountAssignments.add(new AccountAssignment(ARREARS_ALLOWANCE, ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER));
     //accountAssignments.add(new AccountAssignment(ENTRY, ...));
     // Don't assign entry account in test since it usually will not be assigned IRL.
     accountAssignments.add(new AccountAssignment(LOAN_FUNDS_SOURCE, LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER));

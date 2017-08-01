@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.service.internal.util;
 
+import io.mifos.accounting.api.v1.client.AccountAlreadyExistsException;
 import io.mifos.accounting.api.v1.client.AccountNotFoundException;
 import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.accounting.api.v1.client.LedgerNotFoundException;
@@ -25,8 +26,11 @@ import io.mifos.core.lang.DateRange;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.service.ServiceConstants;
 import org.apache.commons.lang.RandomStringUtils;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -48,10 +52,13 @@ public class AccountingAdapter {
   public enum IdentifierType {LEDGER, ACCOUNT}
 
   private final LedgerManager ledgerManager;
+  private final Logger logger;
 
   @Autowired
-  public AccountingAdapter(@SuppressWarnings("SpringJavaAutowiringInspection") final LedgerManager ledgerManager) {
+  public AccountingAdapter(@SuppressWarnings("SpringJavaAutowiringInspection") final LedgerManager ledgerManager,
+                           @Qualifier(ServiceConstants.LOGGER_NAME) final Logger logger) {
     this.ledgerManager = ledgerManager;
+    this.logger = logger;
   }
 
   public void bookCharges(final List<ChargeInstance> costComponents,
@@ -155,14 +162,33 @@ public class AccountingAdapter {
     generatedAccount.setBalance(0.0);
     generatedAccount.setType(ledger.getType());
     generatedAccount.setState(Account.State.OPEN.name());
-    final String accountNumber = customerIdentifier + "." + ledgerAssignment.getDesignator()
-            + "." + String.format("%05d", accountsOfLedger.getTotalElements() + 1);
-    generatedAccount.setIdentifier(accountNumber);
+    long guestimatedAccountIndex = accountsOfLedger.getTotalElements() + 1;
     generatedAccount.setLedger(ledger.getIdentifier());
-    generatedAccount.setName(accountNumber);
-    ledgerManager.createAccount(generatedAccount);
+    final Optional<String> createdAccountNumber =
+        Stream.iterate(guestimatedAccountIndex, i -> i + 1).limit(99999 - guestimatedAccountIndex)
+        .map(i -> {
+          final String accountNumber = createAccountNumber(customerIdentifier, ledgerAssignment.getDesignator(), i);
+          generatedAccount.setIdentifier(accountNumber);
+          generatedAccount.setName(accountNumber);
+          try {
+            ledgerManager.createAccount(generatedAccount);
+            return Optional.of(accountNumber);
+          } catch (final AccountAlreadyExistsException e) {
+            logger.error("Account '{}' could not be created because it already exists.", accountNumber);
+            return Optional.<String>empty();
+          }
+        })
+        .filter(Optional::isPresent).map(Optional::get)
+        .findFirst();
 
-    return accountNumber;
+    return createdAccountNumber.orElseThrow(() ->
+        ServiceException.conflict("Failed to create an account for customer ''{0}'' and ''{1}'', in ledger ''{2}''.",
+            customerIdentifier, ledgerAssignment.getDesignator(), ledgerAssignment.getLedgerIdentifier()));
+  }
+
+  private String createAccountNumber(final String customerIdentifier, final String designator, final long accountIndex) {
+    return customerIdentifier + "." + designator
+            + "." + String.format("%05d", accountIndex);
   }
 
 

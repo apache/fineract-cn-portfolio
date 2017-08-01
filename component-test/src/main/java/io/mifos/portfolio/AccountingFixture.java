@@ -17,6 +17,7 @@ package io.mifos.portfolio;
 
 import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.accounting.api.v1.domain.*;
+import io.mifos.core.api.util.NotFoundException;
 import io.mifos.core.lang.DateConverter;
 import org.hamcrest.Description;
 import org.mockito.AdditionalMatchers;
@@ -59,6 +60,9 @@ class AccountingFixture {
   static final String LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER = "7810";
   static final String CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER = "1103";
   static final String LOANS_PAYABLE_ACCOUNT_IDENTIFIER ="missingInChartOfAccounts";
+  static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "001-008"; //TODO: ??
+  static final String LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER = "001-009"; //TODO: ??
+  static final String ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER = "001-010"; //TODO: ??
 
   static final Map<String, AccountData> accountMap = new HashMap<>();
 
@@ -88,8 +92,8 @@ class AccountingFixture {
     final AccountData accountData = new AccountData(account);
     accountMap.put(account.getIdentifier(), accountData);
     Mockito.doAnswer(new AccountEntriesStreamAnswer(accountData))
-            .when(ledgerManagerMock)
-            .fetchAccountEntriesStream(Mockito.eq(account.getIdentifier()), Matchers.anyString(), Matchers.anyString(), Matchers.eq("ASC"));
+        .when(ledgerManagerMock)
+        .fetchAccountEntriesStream(Mockito.eq(account.getIdentifier()), Matchers.anyString(), Matchers.anyString(), Matchers.eq("ASC"));
   }
 
 
@@ -218,6 +222,30 @@ class AccountingFixture {
     ret.setIdentifier(LOANS_PAYABLE_ACCOUNT_IDENTIFIER);
     //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.LIABILITY.name());
+    return ret;
+  }
+
+  private static Account lateFeeIncomeAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(LATE_FEE_INCOME_ACCOUNT_IDENTIFIER);
+    //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER); //TODO: ??
+    ret.setType(AccountType.LIABILITY.name()); //TODO: ??
+    return ret;
+  }
+
+  private static Account lateFeeAccrualAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER);
+    //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER); //TODO: ??
+    ret.setType(AccountType.LIABILITY.name()); //TODO: ??
+    return ret;
+  }
+
+  private static Account arrearsAllowanceAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER);
+    //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER); //TODO: ??
+    ret.setType(AccountType.LIABILITY.name()); //TODO: ??
     return ret;
   }
 
@@ -363,7 +391,11 @@ class AccountingFixture {
     @Override
     public Account answer(final InvocationOnMock invocation) throws Throwable {
       final String identifier = invocation.getArgumentAt(0, String.class);
-      return accountMap.get(identifier).account;
+      final AccountData ret = accountMap.get(identifier);
+      if (ret != null)
+        return ret.account;
+      else
+        throw new NotFoundException("Account '" + identifier + "' not found.");
     }
   }
 
@@ -402,6 +434,9 @@ class AccountingFixture {
     makeAccountResponsive(loanInterestAccrualAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(consumerLoanInterestAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(loansPayableAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(lateFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(lateFeeAccrualAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(arrearsAllowanceAccount(), universalCreationDate, ledgerManagerMock);
 
     Mockito.doReturn(incomeLedger()).when(ledgerManagerMock).findLedger(INCOME_LEDGER_IDENTIFIER);
     Mockito.doReturn(feesAndChargesLedger()).when(ledgerManagerMock).findLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);

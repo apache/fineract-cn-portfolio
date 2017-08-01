@@ -42,7 +42,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +52,7 @@ import java.util.stream.Collectors;
 public class CostComponentService {
   private static final int EXTRA_PRECISION = 4;
   private static final int RUNNING_CALCULATION_PRECISION = 8;
+  private static final String NOT_PROPORTIONAL = "null";
 
   private final ProductRepository productRepository;
   private final CaseRepository caseRepository;
@@ -195,7 +196,7 @@ public class CostComponentService {
 
 
     final Map<Boolean, List<ScheduledCharge>> chargesSplitIntoScheduledAndAccrued = scheduledCharges.stream()
-        .collect(Collectors.partitioningBy(x -> isAccruedChargeForAction(x, Action.DISBURSE)));
+        .collect(Collectors.partitioningBy(x -> isAccruedChargeForAction(x.getChargeDefinition(), Action.DISBURSE)));
 
     final Map<ChargeDefinition, CostComponent> accruedCostComponents =
         optionalStartOfTerm.map(startOfTerm ->
@@ -239,7 +240,7 @@ public class CostComponentService {
         Collections.singletonList(interestAction));
 
     final Map<Boolean, List<ScheduledCharge>> chargesSplitIntoScheduledAndAccrued = scheduledCharges.stream()
-        .collect(Collectors.partitioningBy(x -> isAccruedChargeForAction(x, Action.APPLY_INTEREST)));
+        .collect(Collectors.partitioningBy(x -> isAccruedChargeForAction(x.getChargeDefinition(), Action.APPLY_INTEREST)));
 
     final Map<ChargeDefinition, CostComponent> accruedCostComponents = chargesSplitIntoScheduledAndAccrued.get(true)
         .stream()
@@ -295,7 +296,7 @@ public class CostComponentService {
         Collections.singletonList(scheduledAction));
 
     final Map<Boolean, List<ScheduledCharge>> chargesSplitIntoScheduledAndAccrued = scheduledChargesForThisAction.stream()
-        .collect(Collectors.partitioningBy(x -> isAccruedChargeForAction(x, Action.ACCEPT_PAYMENT)));
+        .collect(Collectors.partitioningBy(x -> isAccruedChargeForAction(x.getChargeDefinition(), Action.ACCEPT_PAYMENT)));
 
     final Map<ChargeDefinition, CostComponent> accruedCostComponents = chargesSplitIntoScheduledAndAccrued.get(true)
         .stream()
@@ -314,9 +315,19 @@ public class CostComponentService {
         minorCurrencyUnitDigits);
   }
 
-  private static boolean isAccruedChargeForAction(final ScheduledCharge scheduledCharge, final Action action) {
-    return scheduledCharge.getChargeDefinition().getAccrueAction() != null &&
-        scheduledCharge.getChargeDefinition().getChargeAction().equals(action.name());
+  private static boolean isAccruedChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
+    return chargeDefinition.getAccrueAction() != null &&
+        chargeDefinition.getChargeAction().equals(action.name());
+  }
+
+  private static boolean isAccrualChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
+    return chargeDefinition.getAccrueAction() != null &&
+        chargeDefinition.getAccrueAction().equals(action.name());
+  }
+
+  private static boolean isOneOffChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
+    return chargeDefinition.getChargeAction() != null &&
+        chargeDefinition.getChargeAction().equals(action.name());
   }
 
   private CostComponent getAccruedCostComponentToApply(final DataContextOfAction dataContextOfAction,
@@ -385,47 +396,92 @@ public class CostComponentService {
         balanceAdjustment = balanceAdjustment.add(entry.getValue().getAmount());
     }
 
-    final Map<Boolean, List<ScheduledCharge>> partitionedCharges = scheduledCharges.stream()
-        .collect(Collectors.partitioningBy(CostComponentService::proportionalToPrincipalAdjustment));
+    final Map<String, List<ScheduledCharge>> partitionedCharges = scheduledCharges.stream()
+        .collect(Collectors.groupingBy(CostComponentService::proportionalToDesignator));
 
-    for (final ScheduledCharge scheduledCharge : partitionedCharges.get(false))
+    final List<String> orderOfChargesByDesignatorFirstSet = Arrays.asList(
+        NOT_PROPORTIONAL,
+        ChargeIdentifiers.MAXIMUM_BALANCE_DESIGNATOR,
+        ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR);
+
+    for (final String chargeProportionalTo : orderOfChargesByDesignatorFirstSet)
     {
-      final CostComponent costComponent = costComponentMap
-          .computeIfAbsent(scheduledCharge.getChargeDefinition(), CostComponentService::constructEmptyCostComponent);
+      final BigDecimal amountProportionalTo;
+      switch (chargeProportionalTo) {
+        case NOT_PROPORTIONAL:
+          amountProportionalTo = BigDecimal.ZERO;
+          break;
+        case ChargeIdentifiers.MAXIMUM_BALANCE_DESIGNATOR:
+          amountProportionalTo = maximumBalance;
+          break;
+        case ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR:
+          amountProportionalTo = runningBalance;
+          break;
+        default:
+          amountProportionalTo = BigDecimal.ZERO;
+          break;
+      }
+//TODO: correctly implement charges which are proportionate to other charges.
 
-      final BigDecimal chargeAmount = howToApplyScheduledChargeToBalance(scheduledCharge)
-          .apply(maximumBalance, currentRunningBalance)
-          .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
-      if (chargeDefinitionTouchesAccount(scheduledCharge.getChargeDefinition(), AccountDesignators.CUSTOMER_LOAN))
-        balanceAdjustment = balanceAdjustment.add(chargeAmount);
-      costComponent.setAmount(costComponent.getAmount().add(chargeAmount));
-      currentRunningBalance = currentRunningBalance.add(chargeAmount);
+      final List<ScheduledCharge> partition = partitionedCharges.get(chargeProportionalTo);
+      if (partition != null) {
+        for (final ScheduledCharge scheduledCharge : partition) {
+          final CostComponent costComponent = costComponentMap
+              .computeIfAbsent(scheduledCharge.getChargeDefinition(), CostComponentService::constructEmptyCostComponent);
+
+          final BigDecimal chargeAmount = howToApplyScheduledChargeToAmount(scheduledCharge)
+              .apply(amountProportionalTo)
+              .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
+          if (chargeDefinitionTouchesAccount(scheduledCharge.getChargeDefinition(), AccountDesignators.CUSTOMER_LOAN))
+            balanceAdjustment = balanceAdjustment.add(chargeAmount);
+          costComponent.setAmount(costComponent.getAmount().add(chargeAmount));
+          currentRunningBalance = currentRunningBalance.add(chargeAmount);
+        }
+      }
     }
 
-    final BigDecimal principalAdjustment = loanPaymentSize.subtract(balanceAdjustment);
-    for (final ScheduledCharge scheduledCharge : partitionedCharges.get(true))
-    {
-      final CostComponent costComponent = costComponentMap
-          .computeIfAbsent(scheduledCharge.getChargeDefinition(), CostComponentService::constructEmptyCostComponent);
+    final List<String> orderOfChargesByDesignatorSecondSet = Arrays.asList(
+        ChargeIdentifiers.REPAYMENT_DESIGNATOR,
+        ChargeIdentifiers.PRINCIPAL_ADJUSTMENT_DESIGNATOR);
 
-      final BigDecimal chargeAmount = applyPrincipalAdjustmentCharge(scheduledCharge, principalAdjustment)
-          .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
-      if (chargeDefinitionTouchesAccount(scheduledCharge.getChargeDefinition(), AccountDesignators.CUSTOMER_LOAN))
-        balanceAdjustment = balanceAdjustment.add(chargeAmount);
-      costComponent.setAmount(costComponent.getAmount().add(chargeAmount));
-      currentRunningBalance = currentRunningBalance.add(chargeAmount);
+
+    final BigDecimal principalAdjustment = loanPaymentSize.subtract(balanceAdjustment);
+    for (final String chargeProportionalTo : orderOfChargesByDesignatorSecondSet)
+    {
+      final BigDecimal amountProportionalTo;
+      switch (chargeProportionalTo) {
+        case ChargeIdentifiers.REPAYMENT_DESIGNATOR:
+          amountProportionalTo = loanPaymentSize;
+          break;
+        case ChargeIdentifiers.PRINCIPAL_ADJUSTMENT_DESIGNATOR:
+          amountProportionalTo = principalAdjustment;
+          break;
+        default:
+          amountProportionalTo = BigDecimal.ZERO;
+          break;
+      }
+
+      final List<ScheduledCharge> partition = partitionedCharges.get(chargeProportionalTo);
+      if (partition != null) {
+        for (final ScheduledCharge scheduledCharge : partition) {
+          final CostComponent costComponent = costComponentMap
+              .computeIfAbsent(scheduledCharge.getChargeDefinition(), CostComponentService::constructEmptyCostComponent);
+
+          final BigDecimal chargeAmount = howToApplyScheduledChargeToAmount(scheduledCharge)
+              .apply(amountProportionalTo)
+              .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
+          if (chargeDefinitionTouchesAccount(scheduledCharge.getChargeDefinition(), AccountDesignators.CUSTOMER_LOAN))
+            balanceAdjustment = balanceAdjustment.add(chargeAmount);
+          costComponent.setAmount(costComponent.getAmount().add(chargeAmount));
+          currentRunningBalance = currentRunningBalance.add(chargeAmount);
+        }
+      }
     }
 
     return new CostComponentsForRepaymentPeriod(
         runningBalance,
         costComponentMap,
         balanceAdjustment.negate());
-  }
-
-  private static BigDecimal applyPrincipalAdjustmentCharge(
-      final ScheduledCharge scheduledCharge,
-      final BigDecimal principalAdjustment) {
-    return scheduledCharge.getChargeDefinition().getAmount().multiply(principalAdjustment);
   }
 
   private static CostComponent constructEmptyCostComponent(final ChargeDefinition chargeDefinition) {
@@ -435,42 +491,33 @@ public class CostComponentService {
     return ret;
   }
 
-  private static boolean proportionalToPrincipalAdjustment(final ScheduledCharge scheduledCharge) {
+  private static String proportionalToDesignator(final ScheduledCharge scheduledCharge) {
     if (!scheduledCharge.getChargeDefinition().getChargeMethod().equals(ChargeDefinition.ChargeMethod.PROPORTIONAL))
-      return false;
-    final String proportionalTo = scheduledCharge.getChargeDefinition().getProportionalTo();
-    return proportionalTo != null && proportionalTo.equals(ChargeIdentifiers.PRINCIPAL_ADJUSTMENT_DESIGNATOR);
+      return NOT_PROPORTIONAL;
+
+    return scheduledCharge.getChargeDefinition().getProportionalTo();
   }
 
-  private static BiFunction<BigDecimal, BigDecimal, BigDecimal> howToApplyScheduledChargeToBalance(
+  private static Function<BigDecimal, BigDecimal> howToApplyScheduledChargeToAmount(
       final ScheduledCharge scheduledCharge)
   {
-
+    final ChargeDefinition chargeDefinition = scheduledCharge.getChargeDefinition();
+    final Action action = scheduledCharge.getScheduledAction().action;
     switch (scheduledCharge.getChargeDefinition().getChargeMethod())
     {
       case FIXED:
-        return (maximumBalance, runningBalance) -> scheduledCharge.getChargeDefinition().getAmount();
-      case PROPORTIONAL: {
-        switch (scheduledCharge.getChargeDefinition().getProportionalTo()) {
-          case ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR:
-            return (maximumBalance, runningBalance) ->
-                PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, RUNNING_CALCULATION_PRECISION)
-                    .multiply(runningBalance);
-          case ChargeIdentifiers.MAXIMUM_BALANCE_DESIGNATOR:
-            return (maximumBalance, runningBalance) ->
-                PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, RUNNING_CALCULATION_PRECISION)
-                    .multiply(maximumBalance);
-          case ChargeIdentifiers.PRINCIPAL_ADJUSTMENT_DESIGNATOR: //This is handled elsewhere.
-            throw new IllegalStateException("A principal adjustment charge should not be passed to the same application function as the other charges.");
-          default:
-//TODO: correctly implement charges which are proportionate to other charges.
-            return (maximumBalance, runningBalance) ->
-                PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, RUNNING_CALCULATION_PRECISION)
-                    .multiply(maximumBalance);
-        }
-      }
+        return (amountProportionalTo) -> scheduledCharge.getChargeDefinition().getAmount();
+      case PROPORTIONAL:
+        if (isAccrualChargeForAction(chargeDefinition, action))
+          return (amountProportionalTo) ->
+              PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, RUNNING_CALCULATION_PRECISION)
+                  .multiply(amountProportionalTo);
+        else if (isOneOffChargeForAction(chargeDefinition, action))
+            return (amountProportionalTo) ->
+                scheduledCharge.getChargeDefinition().getAmount()
+                    .multiply(amountProportionalTo);
       default:
-        return (maximumBalance, runningBalance) -> BigDecimal.ZERO;
+        return (amountProportionalTo) -> BigDecimal.ZERO;
     }
   }
 

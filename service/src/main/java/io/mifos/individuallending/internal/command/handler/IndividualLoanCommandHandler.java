@@ -52,6 +52,7 @@ import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -103,6 +104,8 @@ public class IndividualLoanCommandHandler {
             Action.OPEN,
             entry,
             designatorToAccountIdentifierMapper))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
         .collect(Collectors.toList());
 
     accountingAdapter.bookCharges(charges,
@@ -142,6 +145,8 @@ public class IndividualLoanCommandHandler {
             Action.DENY,
             entry,
             designatorToAccountIdentifierMapper))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
         .collect(Collectors.toList());
 
     final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
@@ -187,6 +192,8 @@ public class IndividualLoanCommandHandler {
             Action.APPROVE,
             entry,
             designatorToAccountIdentifierMapper))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
         .collect(Collectors.toList());
 
     accountingAdapter.bookCharges(charges,
@@ -226,7 +233,9 @@ public class IndividualLoanCommandHandler {
               .map(entry -> mapCostComponentEntryToChargeInstance(
                   Action.DISBURSE,
                   entry,
-                  designatorToAccountIdentifierMapper)),
+                  designatorToAccountIdentifierMapper))
+              .filter(Optional::isPresent)
+              .map(Optional::get),
           Stream.of(getDisbursalChargeInstance(disbursalAmount, designatorToAccountIdentifierMapper)))
         .collect(Collectors.toList());
 
@@ -275,6 +284,8 @@ public class IndividualLoanCommandHandler {
             Action.APPLY_INTEREST,
             entry,
             designatorToAccountIdentifierMapper))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
         .collect(Collectors.toList());
 
     accountingAdapter.bookCharges(charges,
@@ -319,6 +330,8 @@ public class IndividualLoanCommandHandler {
             Action.ACCEPT_PAYMENT,
             entry,
             designatorToAccountIdentifierMapper))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
         .collect(Collectors.toList());
 
 
@@ -384,30 +397,38 @@ public class IndividualLoanCommandHandler {
     return new IndividualLoanCommandEvent(command.getProductIdentifier(), command.getCaseIdentifier());
   }
 
-  private static ChargeInstance mapCostComponentEntryToChargeInstance(
+  private static Optional<ChargeInstance> mapCostComponentEntryToChargeInstance(
       final Action action,
       final Map.Entry<ChargeDefinition, CostComponent> costComponentEntry,
       final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
     final ChargeDefinition chargeDefinition = costComponentEntry.getKey();
     final BigDecimal chargeAmount = costComponentEntry.getValue().getAmount();
 
-    if (chargeDefinition.getAccrualAccountDesignator() != null) {
+    if (chargeIsAccrued(chargeDefinition)) {
       if (Action.valueOf(chargeDefinition.getAccrueAction()) == action)
-        return new ChargeInstance(
+        return Optional.of(new ChargeInstance(
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            chargeAmount);
-      else
-        return new ChargeInstance(
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
+            chargeAmount));
+      else if (Action.valueOf(chargeDefinition.getChargeAction()) == action)
+        return Optional.of(new ChargeInstance(
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            chargeAmount);
+            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
+            chargeAmount));
+      else
+        return Optional.empty();
     }
-    else
-      return new ChargeInstance(
+    else if (Action.valueOf(chargeDefinition.getChargeAction()) == action)
+      return Optional.of(new ChargeInstance(
           designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
           designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
-          chargeAmount);
+          chargeAmount));
+    else
+      return Optional.empty();
+  }
+
+  private static boolean chargeIsAccrued(final ChargeDefinition chargeDefinition) {
+    return chargeDefinition.getAccrualAccountDesignator() != null;
   }
 
   private static ChargeInstance getDisbursalChargeInstance(

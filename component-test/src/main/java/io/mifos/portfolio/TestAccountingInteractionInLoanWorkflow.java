@@ -246,12 +246,12 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(
-        AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER,
+        customerLoanAccountIdentifier,
         calculatedInterest.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(
-        customerLoanAccountIdentifier,
+        AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER,
         calculatedInterest.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
 
@@ -274,15 +274,17 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
 
+    final BigDecimal principal = expectedCurrentBalance.subtract(interestAccrued);
+
     final Set<Debtor> debtors = new HashSet<>();
-    debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, expectedCurrentBalance.subtract(interestAccrued).toPlainString()));
     debtors.add(new Debtor(customerLoanAccountIdentifier, expectedCurrentBalance.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER, principal.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
-    creditors.add(new Creditor(AccountingFixture.CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
-    creditors.add(new Creditor(AccountingFixture.LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER, expectedCurrentBalance.subtract(interestAccrued).toPlainString()));
     creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, expectedCurrentBalance.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, principal.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
 
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
 

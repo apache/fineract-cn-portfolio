@@ -29,11 +29,9 @@ import io.mifos.portfolio.api.v1.client.PortfolioManager;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.api.v1.events.*;
 import io.mifos.portfolio.service.config.PortfolioServiceConfiguration;
-import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.portfolio.service.internal.util.RhythmAdapter;
 import org.junit.*;
 import org.junit.runner.RunWith;
-import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,9 +54,6 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doReturn;
 
 /**
  * @author Myrle Krantz
@@ -85,14 +80,6 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     @Bean(name = LOGGER_NAME)
     public Logger logger() {
       return LoggerFactory.getLogger(LOGGER_NAME);
-    }
-    @Bean()
-    public AccountingAdapter accountingAdapter(@SuppressWarnings("SpringJavaAutowiringInspection")
-                                                   final LedgerManager ledgerManager)
-    {
-      final AccountingAdapter spy = Mockito.spy(new AccountingAdapter(ledgerManager));
-      doReturn(true).when(spy).accountAssignmentRepresentsRealAccount(any());
-      return spy;
     }
   }
 

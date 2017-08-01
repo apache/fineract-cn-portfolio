@@ -325,7 +325,8 @@ public class IndividualLoanServiceTest {
     Assert.assertTrue(maxPayment.isPresent());
     Assert.assertTrue(minPayment.isPresent());
     final double percentDifference = percentDifference(maxPayment.get(), minPayment.get());
-    Assert.assertTrue("Percent difference = " + percentDifference, percentDifference < 0.01);
+    Assert.assertTrue("Percent difference = " + percentDifference + ", max = " + maxPayment.get() + ", min = " + minPayment.get(),
+        percentDifference < 0.01);
 
     //Final balance should be zero.
     Assert.assertEquals(BigDecimal.ZERO.setScale(testCase.minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN),

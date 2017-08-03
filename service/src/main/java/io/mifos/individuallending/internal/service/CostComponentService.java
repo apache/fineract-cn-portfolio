@@ -189,7 +189,7 @@ public class CostComponentService {
     final BigDecimal currentBalance = accountingAdapter.getCurrentBalance(customerLoanAccountIdentifier);
 
     if (dataContextOfAction.getCaseParameters().getMaximumBalance().compareTo(
-        currentBalance.add(requestedDisbursalSize)) > 0)
+        currentBalance.add(requestedDisbursalSize)) < 0)
       throw ServiceException.conflict("Cannot disburse over the maximum balance.");
 
     final Optional<LocalDateTime> optionalStartOfTerm = accountingAdapter.getDateOfOldestEntryContainingMessage(
@@ -373,13 +373,6 @@ public class CostComponentService {
             dataContextOfAction.getCompoundIdentifer()));
   }
 
-  private CostComponentsForRepaymentPeriod getCostComponentsForMarkLate(final DataContextOfAction dataContextOfAction) {
-    return null;
-  }
-  private CostComponentsForRepaymentPeriod getCostComponentsForWriteOff(final DataContextOfAction dataContextOfAction) {
-    return null;
-  }
-
   public CostComponentsForRepaymentPeriod getCostComponentsForClose(final DataContextOfAction dataContextOfAction) {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -417,6 +410,14 @@ public class CostComponentService {
         BigDecimal.ZERO,
         minorCurrencyUnitDigits,
         true);
+  }
+
+  private CostComponentsForRepaymentPeriod getCostComponentsForMarkLate(final DataContextOfAction dataContextOfAction) {
+    return null;
+  }
+
+  private CostComponentsForRepaymentPeriod getCostComponentsForWriteOff(final DataContextOfAction dataContextOfAction) {
+    return null;
   }
 
   private CostComponentsForRepaymentPeriod getCostComponentsForRecover(final DataContextOfAction dataContextOfAction) {

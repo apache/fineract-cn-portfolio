@@ -373,13 +373,6 @@ public class CostComponentService {
             dataContextOfAction.getCompoundIdentifer()));
   }
 
-  private CostComponentsForRepaymentPeriod getCostComponentsForMarkLate(final DataContextOfAction dataContextOfAction) {
-    return null;
-  }
-  private CostComponentsForRepaymentPeriod getCostComponentsForWriteOff(final DataContextOfAction dataContextOfAction) {
-    return null;
-  }
-
   public CostComponentsForRepaymentPeriod getCostComponentsForClose(final DataContextOfAction dataContextOfAction) {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -417,6 +410,14 @@ public class CostComponentService {
         BigDecimal.ZERO,
         minorCurrencyUnitDigits,
         true);
+  }
+
+  private CostComponentsForRepaymentPeriod getCostComponentsForMarkLate(final DataContextOfAction dataContextOfAction) {
+    return null;
+  }
+
+  private CostComponentsForRepaymentPeriod getCostComponentsForWriteOff(final DataContextOfAction dataContextOfAction) {
+    return null;
   }
 
   private CostComponentsForRepaymentPeriod getCostComponentsForRecover(final DataContextOfAction dataContextOfAction) {

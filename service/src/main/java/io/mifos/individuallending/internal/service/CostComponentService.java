@@ -189,7 +189,7 @@ public class CostComponentService {
     final BigDecimal currentBalance = accountingAdapter.getCurrentBalance(customerLoanAccountIdentifier);
 
     if (dataContextOfAction.getCaseParameters().getMaximumBalance().compareTo(
-        currentBalance.add(requestedDisbursalSize)) > 0)
+        currentBalance.add(requestedDisbursalSize)) < 0)
       throw ServiceException.conflict("Cannot disburse over the maximum balance.");
 
     final Optional<LocalDateTime> optionalStartOfTerm = accountingAdapter.getDateOfOldestEntryContainingMessage(

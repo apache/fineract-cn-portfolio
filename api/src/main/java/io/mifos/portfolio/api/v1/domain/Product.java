@@ -43,9 +43,6 @@ public final class Product {
   @Valid
   private BalanceRange balanceRange;
   @NotNull
-  @Valid
-  private InterestRange interestRange;
-  @NotNull
   private InterestBasis interestBasis;
   @NotNull
   @ValidIdentifier(maxLength = 512)
@@ -102,14 +99,6 @@ public final class Product {
 
   public void setBalanceRange(BalanceRange balanceRange) {
     this.balanceRange = balanceRange;
-  }
-
-  public InterestRange getInterestRange() {
-    return interestRange;
-  }
-
-  public void setInterestRange(InterestRange interestRange) {
-    this.interestRange = interestRange;
   }
 
   public InterestBasis getInterestBasis() {
@@ -210,7 +199,6 @@ public final class Product {
             Objects.equals(name, product.name) &&
             Objects.equals(termRange, product.termRange) &&
             Objects.equals(balanceRange, product.balanceRange) &&
-            Objects.equals(interestRange, product.interestRange) &&
             interestBasis == product.interestBasis &&
             Objects.equals(patternPackage, product.patternPackage) &&
             Objects.equals(description, product.description) &&
@@ -221,7 +209,7 @@ public final class Product {
 
   @Override
   public int hashCode() {
-    return Objects.hash(identifier, name, termRange, balanceRange, interestRange, interestBasis, patternPackage, description, currencyCode, minorCurrencyUnitDigits, accountAssignments, parameters);
+    return Objects.hash(identifier, name, termRange, balanceRange, interestBasis, patternPackage, description, currencyCode, minorCurrencyUnitDigits, accountAssignments, parameters);
   }
 
   @Override
@@ -231,7 +219,6 @@ public final class Product {
             ", name='" + name + '\'' +
             ", termRange=" + termRange +
             ", balanceRange=" + balanceRange +
-            ", interestRange=" + interestRange +
             ", interestBasis=" + interestBasis +
             ", patternPackage='" + patternPackage + '\'' +
             ", description='" + description + '\'' +

@@ -85,7 +85,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step2CreateCase();
     step3OpenCase();
     step4ApproveCase();
-    step5DisburseFullAmount();
+    step5Disburse(BigDecimal.valueOf(2000L));
     step6CalculateInterestAccrual();
     step7PaybackPartialAmount(expectedCurrentBalance);
   }
@@ -97,7 +97,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step2CreateCase();
     step3OpenCase();
     step4ApproveCase();
-    step5DisburseFullAmount();
+    step5Disburse(BigDecimal.valueOf(2000L));
     step6CalculateInterestAccrual();
     final BigDecimal repayment1 = expectedCurrentBalance.divide(BigDecimal.valueOf(2), BigDecimal.ROUND_HALF_EVEN);
     step7PaybackPartialAmount(repayment1);
@@ -207,13 +207,14 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
-  private void step5DisburseFullAmount() throws InterruptedException {
-    logger.info("step5DisburseFullAmount");
+  private void step5Disburse(final BigDecimal amount) throws InterruptedException {
+    logger.info("step5Disburse");
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DISBURSE,
         Collections.singletonList(assignEntryToTeller()),
+        amount,
         IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE,
         Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,

@@ -299,8 +299,13 @@ public class IndividualLoanServiceTest {
               .map(CostComponent::getAmount)
               .reduce(BigDecimal::add)
               .orElse(BigDecimal.ZERO);
+          final BigDecimal valueOfPrincipleTrackingCostComponent = allPlannedPayments.get(x).getCostComponents().stream()
+              .filter(costComponent -> costComponent.getChargeIdentifier().equals(ChargeIdentifiers.TRACK_RETURN_PRINCIPAL_ID))
+              .map(CostComponent::getAmount)
+              .reduce(BigDecimal::add)
+              .orElse(BigDecimal.ZERO);
           final BigDecimal principalDifference = allPlannedPayments.get(x-1).getRemainingPrincipal().subtract(allPlannedPayments.get(x).getRemainingPrincipal());
-          Assert.assertEquals(costComponentSum, principalDifference);
+          Assert.assertEquals(valueOfPrincipleTrackingCostComponent, principalDifference);
           Assert.assertNotEquals("Remaining principle should always be positive or zero.",
               allPlannedPayments.get(x).getRemainingPrincipal().signum(), -1);
           return costComponentSum;

@@ -22,7 +22,6 @@ import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
-import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
@@ -54,7 +53,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -222,21 +220,19 @@ public class IndividualLoanCommandHandler {
     checkIfTasksAreOutstanding(dataContextOfAction, Action.DISBURSE);
 
     final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-        costComponentService.getCostComponentsForDisburse(dataContextOfAction);
+        costComponentService.getCostComponentsForDisburse(dataContextOfAction, command.getCommand().getPaymentSize());
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
-    final BigDecimal disbursalAmount = dataContextOfAction.getCaseParameters().getMaximumBalance();
-    final List<ChargeInstance> charges = Stream.concat(
-          costComponentsForRepaymentPeriod.stream()
-              .map(entry -> mapCostComponentEntryToChargeInstance(
-                  Action.DISBURSE,
-                  entry,
-                  designatorToAccountIdentifierMapper))
-              .filter(Optional::isPresent)
-              .map(Optional::get),
-          Stream.of(getDisbursalChargeInstance(disbursalAmount, designatorToAccountIdentifierMapper)))
+    final List<ChargeInstance> charges =
+        costComponentsForRepaymentPeriod.stream()
+            .map(entry -> mapCostComponentEntryToChargeInstance(
+                Action.DISBURSE,
+                entry,
+                designatorToAccountIdentifierMapper))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
         .collect(Collectors.toList());
 
     accountingAdapter.bookCharges(charges,
@@ -404,7 +400,7 @@ public class IndividualLoanCommandHandler {
     final ChargeDefinition chargeDefinition = costComponentEntry.getKey();
     final BigDecimal chargeAmount = costComponentEntry.getValue().getAmount();
 
-    if (chargeIsAccrued(chargeDefinition)) {
+    if (CostComponentService.chargeIsAccrued(chargeDefinition)) {
       if (Action.valueOf(chargeDefinition.getAccrueAction()) == action)
         return Optional.of(new ChargeInstance(
             designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
@@ -425,19 +421,6 @@ public class IndividualLoanCommandHandler {
           chargeAmount));
     else
       return Optional.empty();
-  }
-
-  private static boolean chargeIsAccrued(final ChargeDefinition chargeDefinition) {
-    return chargeDefinition.getAccrualAccountDesignator() != null;
-  }
-
-  private static ChargeInstance getDisbursalChargeInstance(
-      final BigDecimal amount,
-      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
-    return new ChargeInstance(
-        designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.PENDING_DISBURSAL),
-        designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN),
-        amount);
   }
 
   private Map<String, BigDecimal> getRequestedChargeAmounts(final @Nullable List<CostComponent> costComponents) {

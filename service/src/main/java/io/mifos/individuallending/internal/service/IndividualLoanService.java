@@ -19,6 +19,7 @@ import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
+import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
@@ -124,10 +125,14 @@ public class IndividualLoanService {
       final int minorCurrencyUnitDigits,
       final List<ScheduledCharge> scheduledCharges,
       final BigDecimal loanPaymentSize) {
-    final Map<Period, Set<ScheduledCharge>> orderedScheduledChargesGroupedByPeriod
-            = scheduledCharges.stream()
-            .collect(Collectors.groupingBy(IndividualLoanService::getPeriodFromScheduledCharge,
-                    Collectors.mapping(x -> x, Collectors.toSet())));
+    final Map<Period, SortedSet<ScheduledCharge>> orderedScheduledChargesGroupedByPeriod
+        = scheduledCharges.stream()
+        .collect(Collectors.groupingBy(IndividualLoanService::getPeriodFromScheduledCharge,
+            Collectors.mapping(x -> x,
+                Collector.of(
+                    () -> new TreeSet<>(new ScheduledChargeComparator()),
+                    SortedSet::add,
+                    (left, right) -> { left.addAll(right); return left; }))));
 
     final List<Period> sortedRepaymentPeriods
         = orderedScheduledChargesGroupedByPeriod.keySet().stream()
@@ -140,15 +145,12 @@ public class IndividualLoanService {
     {
       final BigDecimal currentLoanPaymentSize;
       if (repaymentPeriod.isDefined()) {
-        if (balance.compareTo(loanPaymentSize) < 0)
-          currentLoanPaymentSize = balance;
-        else
-          currentLoanPaymentSize = loanPaymentSize;
+        currentLoanPaymentSize = loanPaymentSize;
       }
       else
         currentLoanPaymentSize = BigDecimal.ZERO;
 
-      final Set<ScheduledCharge> scheduledChargesInPeriod = orderedScheduledChargesGroupedByPeriod.get(repaymentPeriod);
+      final SortedSet<ScheduledCharge> scheduledChargesInPeriod = orderedScheduledChargesGroupedByPeriod.get(repaymentPeriod);
       final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
               CostComponentService.getCostComponentsForScheduledCharges(
                   Collections.emptyMap(),
@@ -156,7 +158,8 @@ public class IndividualLoanService {
                   balance,
                   balance,
                   currentLoanPaymentSize,
-                  minorCurrencyUnitDigits);
+                  minorCurrencyUnitDigits,
+                  false);
 
       final PlannedPayment plannedPayment = new PlannedPayment();
       plannedPayment.setCostComponents(new ArrayList<>(costComponentsForRepaymentPeriod.getCostComponents().values()));
@@ -205,7 +208,42 @@ public class IndividualLoanService {
     if (accrueMapping == null)
       accrueMapping = Stream.empty();
 
+    return Stream.concat(
+        accrueMapping.sorted(IndividualLoanService::proportionalityApplicationOrder),
+        chargeMapping.sorted(IndividualLoanService::proportionalityApplicationOrder));
+  }
 
-    return Stream.concat(accrueMapping, chargeMapping);
+  private static class ScheduledChargeComparator implements Comparator<ScheduledCharge>
+  {
+    @Override
+    public int compare(ScheduledCharge o1, ScheduledCharge o2) {
+      int ret = o1.getScheduledAction().when.compareTo(o2.getScheduledAction().when);
+      if (ret == 0)
+        ret = o1.getScheduledAction().action.compareTo(o2.getScheduledAction().action);
+      if (ret == 0)
+        ret = proportionalityApplicationOrder(o1.getChargeDefinition(), o2.getChargeDefinition());
+      if (ret == 0)
+        return o1.getChargeDefinition().getIdentifier().compareTo(o2.getChargeDefinition().getIdentifier());
+      else
+        return ret;
+    }
+  }
+
+  private static int proportionalityApplicationOrder(final ChargeDefinition o1, final ChargeDefinition o2) {
+    final Optional<ChargeProportionalDesignator> aProportionalToDesignator
+        = ChargeProportionalDesignator.fromString(o1.getProportionalTo());
+    final Optional<ChargeProportionalDesignator> bProportionalToDesignator
+        = ChargeProportionalDesignator.fromString(o2.getProportionalTo());
+
+    if (aProportionalToDesignator.isPresent() && bProportionalToDesignator.isPresent())
+      return Integer.compare(
+          aProportionalToDesignator.get().getOrderOfApplication(),
+          bProportionalToDesignator.get().getOrderOfApplication());
+    else if (aProportionalToDesignator.isPresent())
+      return 1;
+    else if (bProportionalToDesignator.isPresent())
+      return -1;
+    else
+      return 0;
   }
 }

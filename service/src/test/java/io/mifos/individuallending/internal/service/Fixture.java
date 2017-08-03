@@ -85,19 +85,19 @@ class Fixture {
     return new ScheduledAction(Action.ACCEPT_PAYMENT, to, repaymentPeriod, repaymentPeriod);
   }
 
-  static ScheduledCharge scheduledInterestCharge(
-          final double amount,
-          final LocalDate initialDate,
-          final int chargeDateDelta,
-          final int periodBeginDelta,
-          final int periodLength)
+  static ScheduledCharge scheduledInterestBookingCharge(
+      final double amount,
+      final LocalDate initialDate,
+      final int chargeDateDelta,
+      final int periodBeginDelta,
+      final int periodLength)
   {
     final LocalDate chargeDate = initialDate.plusDays(chargeDateDelta);
     final ScheduledAction scheduledAction = new ScheduledAction(
-            Action.APPLY_INTEREST,
-            chargeDate,
-            new Period(chargeDate, 1),
-            getPeriod(initialDate, periodBeginDelta, periodLength));
+        Action.ACCEPT_PAYMENT,
+        chargeDate,
+        new Period(chargeDate, periodLength),
+        getPeriod(initialDate, periodBeginDelta, periodLength));
     final ChargeDefinition chargeDefinition = new ChargeDefinition();
     chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
     chargeDefinition.setForCycleSizeUnit(ChronoUnit.YEARS);

@@ -190,7 +190,7 @@ public class CostComponentService {
 
     if (dataContextOfAction.getCaseParameters().getMaximumBalance().compareTo(
         currentBalance.add(requestedDisbursalSize)) > 0)
-      throw ServiceException.badRequest("Cannot disburse over the maximum balance.");
+      throw ServiceException.conflict("Cannot disburse over the maximum balance.");
 
     final Optional<LocalDateTime> optionalStartOfTerm = accountingAdapter.getDateOfOldestEntryContainingMessage(
         customerLoanAccountIdentifier,
@@ -379,9 +379,46 @@ public class CostComponentService {
   private CostComponentsForRepaymentPeriod getCostComponentsForWriteOff(final DataContextOfAction dataContextOfAction) {
     return null;
   }
-  private CostComponentsForRepaymentPeriod getCostComponentsForClose(final DataContextOfAction dataContextOfAction) {
-    return null;
+
+  public CostComponentsForRepaymentPeriod getCostComponentsForClose(final DataContextOfAction dataContextOfAction) {
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
+    final BigDecimal currentBalance = accountingAdapter.getCurrentBalance(customerLoanAccountIdentifier);
+    if (currentBalance.compareTo(BigDecimal.ZERO) != 0)
+      throw ServiceException.conflict("Cannot close loan until the balance is zero.");
+
+    final LocalDate startOfTerm = getStartOfTermOrThrow(dataContextOfAction, customerLoanAccountIdentifier);
+
+    final CaseParameters caseParameters = dataContextOfAction.getCaseParameters();
+    final String productIdentifier = dataContextOfAction.getProduct().getIdentifier();
+    final int minorCurrencyUnitDigits = dataContextOfAction.getProduct().getMinorCurrencyUnitDigits();
+    final LocalDate today = today();
+    final ScheduledAction closeAction = new ScheduledAction(Action.CLOSE, today, new Period(1, today));
+
+    final List<ScheduledCharge> scheduledCharges = individualLoanService.getScheduledCharges(
+        productIdentifier,
+        Collections.singletonList(closeAction));
+
+    final Map<Boolean, List<ScheduledCharge>> chargesSplitIntoScheduledAndAccrued = scheduledCharges.stream()
+        .collect(Collectors.partitioningBy(x -> isAccruedChargeForAction(x.getChargeDefinition(), Action.CLOSE)));
+
+    final Map<ChargeDefinition, CostComponent> accruedCostComponents = chargesSplitIntoScheduledAndAccrued.get(true)
+        .stream()
+        .map(ScheduledCharge::getChargeDefinition)
+        .collect(Collectors.toMap(chargeDefinition -> chargeDefinition,
+            chargeDefinition -> getAccruedCostComponentToApply(dataContextOfAction, designatorToAccountIdentifierMapper, startOfTerm, chargeDefinition)));
+
+    return getCostComponentsForScheduledCharges(
+        accruedCostComponents,
+        chargesSplitIntoScheduledAndAccrued.get(false),
+        caseParameters.getMaximumBalance(),
+        currentBalance,
+        BigDecimal.ZERO,
+        minorCurrencyUnitDigits,
+        true);
   }
+
   private CostComponentsForRepaymentPeriod getCostComponentsForRecover(final DataContextOfAction dataContextOfAction) {
     return null;
   }

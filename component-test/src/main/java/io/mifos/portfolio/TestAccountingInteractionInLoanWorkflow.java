@@ -88,6 +88,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step5Disburse(BigDecimal.valueOf(2000L));
     step6CalculateInterestAccrual();
     step7PaybackPartialAmount(expectedCurrentBalance);
+    step8Close();
   }
 
 
@@ -102,6 +103,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final BigDecimal repayment1 = expectedCurrentBalance.divide(BigDecimal.valueOf(2), BigDecimal.ROUND_HALF_EVEN);
     step7PaybackPartialAmount(repayment1);
     step7PaybackPartialAmount(expectedCurrentBalance);
+    step8Close();
   }
 
   //Create product and set charges to fixed fees.
@@ -307,5 +309,21 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     expectedCurrentBalance = expectedCurrentBalance.subtract(amount);
     interestAccrued = BigDecimal.ZERO;
+  }
+
+  private void step8Close() throws InterruptedException {
+    logger.info("step8Close");
+
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
+
+    checkStateTransfer(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.CLOSE,
+        Collections.singletonList(assignEntryToTeller()),
+        IndividualLoanEventConstants.CLOSE_INDIVIDUALLOAN_CASE,
+        Case.State.CLOSED); //Close has to be done explicitly.
+
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
   }
 }

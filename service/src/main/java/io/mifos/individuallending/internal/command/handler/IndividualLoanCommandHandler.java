@@ -219,8 +219,9 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.DISBURSE);
 
+    final BigDecimal disbursalAmount = Optional.ofNullable(command.getCommand().getPaymentSize()).orElse(BigDecimal.ZERO);
     final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-        costComponentService.getCostComponentsForDisburse(dataContextOfAction, command.getCommand().getPaymentSize());
+        costComponentService.getCostComponentsForDisburse(dataContextOfAction, disbursalAmount);
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -368,6 +369,27 @@ public class IndividualLoanCommandHandler {
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.CLOSE);
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.CLOSE);
+
+    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+        costComponentService.getCostComponentsForClose(dataContextOfAction);
+
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+
+    final List<ChargeInstance> charges =
+        costComponentsForRepaymentPeriod.stream()
+            .map(entry -> mapCostComponentEntryToChargeInstance(
+                Action.DISBURSE,
+                entry,
+                designatorToAccountIdentifierMapper))
+            .filter(Optional::isPresent)
+            .map(Optional::get)
+            .collect(Collectors.toList());
+
+    accountingAdapter.bookCharges(charges,
+        command.getCommand().getNote(),
+        dataContextOfAction.getMessageForCharge(Action.DISBURSE),
+        Action.DISBURSE.getTransactionType());
 
     final CaseEntity customerCase = dataContextOfAction.getCustomerCase();
     customerCase.setCurrentState(Case.State.CLOSED.name());

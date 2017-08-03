@@ -141,11 +141,17 @@ public class IndividualLoanService {
 
     BigDecimal balance = initialBalance.setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
     final List<PlannedPayment> plannedPayments = new ArrayList<>();
-    for (final Period repaymentPeriod : sortedRepaymentPeriods)
+    for (int i = 0; i < sortedRepaymentPeriods.size(); i++)
     {
+      final Period repaymentPeriod = sortedRepaymentPeriods.get(i);
       final BigDecimal currentLoanPaymentSize;
       if (repaymentPeriod.isDefined()) {
-        currentLoanPaymentSize = loanPaymentSize;
+        // last repayment period: Force the proposed payment to "overhang". Cost component calculation
+        // corrects last loan payment downwards but not upwards.
+        if (i == sortedRepaymentPeriods.size() - 1)
+          currentLoanPaymentSize = loanPaymentSize.add(BigDecimal.valueOf(sortedRepaymentPeriods.size()));
+        else
+          currentLoanPaymentSize = loanPaymentSize;
       }
       else
         currentLoanPaymentSize = BigDecimal.ZERO;
@@ -155,7 +161,7 @@ public class IndividualLoanService {
               CostComponentService.getCostComponentsForScheduledCharges(
                   Collections.emptyMap(),
                   scheduledChargesInPeriod,
-                  balance,
+                  initialBalance,
                   balance,
                   currentLoanPaymentSize,
                   minorCurrencyUnitDigits,

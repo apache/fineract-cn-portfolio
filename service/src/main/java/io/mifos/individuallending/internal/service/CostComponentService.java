@@ -391,7 +391,7 @@ public class CostComponentService {
       final Collection<ScheduledCharge> scheduledCharges,
       final BigDecimal maximumBalance,
       final BigDecimal runningBalance,
-      final BigDecimal loanPaymentSize,
+      final BigDecimal entryAccountAdjustment, //disbursement or payment size.
       final int minorCurrencyUnitDigits,
       final boolean accrualAccounting) {
     final Map<String, BigDecimal> balanceAdjustments = new HashMap<>();
@@ -419,7 +419,7 @@ public class CostComponentService {
             scheduledCharge,
             maximumBalance,
             runningBalance,
-            loanPaymentSize,
+            entryAccountAdjustment,
             balanceAdjustments);
         //TODO: getAmountProportionalTo is programmed under the assumption of non-accrual accounting.
 

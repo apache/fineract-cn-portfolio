@@ -46,9 +46,6 @@ public interface ChargeIdentifiers {
   String REPAYMENT_ID = "repayment";
   String TRACK_RETURN_PRINCIPAL_NAME = "Track return principal";
   String TRACK_RETURN_PRINCIPAL_ID = "track-return-principal";
-  String MAXIMUM_BALANCE_DESIGNATOR = "{maximumbalance}";
-  String RUNNING_BALANCE_DESIGNATOR = "{runningbalance}";
-  String PRINCIPAL_ADJUSTMENT_DESIGNATOR = "{principaladjustment}";
 
   static String nameToIdentifier(String name) {
     return name.toLowerCase(Locale.US).replace(" ", "-");

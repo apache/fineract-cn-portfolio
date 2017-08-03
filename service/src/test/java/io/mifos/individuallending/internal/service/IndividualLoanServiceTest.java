@@ -299,8 +299,13 @@ public class IndividualLoanServiceTest {
               .map(CostComponent::getAmount)
               .reduce(BigDecimal::add)
               .orElse(BigDecimal.ZERO);
+          final BigDecimal valueOfPrincipleTrackingCostComponent = allPlannedPayments.get(x).getCostComponents().stream()
+              .filter(costComponent -> costComponent.getChargeIdentifier().equals(ChargeIdentifiers.TRACK_RETURN_PRINCIPAL_ID))
+              .map(CostComponent::getAmount)
+              .reduce(BigDecimal::add)
+              .orElse(BigDecimal.ZERO);
           final BigDecimal principalDifference = allPlannedPayments.get(x-1).getRemainingPrincipal().subtract(allPlannedPayments.get(x).getRemainingPrincipal());
-          Assert.assertEquals(costComponentSum, principalDifference);
+          Assert.assertEquals(valueOfPrincipleTrackingCostComponent, principalDifference);
           Assert.assertNotEquals("Remaining principle should always be positive or zero.",
               allPlannedPayments.get(x).getRemainingPrincipal().signum(), -1);
           return costComponentSum;
@@ -325,7 +330,8 @@ public class IndividualLoanServiceTest {
     Assert.assertTrue(maxPayment.isPresent());
     Assert.assertTrue(minPayment.isPresent());
     final double percentDifference = percentDifference(maxPayment.get(), minPayment.get());
-    Assert.assertTrue("Percent difference = " + percentDifference, percentDifference < 0.01);
+    Assert.assertTrue("Percent difference = " + percentDifference + ", max = " + maxPayment.get() + ", min = " + minPayment.get(),
+        percentDifference < 0.01);
 
     //Final balance should be zero.
     Assert.assertEquals(BigDecimal.ZERO.setScale(testCase.minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN),

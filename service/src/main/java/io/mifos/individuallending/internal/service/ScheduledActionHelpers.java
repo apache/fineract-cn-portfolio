@@ -262,4 +262,11 @@ public class ScheduledActionHelpers {
     final int maxDay = YearMonth.of(paymentDate.getYear(), paymentDate.getMonth()).lengthOfMonth()-1;
     return paymentDate.plusDays(Math.min(maxDay, alignmentDay));
   }
+
+  public static Optional<Duration> getAccrualPeriodDurationForAction(final Action action) {
+    if (action == Action.APPLY_INTEREST)
+      return Optional.of(ChronoUnit.DAYS.getDuration());
+    else
+      return Optional.empty();
+  }
 }

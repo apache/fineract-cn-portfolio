@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.service.internal.mapper;
 
+import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.service.internal.repository.ChargeDefinitionEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
@@ -71,15 +72,17 @@ public class ChargeDefinitionMapper {
     if ((chargeMethod == ChargeDefinition.ChargeMethod.FIXED) || (from.getProportionalTo() != null))
       return from.getProportionalTo();
 
-    if (identifier.equals(LOAN_FUNDS_ALLOCATION_ID))
-      return MAXIMUM_BALANCE_DESIGNATOR;
-    else if (identifier.equals(LOAN_ORIGINATION_FEE_ID))
-      return MAXIMUM_BALANCE_DESIGNATOR;
-    else if (identifier.equals(PROCESSING_FEE_ID))
-      return MAXIMUM_BALANCE_DESIGNATOR;
-    else if (identifier.equals(LATE_FEE_ID))
-      return REPAYMENT_ID;
-    else
-      return RUNNING_BALANCE_DESIGNATOR;
+    switch (identifier) {
+      case LOAN_FUNDS_ALLOCATION_ID:
+        return ChargeProportionalDesignator.MAXIMUM_BALANCE_DESIGNATOR.getValue();
+      case LOAN_ORIGINATION_FEE_ID:
+        return ChargeProportionalDesignator.MAXIMUM_BALANCE_DESIGNATOR.getValue();
+      case PROCESSING_FEE_ID:
+        return ChargeProportionalDesignator.MAXIMUM_BALANCE_DESIGNATOR.getValue();
+      case LATE_FEE_ID:
+        return ChargeProportionalDesignator.REPAYMENT_DESIGNATOR.getValue();
+      default:
+        return ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue();
+    }
   }
 }

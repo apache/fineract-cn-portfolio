@@ -85,9 +85,25 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step2CreateCase();
     step3OpenCase();
     step4ApproveCase();
-    step5DisburseFullAmount();
+    step5Disburse(BigDecimal.valueOf(2000L));
     step6CalculateInterestAccrual();
-    step7PaybackFullAmount();
+    step7PaybackPartialAmount(expectedCurrentBalance);
+    step8Close();
+  }
+
+
+  @Test
+  public void workflowWithTwoNearlyEqualRepayments() throws InterruptedException {
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase();
+    step4ApproveCase();
+    step5Disburse(BigDecimal.valueOf(2000L));
+    step6CalculateInterestAccrual();
+    final BigDecimal repayment1 = expectedCurrentBalance.divide(BigDecimal.valueOf(2), BigDecimal.ROUND_HALF_EVEN);
+    step7PaybackPartialAmount(repayment1);
+    step7PaybackPartialAmount(expectedCurrentBalance);
+    step8Close();
   }
 
   //Create product and set charges to fixed fees.
@@ -193,13 +209,14 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
-  private void step5DisburseFullAmount() throws InterruptedException {
-    logger.info("step5DisburseFullAmount");
+  private void step5Disburse(final BigDecimal amount) throws InterruptedException {
+    logger.info("step5Disburse");
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DISBURSE,
         Collections.singletonList(assignEntryToTeller()),
+        amount,
         IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE,
         Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
@@ -246,20 +263,20 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(
-        AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER,
+        customerLoanAccountIdentifier,
         calculatedInterest.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(
-        customerLoanAccountIdentifier,
+        AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER,
         calculatedInterest.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
 
     expectedCurrentBalance = expectedCurrentBalance.add(calculatedInterest);
   }
 
-  private void step7PaybackFullAmount() throws InterruptedException {
-    logger.info("step7PaybackFullAmount");
+  private void step7PaybackPartialAmount(final BigDecimal amount) throws InterruptedException {
+    logger.info("step7PaybackPartialAmount");
 
     AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
 
@@ -268,24 +285,45 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         customerCase.getIdentifier(),
         Action.ACCEPT_PAYMENT,
         Collections.singletonList(assignEntryToTeller()),
-        expectedCurrentBalance,
+        amount,
         IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE,
         Case.State.ACTIVE); //Close has to be done explicitly.
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
 
+    final BigDecimal principal = amount.subtract(interestAccrued);
+
     final Set<Debtor> debtors = new HashSet<>();
-    debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, expectedCurrentBalance.subtract(interestAccrued).toPlainString()));
-    debtors.add(new Debtor(customerLoanAccountIdentifier, expectedCurrentBalance.toPlainString()));
+    debtors.add(new Debtor(customerLoanAccountIdentifier, amount.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER, principal.toPlainString()));
+    if (interestAccrued.compareTo(BigDecimal.ZERO) != 0)
+      debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
-    creditors.add(new Creditor(AccountingFixture.CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
-    creditors.add(new Creditor(AccountingFixture.LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER, expectedCurrentBalance.subtract(interestAccrued).toPlainString()));
-    creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, expectedCurrentBalance.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, principal.toPlainString()));
+    if (interestAccrued.compareTo(BigDecimal.ZERO) != 0)
+      creditors.add(new Creditor(AccountingFixture.CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
 
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
 
-    expectedCurrentBalance = expectedCurrentBalance.subtract(expectedCurrentBalance);
+    expectedCurrentBalance = expectedCurrentBalance.subtract(amount);
+    interestAccrued = BigDecimal.ZERO;
+  }
+
+  private void step8Close() throws InterruptedException {
+    logger.info("step8Close");
+
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
+
+    checkStateTransfer(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.CLOSE,
+        Collections.singletonList(assignEntryToTeller()),
+        IndividualLoanEventConstants.CLOSE_INDIVIDUALLOAN_CASE,
+        Case.State.CLOSED); //Close has to be done explicitly.
+
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
   }
 }

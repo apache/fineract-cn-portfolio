@@ -16,7 +16,7 @@
 package io.mifos.portfolio.api.v1.validation;
 
 import io.mifos.core.lang.validation.CheckIdentifier;
-import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
+import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
@@ -36,8 +36,7 @@ public class CheckChargeReference implements ConstraintValidator<ValidChargeRefe
     if (value == null)
       return true;
 
-    if (value.equals(ChargeIdentifiers.MAXIMUM_BALANCE_DESIGNATOR) ||
-        value.equals(ChargeIdentifiers.RUNNING_BALANCE_DESIGNATOR))
+    if (ChargeProportionalDesignator.fromString(value).isPresent())
       return true;
 
     final CheckIdentifier identifierChecker = new CheckIdentifier();

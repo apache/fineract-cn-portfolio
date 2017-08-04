@@ -84,8 +84,11 @@ public class ChargeDefinitionRestController {
   {
     checkProductExists(productIdentifier);
 
+    if (instance.isReadOnly())
+      throw ServiceException.badRequest("Created charges cannot be read only.");
+
     chargeDefinitionService.findByIdentifier(productIdentifier, instance.getIdentifier())
-            .ifPresent(taskDefinition -> {throw ServiceException.conflict("Duplicate identifier: " + taskDefinition.getIdentifier());});
+        .ifPresent(taskDefinition -> {throw ServiceException.conflict("Duplicate identifier: " + taskDefinition.getIdentifier());});
 
     this.commandGateway.process(new CreateChargeDefinitionCommand(productIdentifier, instance));
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
@@ -105,7 +108,7 @@ public class ChargeDefinitionRestController {
     checkProductExists(productIdentifier);
 
     return chargeDefinitionService.findByIdentifier(productIdentifier, chargeDefinitionIdentifier).orElseThrow(
-            () -> ServiceException.notFound("No charge definition with the identifier '" + chargeDefinitionIdentifier  + "' found."));
+        () -> ServiceException.notFound("No charge definition with the identifier '" + chargeDefinitionIdentifier  + "' found."));
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
@@ -120,7 +123,7 @@ public class ChargeDefinitionRestController {
           @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier,
           @RequestBody @Valid final ChargeDefinition instance)
   {
-    checkChargeExistsInProduct(productIdentifier, chargeDefinitionIdentifier);
+    checkChargeExistsInProductAndIsNotReadOnly(productIdentifier, chargeDefinitionIdentifier);
 
     if (!chargeDefinitionIdentifier.equals(instance.getIdentifier()))
       throw ServiceException.badRequest("Instance identifiers may not be changed.");
@@ -141,17 +144,22 @@ public class ChargeDefinitionRestController {
           @PathVariable("productidentifier") final String productIdentifier,
           @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier)
   {
-    checkChargeExistsInProduct(productIdentifier, chargeDefinitionIdentifier);
+    checkChargeExistsInProductAndIsNotReadOnly(productIdentifier, chargeDefinitionIdentifier);
 
     commandGateway.process(new DeleteProductChargeDefinitionCommand(productIdentifier, chargeDefinitionIdentifier));
 
     return ResponseEntity.accepted().build();
   }
 
-  private void checkChargeExistsInProduct(final String productIdentifier,
-                                          final String chargeDefinitionIdentifier) {
-    chargeDefinitionService.findByIdentifier(productIdentifier, chargeDefinitionIdentifier).orElseThrow(
-            () -> ServiceException.notFound("No charge definition in the product " + productIdentifier + "with the identifier '" + chargeDefinitionIdentifier  + "' found."));
+  private void checkChargeExistsInProductAndIsNotReadOnly(final String productIdentifier,
+                                                          final String chargeDefinitionIdentifier) {
+    final boolean readOnly = chargeDefinitionService.findByIdentifier(productIdentifier, chargeDefinitionIdentifier)
+        .orElseThrow(() -> ServiceException.notFound("No charge definition ''{0}.{1}'' found.",
+            productIdentifier, chargeDefinitionIdentifier))
+        .isReadOnly();
+
+    if (readOnly)
+      throw ServiceException.conflict("Charge definition is read only ''{0}''", chargeDefinitionIdentifier);
   }
 
   private void checkProductExists(final String productIdentifier) {

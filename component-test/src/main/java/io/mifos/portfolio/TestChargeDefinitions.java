@@ -16,8 +16,11 @@
 package io.mifos.portfolio;
 
 import io.mifos.core.api.util.NotFoundException;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
+import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.portfolio.api.v1.client.ChargeDefinitionIsReadOnly;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
@@ -27,6 +30,7 @@ import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -40,34 +44,58 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
     final Product product = createProduct();
 
     final List<ChargeDefinition> charges = portfolioManager.getAllChargeDefinitionsForProduct(product.getIdentifier());
-    final Set<String> chargeDefinitionIdentifiers = charges.stream().map(ChargeDefinition::getIdentifier).collect(Collectors.toSet());
-    final Set<String> expectedChargeDefinitionIdentifiers = Stream.of(
+    final Map<Boolean, List<ChargeDefinition>> chargeIdentifersPartitionedByReadOnly
+        = charges.stream().collect(Collectors.partitioningBy(ChargeDefinition::isReadOnly, Collectors.toList()));
+    final Set<String> readOnlyChargeDefinitionIdentifiers
+        = chargeIdentifersPartitionedByReadOnly.get(true).stream()
+        .map(ChargeDefinition::getIdentifier)
+        .collect(Collectors.toSet());
+    final Set<String> changeableChargeDefinitionIdentifiers
+        = chargeIdentifersPartitionedByReadOnly.get(false).stream()
+        .map(ChargeDefinition::getIdentifier)
+        .collect(Collectors.toSet());
+
+    final Set<String> expectedReadOnlyChargeDefinitionIdentifiers = Stream.of(
         ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID,
-        ChargeIdentifiers.DISBURSEMENT_FEE_ID,
-        ChargeIdentifiers.INTEREST_ID,
-        ChargeIdentifiers.LATE_FEE_ID,
         ChargeIdentifiers.LOAN_FUNDS_ALLOCATION_ID,
-        ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID,
-        ChargeIdentifiers.PROCESSING_FEE_ID,
         ChargeIdentifiers.RETURN_DISBURSEMENT_ID,
         ChargeIdentifiers.DISBURSE_PAYMENT_ID,
         ChargeIdentifiers.TRACK_DISBURSAL_PAYMENT_ID,
         ChargeIdentifiers.TRACK_RETURN_PRINCIPAL_ID,
-        ChargeIdentifiers.REPAYMENT_ID
-        )
+        ChargeIdentifiers.REPAYMENT_ID)
         .collect(Collectors.toSet());
-    Assert.assertEquals(expectedChargeDefinitionIdentifiers, chargeDefinitionIdentifiers);
+    final Set<String> expectedChangeableChargeDefinitionIdentifiers = Stream.of(
+        ChargeIdentifiers.DISBURSEMENT_FEE_ID,
+        ChargeIdentifiers.INTEREST_ID,
+        ChargeIdentifiers.LATE_FEE_ID,
+        ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID,
+        ChargeIdentifiers.PROCESSING_FEE_ID)
+        .collect(Collectors.toSet());
+
+    Assert.assertEquals(expectedReadOnlyChargeDefinitionIdentifiers, readOnlyChargeDefinitionIdentifiers);
+    Assert.assertEquals(expectedChangeableChargeDefinitionIdentifiers, changeableChargeDefinitionIdentifiers);
   }
 
   @Test
   public void shouldDeleteChargeDefinition() throws InterruptedException {
     final Product product = createProduct();
 
-    final List<ChargeDefinition> charges = portfolioManager.getAllChargeDefinitionsForProduct(product.getIdentifier());
-    final ChargeDefinition chargeDefinitionToDelete = charges.get(0);
+    final ChargeDefinition chargeDefinitionToDelete = new ChargeDefinition();
+    chargeDefinitionToDelete.setAmount(BigDecimal.TEN);
+    chargeDefinitionToDelete.setIdentifier("blah");
+    chargeDefinitionToDelete.setName("blah blah");
+    chargeDefinitionToDelete.setDescription("blah blah blah");
+    chargeDefinitionToDelete.setChargeAction(Action.APPROVE.name());
+    chargeDefinitionToDelete.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+    chargeDefinitionToDelete.setToAccountDesignator(AccountDesignators.ARREARS_ALLOWANCE);
+    chargeDefinitionToDelete.setFromAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
+    portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinitionToDelete);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CHARGE_DEFINITION,
+        new ChargeDefinitionEvent(product.getIdentifier(), chargeDefinitionToDelete.getIdentifier())));
+
     portfolioManager.deleteChargeDefinition(product.getIdentifier(), chargeDefinitionToDelete.getIdentifier());
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.DELETE_PRODUCT_CHARGE_DEFINITION,
-            new ChargeDefinitionEvent(product.getIdentifier(), chargeDefinitionToDelete.getIdentifier())));
+        new ChargeDefinitionEvent(product.getIdentifier(), chargeDefinitionToDelete.getIdentifier())));
 
     try {
       portfolioManager.getChargeDefinition(product.getIdentifier(), chargeDefinitionToDelete.getIdentifier());
@@ -75,6 +103,13 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
       Assert.assertFalse(true);
     }
     catch (final NotFoundException ignored) { }
+  }
+
+  @Test(expected = ChargeDefinitionIsReadOnly.class)
+  public void shouldNotDeleteReadOnlyChargeDefinition() throws InterruptedException {
+    final Product product = createProduct();
+
+    portfolioManager.deleteChargeDefinition(product.getIdentifier(), ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID);
   }
 
   @Test
@@ -119,5 +154,32 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
         = portfolioManager.getChargeDefinition(product.getIdentifier(), interestChargeDefinition.getIdentifier());
 
     Assert.assertEquals(interestChargeDefinition, chargeDefinitionAsChanged);
+  }
+
+  @Test
+  public void shouldNotChangeDisbursalChargeDefinition() throws InterruptedException {
+    final Product product = createProduct();
+
+    final ChargeDefinition originalDisbursalChargeDefinition
+        = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.DISBURSE_PAYMENT_ID);
+
+    final ChargeDefinition disbursalChargeDefinition
+        = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.DISBURSE_PAYMENT_ID);
+    disbursalChargeDefinition.setProportionalTo(ChargeProportionalDesignator.NOT_PROPORTIONAL.getValue());
+    disbursalChargeDefinition.setReadOnly(false);
+
+    try {
+      portfolioManager.changeChargeDefinition(
+          product.getIdentifier(),
+          disbursalChargeDefinition.getIdentifier(),
+          disbursalChargeDefinition);
+      Assert.fail("Changing a readonly charge definition should fail.");
+    }
+    catch (final ChargeDefinitionIsReadOnly ignore) { }
+
+    final ChargeDefinition chargeDefinitionAsChanged
+        = portfolioManager.getChargeDefinition(product.getIdentifier(), disbursalChargeDefinition.getIdentifier());
+
+    Assert.assertEquals(originalDisbursalChargeDefinition, chargeDefinitionAsChanged);
   }
 }

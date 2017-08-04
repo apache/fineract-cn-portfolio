@@ -76,6 +76,9 @@ public class ChargeDefinitionEntity {
   @Column(name = "for_cycle_size_unit")
   private ChronoUnit forCycleSizeUnit;
 
+  @Column(name = "read_only")
+  private Boolean readOnly;
+
   public ChargeDefinitionEntity() {
   }
 
@@ -189,6 +192,14 @@ public class ChargeDefinitionEntity {
 
   public void setForCycleSizeUnit(ChronoUnit forCycleSizeUnit) {
     this.forCycleSizeUnit = forCycleSizeUnit;
+  }
+
+  public Boolean getReadOnly() {
+    return readOnly;
+  }
+
+  public void setReadOnly(Boolean readOnly) {
+    this.readOnly = readOnly;
   }
 
   @Override

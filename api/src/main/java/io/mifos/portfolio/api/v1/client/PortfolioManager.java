@@ -208,6 +208,7 @@ public interface PortfolioManager {
           produces = MediaType.ALL_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ChargeDefinitionIsReadOnly.class)
   void changeChargeDefinition(
           @PathVariable("productidentifier") final String productIdentifier,
           @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier,
@@ -219,6 +220,7 @@ public interface PortfolioManager {
           produces = MediaType.ALL_VALUE,
           consumes = MediaType.APPLICATION_JSON_VALUE
   )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ChargeDefinitionIsReadOnly.class)
   void deleteChargeDefinition(
           @PathVariable("productidentifier") final String productIdentifier,
           @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier);

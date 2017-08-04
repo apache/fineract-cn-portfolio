@@ -79,6 +79,8 @@ public class ChargeDefinition {
   @ValidPaymentCycleUnit
   private ChronoUnit forCycleSizeUnit;
 
+  private boolean readOnly;
+
   public ChargeDefinition() {
   }
 
@@ -179,45 +181,55 @@ public class ChargeDefinition {
     this.forCycleSizeUnit = forCycleSizeUnit;
   }
 
+  public boolean isReadOnly() {
+    return readOnly;
+  }
+
+  public void setReadOnly(boolean readOnly) {
+    this.readOnly = readOnly;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     ChargeDefinition that = (ChargeDefinition) o;
-    return Objects.equals(identifier, that.identifier) &&
-            Objects.equals(name, that.name) &&
-            Objects.equals(description, that.description) &&
-            Objects.equals(accrueAction, that.accrueAction) &&
-            Objects.equals(chargeAction, that.chargeAction) &&
-            Objects.equals(amount, that.amount) &&
-            chargeMethod == that.chargeMethod &&
-            Objects.equals(proportionalTo, that.proportionalTo) &&
-            Objects.equals(fromAccountDesignator, that.fromAccountDesignator) &&
-            Objects.equals(accrualAccountDesignator, that.accrualAccountDesignator) &&
-            Objects.equals(toAccountDesignator, that.toAccountDesignator) &&
-            forCycleSizeUnit == that.forCycleSizeUnit;
+    return readOnly == that.readOnly &&
+        Objects.equals(identifier, that.identifier) &&
+        Objects.equals(name, that.name) &&
+        Objects.equals(description, that.description) &&
+        Objects.equals(accrueAction, that.accrueAction) &&
+        Objects.equals(chargeAction, that.chargeAction) &&
+        Objects.equals(amount, that.amount) &&
+        chargeMethod == that.chargeMethod &&
+        Objects.equals(proportionalTo, that.proportionalTo) &&
+        Objects.equals(fromAccountDesignator, that.fromAccountDesignator) &&
+        Objects.equals(accrualAccountDesignator, that.accrualAccountDesignator) &&
+        Objects.equals(toAccountDesignator, that.toAccountDesignator) &&
+        forCycleSizeUnit == that.forCycleSizeUnit;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(identifier, name, description, accrueAction, chargeAction, amount, chargeMethod, proportionalTo, fromAccountDesignator, accrualAccountDesignator, toAccountDesignator, forCycleSizeUnit);
+    return Objects.hash(identifier, name, description, accrueAction, chargeAction, amount, chargeMethod, proportionalTo, fromAccountDesignator, accrualAccountDesignator, toAccountDesignator, forCycleSizeUnit, readOnly);
   }
 
   @Override
   public String toString() {
     return "ChargeDefinition{" +
-            "identifier='" + identifier + '\'' +
-            ", name='" + name + '\'' +
-            ", description='" + description + '\'' +
-            ", accrueAction='" + accrueAction + '\'' +
-            ", chargeAction='" + chargeAction + '\'' +
-            ", amount=" + amount +
-            ", chargeMethod=" + chargeMethod +
-            ", proportionalTo='" + proportionalTo + '\'' +
-            ", fromAccountDesignator='" + fromAccountDesignator + '\'' +
-            ", accrualAccountDesignator='" + accrualAccountDesignator + '\'' +
-            ", toAccountDesignator='" + toAccountDesignator + '\'' +
-            ", forCycleSizeUnit=" + forCycleSizeUnit +
-            '}';
+        "identifier='" + identifier + '\'' +
+        ", name='" + name + '\'' +
+        ", description='" + description + '\'' +
+        ", accrueAction='" + accrueAction + '\'' +
+        ", chargeAction='" + chargeAction + '\'' +
+        ", amount=" + amount +
+        ", chargeMethod=" + chargeMethod +
+        ", proportionalTo='" + proportionalTo + '\'' +
+        ", fromAccountDesignator='" + fromAccountDesignator + '\'' +
+        ", accrualAccountDesignator='" + accrualAccountDesignator + '\'' +
+        ", toAccountDesignator='" + toAccountDesignator + '\'' +
+        ", forCycleSizeUnit=" + forCycleSizeUnit +
+        ", readOnly=" + readOnly +
+        '}';
   }
 }

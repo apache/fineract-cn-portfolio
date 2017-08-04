@@ -125,6 +125,9 @@ public class ChargeDefinitionRestController {
   {
     checkChargeExistsInProductAndIsNotReadOnly(productIdentifier, chargeDefinitionIdentifier);
 
+    if (instance.isReadOnly())
+      throw ServiceException.badRequest("Created charges cannot be read only.");
+
     if (!chargeDefinitionIdentifier.equals(instance.getIdentifier()))
       throw ServiceException.badRequest("Instance identifiers may not be changed.");
 
@@ -159,7 +162,8 @@ public class ChargeDefinitionRestController {
         .isReadOnly();
 
     if (readOnly)
-      throw ServiceException.conflict("Charge definition is read only ''{0}''", chargeDefinitionIdentifier);
+      throw ServiceException.conflict("Charge definition is read only ''{0}.{1}''",
+          productIdentifier, chargeDefinitionIdentifier);
   }
 
   private void checkProductExists(final String productIdentifier) {

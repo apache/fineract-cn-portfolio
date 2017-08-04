@@ -128,10 +128,28 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
 
     portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinition);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CHARGE_DEFINITION,
-            new ChargeDefinitionEvent(product.getIdentifier(), chargeDefinition.getIdentifier())));
+        new ChargeDefinitionEvent(product.getIdentifier(), chargeDefinition.getIdentifier())));
 
     final ChargeDefinition chargeDefinitionAsCreated = portfolioManager.getChargeDefinition(product.getIdentifier(), chargeDefinition.getIdentifier());
     Assert.assertEquals(chargeDefinition, chargeDefinitionAsCreated);
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldNotCreateReadOnlyChargeDefinition() throws InterruptedException {
+    final Product product = createProduct();
+
+    final ChargeDefinition chargeDefinition = new ChargeDefinition();
+    chargeDefinition.setIdentifier("rando123456");
+    chargeDefinition.setName("ditto12356");
+    chargeDefinition.setFromAccountDesignator("1234-4321");
+    chargeDefinition.setToAccountDesignator("4321-1234");
+    chargeDefinition.setAmount(BigDecimal.ONE.setScale(4, BigDecimal.ROUND_UNNECESSARY));
+    chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+    chargeDefinition.setChargeAction(Action.OPEN.name());
+    chargeDefinition.setDescription("who cares what the description is?");
+    chargeDefinition.setReadOnly(true);
+
+    portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinition);
   }
 
 

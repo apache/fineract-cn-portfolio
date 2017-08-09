@@ -84,7 +84,7 @@ public class AccountingAdapter {
     journalEntry.setMessage(message);
     journalEntry.setTransactionType(transactionType);
     journalEntry.setNote(note);
-    journalEntry.setTransactionIdentifier("bastet" + RandomStringUtils.random(26, true, true));
+    journalEntry.setTransactionIdentifier("portfolio." + message + "." + RandomStringUtils.random(26, true, true));
 
     ledgerManager.createJournalEntry(journalEntry);
   }

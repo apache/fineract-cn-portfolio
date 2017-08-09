@@ -157,7 +157,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     AccountingFixture.verifyTransfer(ledgerManager,
         AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, AccountingFixture.PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER,
-        PROCESSING_FEE_AMOUNT
+        PROCESSING_FEE_AMOUNT, product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN
     );
   }
 
@@ -203,7 +203,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(pendingDisbursalAccountIdentifier, caseParameters.getMaximumBalance().toPlainString()));
     creditors.add(new Creditor(AccountingFixture.LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER, LOAN_ORIGINATION_FEE_AMOUNT.toPlainString()));
-    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
+    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE);
 
     expectedCurrentBalance = BigDecimal.ZERO;
   }
@@ -232,7 +232,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     creditors.add(new Creditor(customerLoanAccountIdentifier, caseParameters.getMaximumBalance().toPlainString()));
     creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, caseParameters.getMaximumBalance().toPlainString()));
     creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
-    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
+    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE);
 
     expectedCurrentBalance = expectedCurrentBalance.add(caseParameters.getMaximumBalance());
   }
@@ -243,7 +243,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final String beatIdentifier = "alignment0";
     final String midnightTimeStamp = DateConverter.toIsoString(LocalDateTime.now().truncatedTo(ChronoUnit.DAYS));
 
-    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
 
     final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
     portfolioBeatListener.publishBeat(interestBeat);
@@ -270,7 +270,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     creditors.add(new Creditor(
         AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER,
         calculatedInterest.toPlainString()));
-    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
+    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST);
 
     expectedCurrentBalance = expectedCurrentBalance.add(calculatedInterest);
   }
@@ -278,7 +278,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private void step7PaybackPartialAmount(final BigDecimal amount) throws InterruptedException {
     logger.info("step7PaybackPartialAmount");
 
-    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
 
     checkStateTransfer(
         product.getIdentifier(),
@@ -305,7 +305,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     if (interestAccrued.compareTo(BigDecimal.ZERO) != 0)
       creditors.add(new Creditor(AccountingFixture.CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
 
-    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors);
+    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.ACCEPT_PAYMENT);
 
     expectedCurrentBalance = expectedCurrentBalance.subtract(amount);
     interestAccrued = BigDecimal.ZERO;
@@ -314,7 +314,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private void step8Close() throws InterruptedException {
     logger.info("step8Close");
 
-    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
 
     checkStateTransfer(
         product.getIdentifier(),

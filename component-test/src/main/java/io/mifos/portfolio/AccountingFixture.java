@@ -19,6 +19,7 @@ import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.NotFoundException;
 import io.mifos.core.lang.DateConverter;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import org.hamcrest.Description;
 import org.mockito.AdditionalMatchers;
 import org.mockito.ArgumentMatcher;
@@ -335,13 +336,18 @@ class AccountingFixture {
   private static class JournalEntryMatcher extends ArgumentMatcher<JournalEntry> {
     private final Set<Debtor> debtors;
     private final Set<Creditor> creditors;
+    private final String transactionPrefix;
     private JournalEntry checkedArgument;
 
     private JournalEntryMatcher(final Set<Debtor> debtors,
-                                final Set<Creditor> creditors) {
+                                final Set<Creditor> creditors,
+                                final String productIdentifier,
+                                final String caseIdentifier,
+                                final Action action) {
       this.debtors = debtors;
       this.creditors = creditors;
       this.checkedArgument = null; //Set when matches called.
+      this.transactionPrefix = "portfolio." + productIdentifier + "." + caseIdentifier + "." + action.name();
     }
 
     @Override
@@ -354,7 +360,8 @@ class AccountingFixture {
       checkedArgument = (JournalEntry) argument;
 
       return this.debtors.equals(checkedArgument.getDebtors()) &&
-              this.creditors.equals(checkedArgument.getCreditors());
+          this.creditors.equals(checkedArgument.getCreditors()) &&
+          checkedArgument.getTransactionIdentifier().startsWith(transactionPrefix);
     }
 
     @Override
@@ -470,17 +477,24 @@ class AccountingFixture {
   static void verifyTransfer(final LedgerManager ledgerManager,
                              final String fromAccountIdentifier,
                              final String toAccountIdentifier,
-                             final BigDecimal amount) {
+                             final BigDecimal amount,
+                             final String productIdentifier,
+                             final String caseIdentifier,
+                             final Action action) {
     final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(
-            Collections.singleton(new Debtor(fromAccountIdentifier, amount.toPlainString())),
-            Collections.singleton(new Creditor(toAccountIdentifier, amount.toPlainString())));
+        Collections.singleton(new Debtor(fromAccountIdentifier, amount.toPlainString())),
+        Collections.singleton(new Creditor(toAccountIdentifier, amount.toPlainString())),
+        productIdentifier, caseIdentifier, action);
     Mockito.verify(ledgerManager).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
   }
 
   static void verifyTransfer(final LedgerManager ledgerManager,
                              final Set<Debtor> debtors,
-                             final Set<Creditor> creditors) {
-    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(debtors, creditors);
+                             final Set<Creditor> creditors,
+                             final String productIdentifier,
+                             final String caseIdentifier,
+                             final Action action) {
+    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(debtors, creditors, productIdentifier, caseIdentifier, action);
     Mockito.verify(ledgerManager).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
 
   }

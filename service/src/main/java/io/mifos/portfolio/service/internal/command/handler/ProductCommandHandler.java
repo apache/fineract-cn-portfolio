@@ -145,11 +145,18 @@ public class ProductCommandHandler {
               .map(ChargeDefinitionMapper::map)
               .collect(Collectors.toList());
 
-      if (!AccountingAdapter.accountAssignmentsCoverChargeDefinitions(accountAssignments, chargeDefinitions))
-        throw ServiceException.conflict("Not ready to enable product '" + changeEnablingOfProductCommand.getProductIdentifier() + "'. One or more of the charge definitions contains a designator for which no account assignment exists.");
+      final Set<String> accountAssignmentsRequiredButNotProvided
+          = AccountingAdapter.accountAssignmentsRequiredButNotProvided(accountAssignments, chargeDefinitions);
+      if (!accountAssignmentsRequiredButNotProvided.isEmpty())
+        throw ServiceException.conflict("Not ready to enable product ''{0}''. One or more of the charge definitions " +
+            "contains a designator for which no account assignment exists. Here are the unassigned designators ''{1}''",
+            changeEnablingOfProductCommand.getProductIdentifier(), accountAssignmentsRequiredButNotProvided);
 
-      if (!accountingAdapter.accountAssignmentsRepresentRealAccounts(accountAssignments))
-        throw ServiceException.conflict("Not ready to enable product '" + changeEnablingOfProductCommand.getProductIdentifier() + "'. One or more of the account assignments points to an account or ledger which does not exist.");
+      final Set<String> accountAssignmentsMappedToNonexistentAccounts = accountingAdapter.accountAssignmentsMappedToNonexistentAccounts(accountAssignments);
+      if (!accountAssignmentsMappedToNonexistentAccounts.isEmpty())
+        throw ServiceException.conflict("Not ready to enable product ''{0}''. The following account assignments point " +
+            "to an account or ledger which does not exist ''{1}''.", changeEnablingOfProductCommand.getProductIdentifier(),
+            accountAssignmentsMappedToNonexistentAccounts);
     }
 
     productEntity.setEnabled(changeEnablingOfProductCommand.getEnabled());

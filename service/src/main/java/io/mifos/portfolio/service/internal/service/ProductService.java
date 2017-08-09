@@ -115,7 +115,7 @@ public class ProductService {
     final Product product = maybeProduct.get();
     final Set<AccountAssignment> accountAssignments = product.getAccountAssignments();
     final List<ChargeDefinition> chargeDefinitions = chargeDefinitionService.findAllEntities(identifier);
-    return AccountingAdapter.accountAssignmentsCoverChargeDefinitions(accountAssignments, chargeDefinitions);
+    return AccountingAdapter.accountAssignmentsRequiredButNotProvided(accountAssignments, chargeDefinitions).isEmpty();
   }
 
   public Set<AccountAssignment> getIncompleteAccountAssignments(final String identifier) {

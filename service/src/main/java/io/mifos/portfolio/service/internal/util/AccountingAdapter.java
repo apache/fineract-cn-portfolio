@@ -84,7 +84,7 @@ public class AccountingAdapter {
     journalEntry.setMessage(message);
     journalEntry.setTransactionType(transactionType);
     journalEntry.setNote(note);
-    journalEntry.setTransactionIdentifier("bastet" + RandomStringUtils.random(26, true, true));
+    journalEntry.setTransactionIdentifier("portfolio." + message + "." + RandomStringUtils.random(26, true, true));
 
     ledgerManager.createJournalEntry(journalEntry);
   }
@@ -192,14 +192,18 @@ public class AccountingAdapter {
   }
 
 
-  public static boolean accountAssignmentsCoverChargeDefinitions(
+  public static Set<String> accountAssignmentsRequiredButNotProvided(
           final Set<AccountAssignment> accountAssignments,
           final List<ChargeDefinition> chargeDefinitionEntities) {
     final Set<String> allAccountDesignatorsRequired = getRequiredAccountDesignators(chargeDefinitionEntities);
     final Set<String> allAccountDesignatorsDefined = accountAssignments.stream().map(AccountAssignment::getDesignator)
             .collect(Collectors.toSet());
-    return allAccountDesignatorsDefined.containsAll(allAccountDesignatorsRequired);
-
+    if (allAccountDesignatorsDefined.containsAll(allAccountDesignatorsRequired))
+      return Collections.emptySet();
+    else {
+      allAccountDesignatorsRequired.removeAll(allAccountDesignatorsDefined);
+      return allAccountDesignatorsRequired;
+    }
   }
 
   public static Set<String> getRequiredAccountDesignators(final Collection<ChargeDefinition> chargeDefinitionEntities) {
@@ -224,9 +228,12 @@ public class AccountingAdapter {
       retBuilder.add(accountDesignator);
   }
 
-  public boolean accountAssignmentsRepresentRealAccounts(final Set<AccountAssignment> accountAssignments)
+  public Set<String> accountAssignmentsMappedToNonexistentAccounts(final Set<AccountAssignment> accountAssignments)
   {
-    return accountAssignments.stream().allMatch(this::accountAssignmentRepresentsRealAccount);
+    return accountAssignments.stream()
+        .filter(x -> !accountAssignmentRepresentsRealAccount(x))
+        .map(AccountAssignment::getDesignator)
+        .collect(Collectors.toSet());
   }
 
   public boolean accountAssignmentRepresentsRealAccount(final AccountAssignment accountAssignment) {

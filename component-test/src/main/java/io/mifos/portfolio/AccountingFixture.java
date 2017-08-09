@@ -19,6 +19,7 @@ import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.NotFoundException;
 import io.mifos.core.lang.DateConverter;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import org.hamcrest.Description;
 import org.mockito.AdditionalMatchers;
 import org.mockito.ArgumentMatcher;
@@ -59,10 +60,10 @@ class AccountingFixture {
   static final String TELLER_ONE_ACCOUNT_IDENTIFIER = "7352";
   static final String LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER = "7810";
   static final String CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER = "1103";
-  static final String LOANS_PAYABLE_ACCOUNT_IDENTIFIER ="missingInChartOfAccounts";
-  static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "001-008"; //TODO: ??
-  static final String LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER = "001-009"; //TODO: ??
-  static final String ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER = "001-010"; //TODO: ??
+  static final String LOANS_PAYABLE_ACCOUNT_IDENTIFIER ="8530";
+  static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "1311";
+  static final String LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER = "7840";
+  static final String ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER = "3010";
 
   static final Map<String, AccountData> accountMap = new HashMap<>();
 
@@ -228,7 +229,7 @@ class AccountingFixture {
   private static Account lateFeeIncomeAccount() {
     final Account ret = new Account();
     ret.setIdentifier(LATE_FEE_INCOME_ACCOUNT_IDENTIFIER);
-    //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER); //TODO: ??
+    ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.LIABILITY.name()); //TODO: ??
     return ret;
   }
@@ -236,7 +237,7 @@ class AccountingFixture {
   private static Account lateFeeAccrualAccount() {
     final Account ret = new Account();
     ret.setIdentifier(LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER);
-    //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER); //TODO: ??
+    ret.setLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.LIABILITY.name()); //TODO: ??
     return ret;
   }
@@ -335,13 +336,18 @@ class AccountingFixture {
   private static class JournalEntryMatcher extends ArgumentMatcher<JournalEntry> {
     private final Set<Debtor> debtors;
     private final Set<Creditor> creditors;
+    private final String transactionPrefix;
     private JournalEntry checkedArgument;
 
     private JournalEntryMatcher(final Set<Debtor> debtors,
-                                final Set<Creditor> creditors) {
+                                final Set<Creditor> creditors,
+                                final String productIdentifier,
+                                final String caseIdentifier,
+                                final Action action) {
       this.debtors = debtors;
       this.creditors = creditors;
       this.checkedArgument = null; //Set when matches called.
+      this.transactionPrefix = "portfolio." + productIdentifier + "." + caseIdentifier + "." + action.name();
     }
 
     @Override
@@ -354,7 +360,8 @@ class AccountingFixture {
       checkedArgument = (JournalEntry) argument;
 
       return this.debtors.equals(checkedArgument.getDebtors()) &&
-              this.creditors.equals(checkedArgument.getCreditors());
+          this.creditors.equals(checkedArgument.getCreditors()) &&
+          checkedArgument.getTransactionIdentifier().startsWith(transactionPrefix);
     }
 
     @Override
@@ -470,17 +477,24 @@ class AccountingFixture {
   static void verifyTransfer(final LedgerManager ledgerManager,
                              final String fromAccountIdentifier,
                              final String toAccountIdentifier,
-                             final BigDecimal amount) {
+                             final BigDecimal amount,
+                             final String productIdentifier,
+                             final String caseIdentifier,
+                             final Action action) {
     final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(
-            Collections.singleton(new Debtor(fromAccountIdentifier, amount.toPlainString())),
-            Collections.singleton(new Creditor(toAccountIdentifier, amount.toPlainString())));
+        Collections.singleton(new Debtor(fromAccountIdentifier, amount.toPlainString())),
+        Collections.singleton(new Creditor(toAccountIdentifier, amount.toPlainString())),
+        productIdentifier, caseIdentifier, action);
     Mockito.verify(ledgerManager).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
   }
 
   static void verifyTransfer(final LedgerManager ledgerManager,
                              final Set<Debtor> debtors,
-                             final Set<Creditor> creditors) {
-    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(debtors, creditors);
+                             final Set<Creditor> creditors,
+                             final String productIdentifier,
+                             final String caseIdentifier,
+                             final Action action) {
+    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(debtors, creditors, productIdentifier, caseIdentifier, action);
     Mockito.verify(ledgerManager).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
 
   }

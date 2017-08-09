@@ -59,10 +59,10 @@ class AccountingFixture {
   static final String TELLER_ONE_ACCOUNT_IDENTIFIER = "7352";
   static final String LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER = "7810";
   static final String CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER = "1103";
-  static final String LOANS_PAYABLE_ACCOUNT_IDENTIFIER ="missingInChartOfAccounts";
-  static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "001-008"; //TODO: ??
-  static final String LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER = "001-009"; //TODO: ??
-  static final String ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER = "001-010"; //TODO: ??
+  static final String LOANS_PAYABLE_ACCOUNT_IDENTIFIER ="8530";
+  static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "1311";
+  static final String LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER = "7840";
+  static final String ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER = "3010";
 
   static final Map<String, AccountData> accountMap = new HashMap<>();
 
@@ -228,7 +228,7 @@ class AccountingFixture {
   private static Account lateFeeIncomeAccount() {
     final Account ret = new Account();
     ret.setIdentifier(LATE_FEE_INCOME_ACCOUNT_IDENTIFIER);
-    //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER); //TODO: ??
+    ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.LIABILITY.name()); //TODO: ??
     return ret;
   }
@@ -236,7 +236,7 @@ class AccountingFixture {
   private static Account lateFeeAccrualAccount() {
     final Account ret = new Account();
     ret.setIdentifier(LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER);
-    //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER); //TODO: ??
+    ret.setLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.LIABILITY.name()); //TODO: ??
     return ret;
   }

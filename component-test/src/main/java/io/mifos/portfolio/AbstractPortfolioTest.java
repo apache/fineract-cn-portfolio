@@ -242,8 +242,16 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   void checkCostComponentForActionCorrect(final String productIdentifier,
                                           final String customerCaseIdentifier,
                                           final Action action,
+                                          final Set<String> accountDesignators,
+                                          final BigDecimal amount,
                                           final CostComponent... expectedCostComponents) {
-    final List<CostComponent> costComponents = portfolioManager.getCostComponentsForAction(productIdentifier, customerCaseIdentifier, action.name());
+    final List<CostComponent> costComponents = portfolioManager.getCostComponentsForAction(
+        productIdentifier,
+        customerCaseIdentifier,
+        action.name(),
+        accountDesignators,
+        amount
+    );
     final Set<CostComponent> setOfCostComponents = new HashSet<>(costComponents);
     final Set<CostComponent> setOfExpectedCostComponents = new HashSet<>(Arrays.asList(expectedCostComponents));
     Assert.assertEquals(setOfExpectedCostComponents, setOfCostComponents);

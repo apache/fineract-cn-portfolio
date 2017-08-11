@@ -99,6 +99,12 @@ public class ProductService {
     return sortColumn;
   }
 
+  public boolean existsByIdentifier(final String identifier)
+  {
+    //TODO: replace with existsBy once we've upgraded to spring data 1.11 or later.
+    return productRepository.findByIdentifier(identifier).isPresent();
+  }
+
   public Optional<Product> findByIdentifier(final String identifier)
   {
     return productRepository.findByIdentifier(identifier).map(ProductMapper::map);

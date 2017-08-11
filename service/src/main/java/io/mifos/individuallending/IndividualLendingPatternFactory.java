@@ -15,6 +15,7 @@
  */
 package io.mifos.individuallending;
 
+import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
@@ -324,21 +325,38 @@ public class IndividualLendingPatternFactory implements PatternFactory {
 
   @Override
   public List<CostComponent> getCostComponentsForAction(
-          final String productIdentifier,
-          final String caseIdentifier,
-          final String actionIdentifier) {
+      final String productIdentifier,
+      final String caseIdentifier,
+      final String actionIdentifier,
+      final Set<String> forAccountDesignators,
+      final BigDecimal forPaymentSize) {
     final Action action = Action.valueOf(actionIdentifier);
     final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, Collections.emptyList());
     final Case.State caseState = Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState());
     checkActionCanBeExecuted(caseState, action);
 
-    return costComponentService.getCostComponentsForAction(action, dataContextOfAction)
+    return costComponentService.getCostComponentsForAction(action, dataContextOfAction, forPaymentSize)
         .stream()
+        .filter(costComponentEntry -> chargeReferencesAccountDesignators(costComponentEntry.getKey(), action, forAccountDesignators))
         .map(costComponentEntry -> new CostComponent(costComponentEntry.getKey().getIdentifier(), costComponentEntry.getValue().getAmount()))
         .collect(Collectors.toList())
             .stream()
             .map(x -> new CostComponent(x.getChargeIdentifier(), x.getAmount()))
             .collect(Collectors.toList());
+  }
+
+  private boolean chargeReferencesAccountDesignators(
+      final ChargeDefinition chargeDefinition,
+      final Action action,
+      final Set<String> forAccountDesignators) {
+    final Set<String> accountsToCompare = Sets.newHashSet(
+        chargeDefinition.getFromAccountDesignator(),
+        chargeDefinition.getToAccountDesignator()
+    );
+    if (chargeDefinition.getAccrualAccountDesignator() != null)
+      accountsToCompare.add(chargeDefinition.getAccrualAccountDesignator());
+
+    return !Sets.intersection(accountsToCompare, forAccountDesignators).isEmpty();
   }
 
   public static void checkActionCanBeExecuted(final Case.State state, final Action action) {

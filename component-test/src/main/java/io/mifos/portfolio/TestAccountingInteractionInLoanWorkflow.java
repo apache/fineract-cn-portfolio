@@ -22,6 +22,7 @@ import io.mifos.accounting.api.v1.domain.Debtor;
 import io.mifos.core.api.util.ApiFactory;
 import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
@@ -37,8 +38,10 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -63,7 +66,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private String customerLoanAccountIdentifier = null;
 
   private BigDecimal expectedCurrentBalance = null;
-  private BigDecimal interestAccrued = BigDecimal.ZERO;
+  private BigDecimal interestAccrued = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
 
 
   @Before
@@ -85,12 +88,11 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step2CreateCase();
     step3OpenCase();
     step4ApproveCase();
-    step5Disburse(BigDecimal.valueOf(2000L));
+    step5Disburse(BigDecimal.valueOf(2000L).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
     step6CalculateInterestAccrual();
     step7PaybackPartialAmount(expectedCurrentBalance);
     step8Close();
   }
-
 
   @Test
   public void workflowWithTwoNearlyEqualRepayments() throws InterruptedException {
@@ -98,12 +100,21 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step2CreateCase();
     step3OpenCase();
     step4ApproveCase();
-    step5Disburse(BigDecimal.valueOf(2000L));
+    step5Disburse(BigDecimal.valueOf(2000L).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
     step6CalculateInterestAccrual();
     final BigDecimal repayment1 = expectedCurrentBalance.divide(BigDecimal.valueOf(2), BigDecimal.ROUND_HALF_EVEN);
-    step7PaybackPartialAmount(repayment1);
+    step7PaybackPartialAmount(repayment1.setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
     step7PaybackPartialAmount(expectedCurrentBalance);
     step8Close();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void workflowWithNegativePaymentSize() throws InterruptedException {
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase();
+    step4ApproveCase();
+    step5Disburse(BigDecimal.valueOf(-2).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
   }
 
   //Create product and set charges to fixed fees.
@@ -136,13 +147,18 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     customerCase = createAdjustedCase(product.getIdentifier(), x -> x.setParameters(caseParametersAsString));
 
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN);
-    checkCostComponentForActionCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN,
-        new CostComponent(ChargeIdentifiers.PROCESSING_FEE_ID, PROCESSING_FEE_AMOUNT));
   }
 
   //Open the case and accept a processing fee.
   private void step3OpenCase() throws InterruptedException {
     logger.info("step3OpenCase");
+    checkCostComponentForActionCorrect(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.OPEN,
+        Collections.singleton(AccountDesignators.ENTRY),
+        null,
+        new CostComponent(ChargeIdentifiers.PROCESSING_FEE_ID, PROCESSING_FEE_AMOUNT));
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -151,9 +167,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, Action.DENY);
-    checkCostComponentForActionCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE,
-        new CostComponent(ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID, LOAN_ORIGINATION_FEE_AMOUNT),
-        new CostComponent(ChargeIdentifiers.LOAN_FUNDS_ALLOCATION_ID, caseParameters.getMaximumBalance().setScale(product.getMinorCurrencyUnitDigits(), BigDecimal.ROUND_UNNECESSARY)));
 
     AccountingFixture.verifyTransfer(ledgerManager,
         AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, AccountingFixture.PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER,
@@ -165,6 +178,12 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   //Deny the case. Once this is done, no more actions are possible for the case.
   private void step4DenyCase() throws InterruptedException {
     logger.info("step4DenyCase");
+    checkCostComponentForActionCorrect(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.DENY,
+        Collections.singleton(AccountDesignators.ENTRY),
+        null);
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -182,6 +201,13 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     markTaskExecuted(product, customerCase, taskDefinition);
 
+    checkCostComponentForActionCorrect(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.APPROVE,
+        Collections.singleton(AccountDesignators.ENTRY),
+        null,
+        new CostComponent(ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID, LOAN_ORIGINATION_FEE_AMOUNT));
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -211,6 +237,13 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
   private void step5Disburse(final BigDecimal amount) throws InterruptedException {
     logger.info("step5Disburse");
+    checkCostComponentForActionCorrect(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.DISBURSE,
+        Collections.singleton(AccountDesignators.ENTRY),
+        amount, new CostComponent(ChargeIdentifiers.DISBURSEMENT_FEE_ID, DISBURSEMENT_FEE_AMOUNT),
+        new CostComponent(ChargeIdentifiers.DISBURSE_PAYMENT_ID, amount));
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -224,17 +257,17 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
 
     final Set<Debtor> debtors = new HashSet<>();
-    debtors.add(new Debtor(pendingDisbursalAccountIdentifier, caseParameters.getMaximumBalance().toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, caseParameters.getMaximumBalance().toPlainString()));
+    debtors.add(new Debtor(pendingDisbursalAccountIdentifier, amount.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
     debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
-    creditors.add(new Creditor(customerLoanAccountIdentifier, caseParameters.getMaximumBalance().toPlainString()));
-    creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, caseParameters.getMaximumBalance().toPlainString()));
+    creditors.add(new Creditor(customerLoanAccountIdentifier, amount.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
     creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE);
 
-    expectedCurrentBalance = expectedCurrentBalance.add(caseParameters.getMaximumBalance());
+    expectedCurrentBalance = expectedCurrentBalance.add(amount);
   }
 
   //Perform daily interest calculation.
@@ -245,6 +278,16 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
 
+    final BigDecimal calculatedInterest = expectedCurrentBalance.multiply(Fixture.INTEREST_RATE.divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN))
+        .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
+
+    checkCostComponentForActionCorrect(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.APPLY_INTEREST,
+        Collections.singleton(AccountDesignators.CUSTOMER_LOAN),
+        null,
+        new CostComponent(ChargeIdentifiers.INTEREST_ID, calculatedInterest));
     final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
     portfolioBeatListener.publishBeat(interestBeat);
     Assert.assertTrue(this.eventRecorder.wait(io.mifos.rhythm.spi.v1.events.EventConstants.POST_PUBLISHEDBEAT,
@@ -253,11 +296,10 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.APPLY_INTEREST_INDIVIDUALLOAN_CASE,
         new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier())));
 
+
     final Case customerCaseAfterStateChange = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
     Assert.assertEquals(customerCaseAfterStateChange.getCurrentState(), Case.State.ACTIVE.name());
 
-    final BigDecimal calculatedInterest = caseParameters.getMaximumBalance().multiply(Fixture.INTEREST_RATE.divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN))
-        .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
 
     interestAccrued = interestAccrued.add(calculatedInterest);
 
@@ -276,10 +318,21 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   private void step7PaybackPartialAmount(final BigDecimal amount) throws InterruptedException {
-    logger.info("step7PaybackPartialAmount");
+    logger.info("step7PaybackPartialAmount '{}'", amount);
 
     AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
 
+    final BigDecimal principal = amount.subtract(interestAccrued);
+
+    checkCostComponentForActionCorrect(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.ACCEPT_PAYMENT,
+        new HashSet<>(Arrays.asList(AccountDesignators.ENTRY, AccountDesignators.CUSTOMER_LOAN, AccountDesignators.LOAN_FUNDS_SOURCE)),
+        amount,
+        new CostComponent(ChargeIdentifiers.REPAYMENT_ID, amount),
+        new CostComponent(ChargeIdentifiers.TRACK_RETURN_PRINCIPAL_ID, principal),
+        new CostComponent(ChargeIdentifiers.INTEREST_ID, interestAccrued));
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -290,8 +343,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Case.State.ACTIVE); //Close has to be done explicitly.
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
-
-    final BigDecimal principal = amount.subtract(interestAccrued);
 
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(customerLoanAccountIdentifier, amount.toPlainString()));
@@ -308,7 +359,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.ACCEPT_PAYMENT);
 
     expectedCurrentBalance = expectedCurrentBalance.subtract(amount);
-    interestAccrued = BigDecimal.ZERO;
+    interestAccrued = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
   }
 
   private void step8Close() throws InterruptedException {
@@ -316,6 +367,12 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
 
+    checkCostComponentForActionCorrect(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.CLOSE,
+        Collections.singleton(AccountDesignators.ENTRY),
+        null);
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),

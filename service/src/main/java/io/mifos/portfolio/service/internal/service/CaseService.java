@@ -34,6 +34,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -126,11 +127,22 @@ public class CaseService {
     return caseRepository.existsByProductIdentifier(productIdentifier);
   }
 
+  public boolean existsByIdentifier(final String productIdentifier,
+                                    final String caseIdentifier) {
+    return this.findByIdentifier(productIdentifier, caseIdentifier).isPresent();
+  }
+
   public List<CostComponent> getActionCostComponentsForCase(final String productIdentifier,
                                                             final String caseIdentifier,
-                                                            final String actionIdentifier) {
-    return getPatternFactoryOrThrow(productIdentifier)
-            .getCostComponentsForAction(productIdentifier, caseIdentifier, actionIdentifier);
+                                                            final String actionIdentifier,
+                                                            final Set<String> forAccountDesignatorsList,
+                                                            final BigDecimal forPaymentSize) {
+    return getPatternFactoryOrThrow(productIdentifier).getCostComponentsForAction(
+        productIdentifier,
+        caseIdentifier,
+        actionIdentifier,
+        forAccountDesignatorsList,
+        forPaymentSize);
   }
 
   private int getMinorCurrencyUnitDigits(final String productIdentifier) {

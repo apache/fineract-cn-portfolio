@@ -38,6 +38,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -189,11 +190,17 @@ public class CaseRestController {
   @ResponseBody
   List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
                                                  @PathVariable("caseidentifier") final String caseIdentifier,
-                                                 @PathVariable("actionidentifier") final String actionIdentifier)
+                                                 @PathVariable("actionidentifier") final String actionIdentifier,
+                                                 @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators,
+                                                 @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize)
   {
     checkThatCaseExists(productIdentifier, caseIdentifier);
 
-    return caseService.getActionCostComponentsForCase(productIdentifier, caseIdentifier, actionIdentifier);
+    if (forPaymentSize != null && forPaymentSize.compareTo(BigDecimal.ZERO) < 0)
+      throw ServiceException.badRequest("forpaymentsize can''t be negative.");
+
+
+    return caseService.getActionCostComponentsForCase(productIdentifier, caseIdentifier, actionIdentifier, forAccountDesignators, forPaymentSize);
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)
@@ -226,16 +233,16 @@ public class CaseRestController {
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
   }
 
-  private Case checkThatCaseExists(final String productIdentifier, final String caseIdentifier) {
+  private void checkThatCaseExists(final String productIdentifier, final String caseIdentifier) {
     checkThatProductExists(productIdentifier);
 
-    return caseService.findByIdentifier(productIdentifier, caseIdentifier)
-            .orElseThrow(() -> ServiceException.notFound("Case with identifier " + productIdentifier + "." + caseIdentifier + " doesn't exist."));
+    if (!caseService.existsByIdentifier(productIdentifier, caseIdentifier))
+      throw ServiceException.notFound("Case with identifier ''{0}.{1}'' doesn''t exist.", productIdentifier, caseIdentifier);
   }
 
   private void checkThatProductExists(final String productIdentifier) {
-    productService.findByIdentifier(productIdentifier)
-            .orElseThrow(() -> ServiceException.notFound("Product with identifier " + productIdentifier + " doesn't exist."));
+    if (!productService.existsByIdentifier(productIdentifier))
+      throw ServiceException.notFound("Product with identifier ''{0}'' doesn''t exist.", productIdentifier);
   }
 
   //TODO: check that case parameters are within product parameters in put and post.

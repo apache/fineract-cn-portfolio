@@ -98,7 +98,8 @@ public class CostComponentService {
 
   public CostComponentsForRepaymentPeriod getCostComponentsForAction(
       final Action action,
-      final DataContextOfAction dataContextOfAction) {
+      final DataContextOfAction dataContextOfAction,
+      final BigDecimal forPaymentSize) {
     switch (action) {
       case OPEN:
         return getCostComponentsForOpen(dataContextOfAction);
@@ -107,11 +108,11 @@ public class CostComponentService {
       case DENY:
         return getCostComponentsForDeny(dataContextOfAction);
       case DISBURSE:
-        return getCostComponentsForDisburse(dataContextOfAction, dataContextOfAction.getCaseParameters().getMaximumBalance());
+        return getCostComponentsForDisburse(dataContextOfAction, forPaymentSize);
       case APPLY_INTEREST:
         return getCostComponentsForApplyInterest(dataContextOfAction);
       case ACCEPT_PAYMENT:
-        return getCostComponentsForAcceptPayment(dataContextOfAction, null);
+        return getCostComponentsForAcceptPayment(dataContextOfAction, forPaymentSize);
       case CLOSE:
         return getCostComponentsForClose(dataContextOfAction);
       case MARK_LATE:
@@ -182,13 +183,14 @@ public class CostComponentService {
 
   public CostComponentsForRepaymentPeriod getCostComponentsForDisburse(
       final @Nonnull DataContextOfAction dataContextOfAction,
-      final @Nonnull BigDecimal requestedDisbursalSize) {
+      final @Nullable BigDecimal requestedDisbursalSize) {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
     final BigDecimal currentBalance = accountingAdapter.getCurrentBalance(customerLoanAccountIdentifier).negate();
 
-    if (dataContextOfAction.getCaseParameters().getMaximumBalance().compareTo(
+    if (requestedDisbursalSize != null &&
+        dataContextOfAction.getCaseParameters().getMaximumBalance().compareTo(
         currentBalance.add(requestedDisbursalSize)) < 0)
       throw ServiceException.conflict("Cannot disburse over the maximum balance.");
 
@@ -200,7 +202,11 @@ public class CostComponentService {
     final int minorCurrencyUnitDigits = dataContextOfAction.getProduct().getMinorCurrencyUnitDigits();
     final List<ScheduledAction> scheduledActions = Collections.singletonList(new ScheduledAction(Action.DISBURSE, today()));
 
-    final BigDecimal disbursalSize = requestedDisbursalSize.negate();
+    final BigDecimal disbursalSize;
+    if (requestedDisbursalSize == null)
+      disbursalSize = dataContextOfAction.getCaseParameters().getMaximumBalance().negate();
+    else
+      disbursalSize = requestedDisbursalSize.negate();
 
     final List<ScheduledCharge> scheduledCharges = individualLoanService.getScheduledCharges(
         productIdentifier, scheduledActions);
@@ -329,12 +335,12 @@ public class CostComponentService {
         true);
   }
 
-  private static boolean isAccruedChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
+  public static boolean isAccruedChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
     return chargeDefinition.getAccrueAction() != null &&
         chargeDefinition.getChargeAction().equals(action.name());
   }
 
-  private static boolean isAccrualChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
+  public static boolean isAccrualChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
     return chargeDefinition.getAccrueAction() != null &&
         chargeDefinition.getAccrueAction().equals(action.name());
   }
@@ -605,4 +611,5 @@ public class CostComponentService {
   private static LocalDate today() {
     return LocalDate.now(Clock.systemUTC());
   }
+
 }

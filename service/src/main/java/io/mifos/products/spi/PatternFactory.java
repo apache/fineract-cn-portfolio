@@ -21,6 +21,7 @@ import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -35,6 +36,11 @@ public interface PatternFactory {
   void changeParameters(Long caseId, String parameters);
   Optional<String> getParameters(Long caseId, int minorCurrencyUnitDigits);
   Set<String> getNextActionsForState(Case.State state);
-  List<CostComponent> getCostComponentsForAction(String productIdentifier, String caseIdentifier, String actionIdentifier);
+  List<CostComponent> getCostComponentsForAction(
+      String productIdentifier,
+      String caseIdentifier,
+      String actionIdentifier,
+      Set<String> forAccountDesignators,
+      BigDecimal forPaymentSize);
   ProductCommandDispatcher getIndividualLendingCommandDispatcher();
 }

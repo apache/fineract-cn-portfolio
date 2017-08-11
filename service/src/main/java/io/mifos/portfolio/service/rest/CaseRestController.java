@@ -38,6 +38,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -189,11 +190,13 @@ public class CaseRestController {
   @ResponseBody
   List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
                                                  @PathVariable("caseidentifier") final String caseIdentifier,
-                                                 @PathVariable("actionidentifier") final String actionIdentifier)
+                                                 @PathVariable("actionidentifier") final String actionIdentifier,
+                                                 @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators,
+                                                 @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize)
   {
     checkThatCaseExists(productIdentifier, caseIdentifier);
 
-    return caseService.getActionCostComponentsForCase(productIdentifier, caseIdentifier, actionIdentifier);
+    return caseService.getActionCostComponentsForCase(productIdentifier, caseIdentifier, actionIdentifier, forAccountDesignators, forPaymentSize);
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)

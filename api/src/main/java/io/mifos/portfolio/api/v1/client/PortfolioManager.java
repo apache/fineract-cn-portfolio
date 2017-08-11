@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 
@@ -273,6 +274,7 @@ public interface PortfolioManager {
   Set<String> getActionsForCase(@PathVariable("productidentifier") final String productIdentifier,
                                 @PathVariable("caseidentifier") final String caseIdentifier);
 
+
   @RequestMapping(
       value = "/products/{productidentifier}/cases/{caseidentifier}/actions/{actionidentifier}/costcomponents",
       method = RequestMethod.GET,
@@ -282,7 +284,21 @@ public interface PortfolioManager {
   List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
                                                  @PathVariable("caseidentifier") final String caseIdentifier,
                                                  @PathVariable("actionidentifier") final String actionIdentifier,
-                                                 @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final String forAccountDesignators);
+                                                 @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators,
+                                                 @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize);
+
+
+  @RequestMapping(
+      value = "/products/{productidentifier}/cases/{caseidentifier}/actions/{actionidentifier}/costcomponents",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
+                                                 @PathVariable("caseidentifier") final String caseIdentifier,
+                                                 @PathVariable("actionidentifier") final String actionIdentifier,
+                                                 @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators);
+
 
   @RequestMapping(
       value = "/products/{productidentifier}/cases/{caseidentifier}/actions/{actionidentifier}/costcomponents",

@@ -16,6 +16,7 @@
 package io.mifos.portfolio;
 
 import com.google.gson.Gson;
+import io.mifos.core.api.util.NotFoundException;
 import io.mifos.core.test.domain.TimeStampChecker;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessFactor;
@@ -44,6 +45,22 @@ import static io.mifos.individuallending.api.v1.domain.product.AccountDesignator
 public class TestCases extends AbstractPortfolioTest {
 
   public TestCases() { }
+
+  @Test
+  public void shouldFailToCreateCaseForNonexistentProduct() throws InterruptedException {
+    try {
+      final String productIdentifier = "nonexistantProduct";
+      final Case caseInstance = Fixture.getTestCase(productIdentifier);
+
+      portfolioManager.createCase(productIdentifier, caseInstance);
+      Assert.fail("Should fail because product doesn't exist.");
+
+      portfolioManager.getCase(productIdentifier, caseInstance.getIdentifier());
+      Assert.fail("Should fail because product doesn't exist.");
+    }
+    catch (final NotFoundException ignored) {
+    }
+  }
 
   @Test
   public void shouldCreateCase() throws InterruptedException {

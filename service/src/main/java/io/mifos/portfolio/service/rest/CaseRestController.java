@@ -226,16 +226,16 @@ public class CaseRestController {
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
   }
 
-  private Case checkThatCaseExists(final String productIdentifier, final String caseIdentifier) {
+  private void checkThatCaseExists(final String productIdentifier, final String caseIdentifier) {
     checkThatProductExists(productIdentifier);
 
-    return caseService.findByIdentifier(productIdentifier, caseIdentifier)
-            .orElseThrow(() -> ServiceException.notFound("Case with identifier " + productIdentifier + "." + caseIdentifier + " doesn't exist."));
+    if (!caseService.existsByIdentifier(productIdentifier, caseIdentifier))
+      throw ServiceException.notFound("Case with identifier ''{0}.{1}'' doesn''t exist.", productIdentifier, caseIdentifier);
   }
 
   private void checkThatProductExists(final String productIdentifier) {
-    productService.findByIdentifier(productIdentifier)
-            .orElseThrow(() -> ServiceException.notFound("Product with identifier " + productIdentifier + " doesn't exist."));
+    if (!productService.existsByIdentifier(productIdentifier))
+      throw ServiceException.notFound("Product with identifier ''{0}'' doesn''t exist.", productIdentifier);
   }
 
   //TODO: check that case parameters are within product parameters in put and post.

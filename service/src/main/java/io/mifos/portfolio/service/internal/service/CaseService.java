@@ -126,6 +126,11 @@ public class CaseService {
     return caseRepository.existsByProductIdentifier(productIdentifier);
   }
 
+  public boolean existsByIdentifier(final String productIdentifier,
+                                    final String caseIdentifier) {
+    return this.findByIdentifier(productIdentifier, caseIdentifier).isPresent();
+  }
+
   public List<CostComponent> getActionCostComponentsForCase(final String productIdentifier,
                                                             final String caseIdentifier,
                                                             final String actionIdentifier) {

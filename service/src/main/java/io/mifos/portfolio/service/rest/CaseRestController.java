@@ -196,6 +196,10 @@ public class CaseRestController {
   {
     checkThatCaseExists(productIdentifier, caseIdentifier);
 
+    if (forPaymentSize != null && forPaymentSize.compareTo(BigDecimal.ZERO) < 0)
+      throw ServiceException.badRequest("forpaymentsize can''t be negative.");
+
+
     return caseService.getActionCostComponentsForCase(productIdentifier, caseIdentifier, actionIdentifier, forAccountDesignators, forPaymentSize);
   }
 

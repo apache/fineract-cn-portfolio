@@ -94,7 +94,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step8Close();
   }
 
-
   @Test
   public void workflowWithTwoNearlyEqualRepayments() throws InterruptedException {
     step1CreateProduct();
@@ -107,6 +106,15 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step7PaybackPartialAmount(repayment1.setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
     step7PaybackPartialAmount(expectedCurrentBalance);
     step8Close();
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void workflowWithNegativePaymentSize() throws InterruptedException {
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase();
+    step4ApproveCase();
+    step5Disburse(BigDecimal.valueOf(-2).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
   }
 
   //Create product and set charges to fixed fees.

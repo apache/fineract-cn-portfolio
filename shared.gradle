@@ -70,5 +70,6 @@ license {
         uxf = 'XML_STYLE'
     }
     ext.year = Calendar.getInstance().get(Calendar.YEAR)
-    ext.name = 'The Mifos Initiative'
+    ext.name = 'Kuelap, Inc'
+    skipExistingHeaders true
 }

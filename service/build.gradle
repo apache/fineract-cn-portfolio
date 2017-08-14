@@ -36,6 +36,7 @@ dependencies {
             [group: 'io.mifos.rhythm', name: 'api', version: versions.mifosrhythm],
             [group: 'io.mifos.accounting', name: 'api', version: versions.frameworkaccounting],
             [group: 'io.mifos.anubis', name: 'library', version: versions.frameworkanubis],
+            [group: 'io.mifos.customer', name: 'api', version: versions.mifoscustomer],
             [group: 'com.google.code.gson', name: 'gson'],
             [group: 'io.mifos.core', name: 'api', version: versions.frameworkapi],
             [group: 'io.mifos.core', name: 'lang', version: versions.frameworklang],

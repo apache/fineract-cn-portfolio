@@ -21,6 +21,7 @@ import io.mifos.core.api.context.AutoUserContext;
 import io.mifos.core.test.fixture.TenantDataStoreContextTestRule;
 import io.mifos.core.test.listener.EnableEventRecording;
 import io.mifos.core.test.listener.EventRecorder;
+import io.mifos.customer.api.v1.client.CustomerManager;
 import io.mifos.individuallending.api.v1.client.IndividualLending;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
@@ -32,6 +33,7 @@ import io.mifos.portfolio.service.config.PortfolioServiceConfiguration;
 import io.mifos.portfolio.service.internal.util.RhythmAdapter;
 import org.junit.*;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -114,6 +116,9 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   @MockBean
   LedgerManager ledgerManager;
 
+  @MockBean
+  CustomerManager customerManager;
+
   @SuppressWarnings("SpringAutowiredFieldsWarningInspection")
   @Autowired
   @Qualifier(LOGGER_NAME)
@@ -123,6 +128,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   public void prepTest() {
     userContext = this.tenantApplicationSecurityEnvironment.createAutoUserContext(TEST_USER);
     AccountingFixture.mockAccountingPrereqs(ledgerManager);
+    Mockito.doReturn(true).when(customerManager).isCustomerInGoodStanding(Fixture.CUSTOMER_IDENTIFIER);
   }
 
   @After

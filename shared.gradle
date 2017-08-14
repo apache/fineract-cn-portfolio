@@ -12,6 +12,7 @@ ext.versions = [
         frameworkasync      : '0.1.0-BUILD-SNAPSHOT',
         frameworkaccounting : '0.1.0-BUILD-SNAPSHOT',
         mifosrhythm         : '0.1.0-BUILD-SNAPSHOT',
+        mifoscustomer       : '0.1.0-BUILD-SNAPSHOT',
         validator    : '5.3.0.Final',
         javamoneylib : '0.9-SNAPSHOT'
 ]

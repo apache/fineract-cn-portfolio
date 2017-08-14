@@ -32,6 +32,7 @@ import java.util.Set;
 public interface PatternFactory {
   Pattern pattern();
   List<ChargeDefinition> charges();
+  void checkParameters(String parameters);
   void persistParameters(Long caseId, String parameters);
   void changeParameters(Long caseId, String parameters);
   Optional<String> getParameters(Long caseId, int minorCurrencyUnitDigits);

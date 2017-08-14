@@ -41,6 +41,7 @@ public class Fixture {
   static final int MINOR_CURRENCY_UNIT_DIGITS = 2;
   static final BigDecimal INTEREST_RATE = BigDecimal.valueOf(0.10).setScale(4, RoundingMode.HALF_EVEN);
   static final BigDecimal ACCRUAL_PERIODS = BigDecimal.valueOf(365.2425);
+  public static final String CUSTOMER_IDENTIFIER = "alice";
 
   private static int uniquenessSuffix = 0;
 
@@ -134,7 +135,7 @@ public class Fixture {
   {
     final CaseParameters ret = new CaseParameters(generateUniqueIdentifer("fred"));
 
-    ret.setCustomerIdentifier("alice");
+    ret.setCustomerIdentifier(CUSTOMER_IDENTIFIER);
     ret.setMaximumBalance(fixScale(BigDecimal.valueOf(2000L)));
     ret.setTermRange(new TermRange(ChronoUnit.MONTHS, 18));
     ret.setPaymentCycle(new PaymentCycle(ChronoUnit.MONTHS, 1, 1, null, null));

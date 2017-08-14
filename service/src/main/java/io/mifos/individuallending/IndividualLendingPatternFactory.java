@@ -18,6 +18,7 @@ package io.mifos.individuallending;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import io.mifos.core.lang.ServiceException;
+import io.mifos.customer.api.v1.client.CustomerManager;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
@@ -58,18 +59,21 @@ public class IndividualLendingPatternFactory implements PatternFactory {
   final static private String INDIVIDUAL_LENDING_PACKAGE = "io.mifos.individuallending.api.v1";
   private final CaseParametersRepository caseParametersRepository;
   private final CostComponentService costComponentService;
+  private final CustomerManager customerManager;
   private final IndividualLendingCommandDispatcher individualLendingCommandDispatcher;
   private final Gson gson;
 
   @Autowired
   IndividualLendingPatternFactory(
-          final CaseParametersRepository caseParametersRepository,
-          final CostComponentService costComponentService,
-          final IndividualLendingCommandDispatcher individualLendingCommandDispatcher,
-          @Qualifier(ServiceConstants.GSON_NAME) final Gson gson)
+      final CaseParametersRepository caseParametersRepository,
+      final CostComponentService costComponentService,
+      final CustomerManager customerManager,
+      final IndividualLendingCommandDispatcher individualLendingCommandDispatcher,
+      @Qualifier(ServiceConstants.GSON_NAME) final Gson gson)
   {
     this.caseParametersRepository = caseParametersRepository;
     this.costComponentService = costComponentService;
+    this.customerManager = customerManager;
     this.individualLendingCommandDispatcher = individualLendingCommandDispatcher;
     this.gson = gson;
   }
@@ -240,9 +244,18 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     return ret;
   }
 
+  @Override
+  public void checkParameters(final String parameters) {
+    final CaseParameters caseParameters = gson.fromJson(parameters, CaseParameters.class);
+    final String customerIdentifier = caseParameters.getCustomerIdentifier();
+    if (!customerManager.isCustomerInGoodStanding(customerIdentifier))
+      throw ServiceException.badRequest("Customer ''{0}'' is either not a customer or is not in good standing.");
+  }
+
   @Transactional
   @Override
   public void persistParameters(final Long caseId, final String parameters) {
+    checkParameters(parameters);
     final CaseParameters caseParameters = gson.fromJson(parameters, CaseParameters.class);
     final CaseParametersEntity caseParametersEntity = CaseParametersMapper.map(caseId, caseParameters);
     caseParametersRepository.save(caseParametersEntity);
@@ -277,7 +290,8 @@ public class IndividualLendingPatternFactory implements PatternFactory {
 
   @Transactional
   @Override
-  public void changeParameters(Long caseId, String parameters) {
+  public void changeParameters(final Long caseId, final String parameters) {
+    checkParameters(parameters);
     final CaseParameters caseParameters = gson.fromJson(parameters, CaseParameters.class);
     final CaseParametersEntity oldCaseParameters = caseParametersRepository.findByCaseId(caseId)
             .orElseThrow(() -> new IllegalArgumentException("Case id does not represent an individual loan: " + caseId));

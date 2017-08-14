@@ -29,6 +29,7 @@ import io.mifos.portfolio.api.v1.events.CaseEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -196,6 +197,23 @@ public class TestCases extends AbstractPortfolioTest {
     final Case caseAsSaved = portfolioManager.getCase(product.getIdentifier(), caseInstance.getIdentifier());
 
     Assert.assertEquals(caseInstance, caseAsSaved);
+  }
+
+  @Test
+  public void shouldThrowWhenCustomerNotInGoodStanding() throws InterruptedException {
+    Mockito.doReturn(false).when(customerManager).isCustomerInGoodStanding("don");
+
+    final Product product = createProduct();
+
+    final CaseParameters newCaseParameters = Fixture.createAdjustedCaseParameters(x -> x.setCustomerIdentifier("don"));
+    final String originalParameters = new Gson().toJson(newCaseParameters);
+
+    try {
+      createAdjustedCase(product.getIdentifier(), x -> x.setParameters(originalParameters));
+      Assert.fail("This should cause an illegal argument exception because Don is not a customer in good standing.");
+    }
+    catch (final IllegalArgumentException ignored){
+    }
   }
 
   @Test

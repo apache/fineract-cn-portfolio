@@ -15,15 +15,12 @@
  */
 package io.mifos.individuallending.internal.service;
 
-import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
-import io.mifos.portfolio.service.internal.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -40,40 +37,35 @@ import java.util.stream.Stream;
  */
 @Service
 public class IndividualLoanService {
-  private final ProductService productService;
   private final ChargeDefinitionService chargeDefinitionService;
 
   @Autowired
-  public IndividualLoanService(final ProductService productService,
-                               final ChargeDefinitionService chargeDefinitionService) {
-    this.productService = productService;
+  public IndividualLoanService(final ChargeDefinitionService chargeDefinitionService) {
     this.chargeDefinitionService = chargeDefinitionService;
   }
 
   public PlannedPaymentPage getPlannedPaymentsPage(
-          final String productIdentifier,
-          final CaseParameters caseParameters,
-          final int pageIndex,
-          final int size,
-          final @Nonnull LocalDate initialDisbursalDate) {
-    final Product product = productService.findByIdentifier(productIdentifier)
-            .orElseThrow(() -> new IllegalArgumentException("Non-existent product identifier."));
-    final int minorCurrencyUnitDigits = product.getMinorCurrencyUnitDigits();
+      final DataContextOfAction dataContextOfAction,
+      final int pageIndex,
+      final int size,
+      final @Nonnull LocalDate initialDisbursalDate) {
+    final int minorCurrencyUnitDigits = dataContextOfAction.getProduct().getMinorCurrencyUnitDigits();
 
-    final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(initialDisbursalDate, caseParameters);
+    final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(initialDisbursalDate, dataContextOfAction.getCaseParameters());
 
-    final List<ScheduledCharge> scheduledCharges = getScheduledCharges(productIdentifier, scheduledActions);
+    final List<ScheduledCharge> scheduledCharges = getScheduledCharges(dataContextOfAction.getProduct().getIdentifier(), scheduledActions);
 
     final BigDecimal loanPaymentSize = CostComponentService.getLoanPaymentSize(
-        caseParameters.getMaximumBalance(),
+        dataContextOfAction.getCaseParameters().getMaximumBalance(),
         minorCurrencyUnitDigits,
         scheduledCharges);
 
     final List<PlannedPayment> plannedPaymentsElements = getPlannedPaymentsElements(
-        caseParameters.getMaximumBalance(),
+        dataContextOfAction.getCaseParameters().getMaximumBalance(),
         minorCurrencyUnitDigits,
         scheduledCharges,
-        loanPaymentSize);
+        loanPaymentSize,
+        dataContextOfAction.getCustomerCase().getInterest());
 
     final Set<ChargeName> chargeNames = scheduledCharges.stream()
             .map(IndividualLoanService::chargeNameFromChargeDefinition)
@@ -124,7 +116,8 @@ public class IndividualLoanService {
       final BigDecimal initialBalance,
       final int minorCurrencyUnitDigits,
       final List<ScheduledCharge> scheduledCharges,
-      final BigDecimal loanPaymentSize) {
+      final BigDecimal loanPaymentSize,
+      final BigDecimal interest) {
     final Map<Period, SortedSet<ScheduledCharge>> orderedScheduledChargesGroupedByPeriod
         = scheduledCharges.stream()
         .collect(Collectors.groupingBy(IndividualLoanService::getPeriodFromScheduledCharge,
@@ -164,6 +157,7 @@ public class IndividualLoanService {
                   initialBalance,
                   balance,
                   currentLoanPaymentSize,
+                  interest,
                   minorCurrencyUnitDigits,
                   false);
 

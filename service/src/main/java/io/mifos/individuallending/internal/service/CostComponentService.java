@@ -20,15 +20,8 @@ import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
-import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
-import io.mifos.individuallending.internal.repository.CaseParametersRepository;
-import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.service.internal.repository.CaseEntity;
-import io.mifos.portfolio.service.internal.repository.CaseRepository;
-import io.mifos.portfolio.service.internal.repository.ProductEntity;
-import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import org.javamoney.calc.common.Rate;
 import org.javamoney.moneta.Money;
@@ -54,46 +47,15 @@ public class CostComponentService {
   private static final int EXTRA_PRECISION = 4;
   private static final int RUNNING_CALCULATION_PRECISION = 8;
 
-  private final ProductRepository productRepository;
-  private final CaseRepository caseRepository;
-  private final CaseParametersRepository caseParametersRepository;
   private final IndividualLoanService individualLoanService;
   private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public CostComponentService(
-          final ProductRepository productRepository,
-          final CaseRepository caseRepository,
-          final CaseParametersRepository caseParametersRepository,
           final IndividualLoanService individualLoanService,
           final AccountingAdapter accountingAdapter) {
-    this.productRepository = productRepository;
-    this.caseRepository = caseRepository;
-    this.caseParametersRepository = caseParametersRepository;
     this.individualLoanService = individualLoanService;
     this.accountingAdapter = accountingAdapter;
-  }
-
-  public DataContextOfAction checkedGetDataContext(
-          final String productIdentifier,
-          final String caseIdentifier,
-          final @Nullable List<AccountAssignment> oneTimeAccountAssignments) {
-
-    final ProductEntity product =
-            productRepository.findByIdentifier(productIdentifier)
-                    .orElseThrow(() -> ServiceException.notFound("Product not found ''{0}''.", productIdentifier));
-    final CaseEntity customerCase =
-            caseRepository.findByProductIdentifierAndIdentifier(productIdentifier, caseIdentifier)
-                    .orElseThrow(() -> ServiceException.notFound("Case not found ''{0}.{1}''.", productIdentifier, caseIdentifier));
-
-    final CaseParameters caseParameters =
-            caseParametersRepository.findByCaseId(customerCase.getId())
-                    .map(x -> CaseParametersMapper.mapEntity(x, product.getMinorCurrencyUnitDigits()))
-                    .orElseThrow(() -> ServiceException.notFound(
-                            "Individual loan not found ''{0}.{1}''.",
-                            productIdentifier, caseIdentifier));
-
-    return new DataContextOfAction(product, customerCase, caseParameters, oneTimeAccountAssignments);
   }
 
   public CostComponentsForRepaymentPeriod getCostComponentsForAction(
@@ -140,6 +102,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
+        dataContextOfAction.getCustomerCase().getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -158,6 +121,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
+        dataContextOfAction.getCustomerCase().getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -177,6 +141,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
+        dataContextOfAction.getCustomerCase().getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -233,6 +198,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         disbursalSize,
+        dataContextOfAction.getCustomerCase().getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -272,6 +238,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         BigDecimal.ZERO,
+        dataContextOfAction.getCustomerCase().getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -331,6 +298,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         loanPaymentSize,
+        dataContextOfAction.getCustomerCase().getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -414,6 +382,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         BigDecimal.ZERO,
+        dataContextOfAction.getCustomerCase().getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -436,6 +405,7 @@ public class CostComponentService {
       final BigDecimal maximumBalance,
       final BigDecimal runningBalance,
       final BigDecimal entryAccountAdjustment, //disbursement or payment size.
+      final BigDecimal interest,
       final int minorCurrencyUnitDigits,
       final boolean accrualAccounting) {
     final Map<String, BigDecimal> balanceAdjustments = new HashMap<>();

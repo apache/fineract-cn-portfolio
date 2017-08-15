@@ -30,6 +30,7 @@ import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType;
 import io.mifos.individuallending.internal.service.CostComponentService;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
+import io.mifos.individuallending.internal.service.DataContextService;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
@@ -58,6 +59,7 @@ import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers
 public class IndividualLendingPatternFactory implements PatternFactory {
   final static private String INDIVIDUAL_LENDING_PACKAGE = "io.mifos.individuallending.api.v1";
   private final CaseParametersRepository caseParametersRepository;
+  private final DataContextService dataContextService;
   private final CostComponentService costComponentService;
   private final CustomerManager customerManager;
   private final IndividualLendingCommandDispatcher individualLendingCommandDispatcher;
@@ -66,12 +68,14 @@ public class IndividualLendingPatternFactory implements PatternFactory {
   @Autowired
   IndividualLendingPatternFactory(
       final CaseParametersRepository caseParametersRepository,
+      final DataContextService dataContextService,
       final CostComponentService costComponentService,
       final CustomerManager customerManager,
       final IndividualLendingCommandDispatcher individualLendingCommandDispatcher,
       @Qualifier(ServiceConstants.GSON_NAME) final Gson gson)
   {
     this.caseParametersRepository = caseParametersRepository;
+    this.dataContextService = dataContextService;
     this.costComponentService = costComponentService;
     this.customerManager = customerManager;
     this.individualLendingCommandDispatcher = individualLendingCommandDispatcher;
@@ -345,7 +349,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
       final Set<String> forAccountDesignators,
       final BigDecimal forPaymentSize) {
     final Action action = Action.valueOf(actionIdentifier);
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(productIdentifier, caseIdentifier, Collections.emptyList());
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(productIdentifier, caseIdentifier, Collections.emptyList());
     final Case.State caseState = Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState());
     checkActionCanBeExecuted(caseState, action);
 

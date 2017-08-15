@@ -43,6 +43,8 @@ public class ProductMapper {
                     productEntity.getTermRangeMaximum()));
     product.setBalanceRange(
             new BalanceRange(productEntity.getBalanceRangeMinimum().setScale(productEntity.getMinorCurrencyUnitDigits(), BigDecimal.ROUND_HALF_EVEN), productEntity.getBalanceRangeMaximum().setScale(productEntity.getMinorCurrencyUnitDigits(), BigDecimal.ROUND_HALF_EVEN)));
+    product.setInterestRange(
+            new InterestRange(productEntity.getInterestRangeMinimum(), productEntity.getInterestRangeMaximum()));
     product.setInterestBasis(productEntity.getInterestBasis());
     product.setPatternPackage(productEntity.getPatternPackage());
     product.setDescription(productEntity.getDescription());
@@ -70,8 +72,8 @@ public class ProductMapper {
     ret.setTermRangeMaximum(product.getTermRange().getMaximum());
     ret.setBalanceRangeMinimum(product.getBalanceRange().getMinimum());
     ret.setBalanceRangeMaximum(product.getBalanceRange().getMaximum());
-    ret.setInterestRangeMinimum(BigDecimal.ZERO);
-    ret.setInterestRangeMaximum(BigDecimal.valueOf(999.99));
+    ret.setInterestRangeMinimum(product.getInterestRange().getMinimum());
+    ret.setInterestRangeMaximum(product.getInterestRange().getMaximum());
     ret.setInterestBasis(product.getInterestBasis());
     ret.setPatternPackage(product.getPatternPackage());
     ret.setDescription(product.getDescription());

@@ -332,6 +332,7 @@ public class TestProducts extends AbstractPortfolioTest {
     product.setDescription(StringUtils.repeat("x", 4096));
     product.setTermRange(new TermRange(ChronoUnit.MONTHS, 12));
     product.setBalanceRange(new BalanceRange(BigDecimal.ZERO.setScale(4, BigDecimal.ROUND_UNNECESSARY), new BigDecimal(10000).setScale(4, BigDecimal.ROUND_UNNECESSARY)));
+    product.setInterestRange(new InterestRange(new BigDecimal("999.98"), new BigDecimal("999.99")));
     product.setInterestBasis(InterestBasis.CURRENT_BALANCE);
     product.setCurrencyCode("XTS");
     product.setMinorCurrencyUnitDigits(4);

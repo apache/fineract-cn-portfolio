@@ -14,4 +14,4 @@
 -- limitations under the License.
 --
 
-ALTER TABLE bastet_cases ADD COLUMN interest DECIMAL(7,4) NULL DEFAULT NULL;
+ALTER TABLE bastet_cases ADD COLUMN interest DECIMAL(5,2) NULL DEFAULT NULL;

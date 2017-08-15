@@ -62,11 +62,11 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
         ChargeIdentifiers.DISBURSE_PAYMENT_ID,
         ChargeIdentifiers.TRACK_DISBURSAL_PAYMENT_ID,
         ChargeIdentifiers.TRACK_RETURN_PRINCIPAL_ID,
+        ChargeIdentifiers.INTEREST_ID,
         ChargeIdentifiers.REPAYMENT_ID)
         .collect(Collectors.toSet());
     final Set<String> expectedChangeableChargeDefinitionIdentifiers = Stream.of(
         ChargeIdentifiers.DISBURSEMENT_FEE_ID,
-        ChargeIdentifiers.INTEREST_ID,
         ChargeIdentifiers.LATE_FEE_ID,
         ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID,
         ChargeIdentifiers.PROCESSING_FEE_ID)
@@ -154,24 +154,24 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
 
 
   @Test
-  public void shouldChangeInterestChargeDefinition() throws InterruptedException {
+  public void shouldChangeDisbursementFeeChargeDefinition() throws InterruptedException {
     final Product product = createProduct();
 
-    final ChargeDefinition interestChargeDefinition
-        = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.INTEREST_ID);
-    interestChargeDefinition.setAmount(Fixture.INTEREST_RATE);
+    final ChargeDefinition disbursementFeeDefinition
+        = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.DISBURSEMENT_FEE_ID);
+    disbursementFeeDefinition.setAmount(BigDecimal.valueOf(10_0000, 4));
 
     portfolioManager.changeChargeDefinition(
         product.getIdentifier(),
-        interestChargeDefinition.getIdentifier(),
-        interestChargeDefinition);
+        disbursementFeeDefinition.getIdentifier(),
+        disbursementFeeDefinition);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CHARGE_DEFINITION,
-        new ChargeDefinitionEvent(product.getIdentifier(), interestChargeDefinition.getIdentifier())));
+        new ChargeDefinitionEvent(product.getIdentifier(), disbursementFeeDefinition.getIdentifier())));
 
     final ChargeDefinition chargeDefinitionAsChanged
-        = portfolioManager.getChargeDefinition(product.getIdentifier(), interestChargeDefinition.getIdentifier());
+        = portfolioManager.getChargeDefinition(product.getIdentifier(), disbursementFeeDefinition.getIdentifier());
 
-    Assert.assertEquals(interestChargeDefinition, chargeDefinitionAsChanged);
+    Assert.assertEquals(disbursementFeeDefinition, chargeDefinitionAsChanged);
   }
 
   @Test

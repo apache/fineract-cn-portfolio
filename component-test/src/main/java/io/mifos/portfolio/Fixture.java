@@ -118,7 +118,7 @@ public class Fixture {
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
     ret.setAccountAssignments(accountAssignments);
     ret.setCurrentState(Case.State.CREATED.name());
-    ret.setInterest(BigDecimal.valueOf(10_0000, 4));
+    ret.setInterest(BigDecimal.valueOf(10_00, 2));
 
     final CaseParameters caseParameters = getTestCaseParameters();
     final Gson gson = new Gson();

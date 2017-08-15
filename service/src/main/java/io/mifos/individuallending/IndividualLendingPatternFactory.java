@@ -190,14 +190,15 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     final ChargeDefinition interestCharge = charge(
         INTEREST_NAME,
         Action.ACCEPT_PAYMENT,
-        BigDecimal.valueOf(0.05),
+        BigDecimal.ONE,
         CUSTOMER_LOAN,
         INTEREST_INCOME);
     interestCharge.setForCycleSizeUnit(ChronoUnit.YEARS);
     interestCharge.setAccrueAction(Action.APPLY_INTEREST.name());
     interestCharge.setAccrualAccountDesignator(INTEREST_ACCRUAL);
     interestCharge.setProportionalTo(ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue());
-    interestCharge.setReadOnly(false);
+    interestCharge.setChargeMethod(ChargeDefinition.ChargeMethod.INTEREST);
+    interestCharge.setReadOnly(true);
 
     final ChargeDefinition customerRepaymentCharge = new ChargeDefinition();
     customerRepaymentCharge.setChargeAction(Action.ACCEPT_PAYMENT.name());

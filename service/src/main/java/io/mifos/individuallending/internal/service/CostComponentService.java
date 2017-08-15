@@ -102,7 +102,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
-        dataContextOfAction.getCustomerCase().getInterest(),
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -121,7 +121,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
-        dataContextOfAction.getCustomerCase().getInterest(),
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -141,7 +141,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
-        dataContextOfAction.getCustomerCase().getInterest(),
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -198,7 +198,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         disbursalSize,
-        dataContextOfAction.getCustomerCase().getInterest(),
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -238,7 +238,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         BigDecimal.ZERO,
-        dataContextOfAction.getCustomerCase().getInterest(),
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -274,7 +274,11 @@ public class CostComponentService {
       final List<ScheduledCharge> hypotheticalScheduledCharges = individualLoanService.getScheduledCharges(
           productIdentifier,
           hypotheticalScheduledActions);
-      loanPaymentSize = getLoanPaymentSize(currentBalance, minorCurrencyUnitDigits, hypotheticalScheduledCharges);
+      loanPaymentSize = getLoanPaymentSize(
+          currentBalance,
+          dataContextOfAction.getInterestAsFraction(),
+          minorCurrencyUnitDigits,
+          hypotheticalScheduledCharges);
     }
 
     final List<ScheduledCharge> scheduledChargesForThisAction = individualLoanService.getScheduledCharges(
@@ -298,7 +302,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         loanPaymentSize,
-        dataContextOfAction.getCustomerCase().getInterest(),
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -382,7 +386,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         BigDecimal.ZERO,
-        dataContextOfAction.getCustomerCase().getInterest(),
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -440,7 +444,7 @@ public class CostComponentService {
         final CostComponent costComponent = costComponentMap
             .computeIfAbsent(scheduledCharge.getChargeDefinition(), CostComponentService::constructEmptyCostComponent);
 
-        final BigDecimal chargeAmount = howToApplyScheduledChargeToAmount(scheduledCharge)
+        final BigDecimal chargeAmount = howToApplyScheduledChargeToAmount(scheduledCharge, interest)
             .apply(amountProportionalTo)
             .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
         adjustBalances(
@@ -496,34 +500,42 @@ public class CostComponentService {
   }
 
   private static Optional<ChargeProportionalDesignator> proportionalToDesignator(final ScheduledCharge scheduledCharge) {
-    if (!scheduledCharge.getChargeDefinition().getChargeMethod().equals(ChargeDefinition.ChargeMethod.PROPORTIONAL))
+    if (!scheduledCharge.getChargeDefinition().getChargeMethod().equals(ChargeDefinition.ChargeMethod.PROPORTIONAL) &&
+        !scheduledCharge.getChargeDefinition().getChargeMethod().equals(ChargeDefinition.ChargeMethod.INTEREST))
       return Optional.of(ChargeProportionalDesignator.NOT_PROPORTIONAL);
 
     return ChargeProportionalDesignator.fromString(scheduledCharge.getChargeDefinition().getProportionalTo());
   }
 
   private static Function<BigDecimal, BigDecimal> howToApplyScheduledChargeToAmount(
-      final ScheduledCharge scheduledCharge)
+      final ScheduledCharge scheduledCharge, final BigDecimal interest)
   {
     switch (scheduledCharge.getChargeDefinition().getChargeMethod())
     {
-      case FIXED:
+      case FIXED: {
         return (amountProportionalTo) -> scheduledCharge.getChargeDefinition().getAmount();
-      case PROPORTIONAL:
-        return (amountProportionalTo) ->
-            PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, RUNNING_CALCULATION_PRECISION)
-                .multiply(amountProportionalTo);
-      default:
+      }
+      case PROPORTIONAL: {
+        final BigDecimal chargeAmountPerPeriod = PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, scheduledCharge.getChargeDefinition().getAmount(), RUNNING_CALCULATION_PRECISION);
+        return chargeAmountPerPeriod::multiply;
+      }
+      case INTEREST: {
+        final BigDecimal chargeAmountPerPeriod = PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, interest, RUNNING_CALCULATION_PRECISION);
+        return chargeAmountPerPeriod::multiply;
+      }
+      default: {
         return (amountProportionalTo) -> BigDecimal.ZERO;
+      }
     }
   }
 
   static BigDecimal getLoanPaymentSize(final BigDecimal startingBalance,
+                                       final BigDecimal interest,
                                        final int minorCurrencyUnitDigits,
                                        final List<ScheduledCharge> scheduledCharges) {
     final int precision = startingBalance.precision() + minorCurrencyUnitDigits + EXTRA_PRECISION;
     final Map<Period, BigDecimal> accrualRatesByPeriod
-        = PeriodChargeCalculator.getPeriodAccrualInterestRate(scheduledCharges, precision);
+        = PeriodChargeCalculator.getPeriodAccrualInterestRate(interest, scheduledCharges, precision);
 
     final int periodCount = accrualRatesByPeriod.size();
     if (periodCount == 0)

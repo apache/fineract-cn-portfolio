@@ -57,6 +57,7 @@ public class IndividualLoanService {
 
     final BigDecimal loanPaymentSize = CostComponentService.getLoanPaymentSize(
         dataContextOfAction.getCaseParameters().getMaximumBalance(),
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         scheduledCharges);
 
@@ -65,7 +66,7 @@ public class IndividualLoanService {
         minorCurrencyUnitDigits,
         scheduledCharges,
         loanPaymentSize,
-        dataContextOfAction.getCustomerCase().getInterest());
+        dataContextOfAction.getInterestAsFraction());
 
     final Set<ChargeName> chargeNames = scheduledCharges.stream()
             .map(IndividualLoanService::chargeNameFromChargeDefinition)
@@ -179,7 +180,7 @@ public class IndividualLoanService {
       return scheduledAction.repaymentPeriod;
   }
 
-  private List<ScheduledCharge> getScheduledCharges(final List<ScheduledAction> scheduledActions,
+  static List<ScheduledCharge> getScheduledCharges(final List<ScheduledAction> scheduledActions,
                                                     final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction,
                                                     final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction) {
     return scheduledActions.stream()
@@ -192,7 +193,7 @@ public class IndividualLoanService {
         .collect(Collectors.toList());
   }
 
-  private Stream<ChargeDefinition> getChargeDefinitionStream(
+  private static Stream<ChargeDefinition> getChargeDefinitionStream(
           final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction,
           final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
           final ScheduledAction scheduledAction) {

@@ -186,7 +186,7 @@ public class IndividualLoanServiceTest {
     final ChargeDefinition processingFeeCharge = getFixedSingleChargeDefinition(10.0, Action.OPEN, PROCESSING_FEE_ID, AccountDesignators.PROCESSING_FEE_INCOME);
     final ChargeDefinition loanOriginationFeeCharge = getFixedSingleChargeDefinition(100.0, Action.APPROVE, LOAN_ORIGINATION_FEE_ID, AccountDesignators.ORIGINATION_FEE_INCOME);
     final List<ChargeDefinition> defaultChargesWithFeesReplaced =
-    chargesWithInterestRate(0.01).stream().map(x -> {
+    charges().stream().map(x -> {
       switch (x.getIdentifier()) {
         case PROCESSING_FEE_ID:
           return processingFeeCharge;
@@ -202,7 +202,7 @@ public class IndividualLoanServiceTest {
         .caseParameters(caseParameters)
         .initialDisbursementDate(initialDisbursementDate)
         .chargeDefinitions(defaultChargesWithFeesReplaced)
-        .interest(BigDecimal.valueOf(0.01))
+        .interest(BigDecimal.valueOf(1))
         .expectChargeInstancesForActionDatePair(Action.OPEN, initialDisbursementDate, Collections.singletonList(processingFeeCharge))
         .expectChargeInstancesForActionDatePair(Action.APPROVE, initialDisbursementDate,
             Collections.singletonList(loanOriginationFeeCharge));
@@ -217,14 +217,14 @@ public class IndividualLoanServiceTest {
     caseParameters.setPaymentCycle(new PaymentCycle(ChronoUnit.MONTHS, 1, 0, null, null));
     caseParameters.setMaximumBalance(BigDecimal.valueOf(200000));
 
-    final List<ChargeDefinition> charges = chargesWithInterestRate(0.10);
+    final List<ChargeDefinition> charges = charges();
 
     return new TestCase("yearLoanTestCase")
         .minorCurrencyUnitDigits(3)
         .caseParameters(caseParameters)
         .initialDisbursementDate(initialDisbursementDate)
         .chargeDefinitions(charges)
-        .interest(BigDecimal.valueOf(0.10));
+        .interest(BigDecimal.valueOf(10));
   }
 
   private static TestCase chargeDefaultsCase()
@@ -235,25 +235,18 @@ public class IndividualLoanServiceTest {
     caseParameters.setPaymentCycle(new PaymentCycle(ChronoUnit.WEEKS, 1, 1, 0, 0));
     caseParameters.setMaximumBalance(BigDecimal.valueOf(2000));
 
-    final List<ChargeDefinition> charges = chargesWithInterestRate(0.05);
+    final List<ChargeDefinition> charges = charges();
 
     return new TestCase("chargeDefaultsCase")
         .minorCurrencyUnitDigits(2)
         .caseParameters(caseParameters)
         .initialDisbursementDate(initialDisbursementDate)
         .chargeDefinitions(charges)
-        .interest(BigDecimal.valueOf(0.05));
+        .interest(BigDecimal.valueOf(5));
   }
 
-  private static List<ChargeDefinition> chargesWithInterestRate(final double interestRate) {
-    final List<ChargeDefinition> defaultLoanCharges = IndividualLendingPatternFactory.defaultIndividualLoanCharges();
-
-    defaultLoanCharges.forEach(x -> {
-      if (x.getIdentifier().equals(ChargeIdentifiers.INTEREST_ID))
-        x.setAmount(BigDecimal.valueOf(interestRate));
-    });
-
-    return defaultLoanCharges;
+  private static List<ChargeDefinition> charges() {
+    return IndividualLendingPatternFactory.defaultIndividualLoanCharges();
   }
 
   private static ChargeDefinition getFixedSingleChargeDefinition(

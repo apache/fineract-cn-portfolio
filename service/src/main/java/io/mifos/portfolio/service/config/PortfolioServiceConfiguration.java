@@ -25,6 +25,7 @@ import io.mifos.core.lang.config.EnableApplicationName;
 import io.mifos.core.lang.config.EnableServiceException;
 import io.mifos.core.lang.config.EnableTenantContext;
 import io.mifos.core.mariadb.config.EnableMariaDB;
+import io.mifos.customer.api.v1.client.CustomerManager;
 import io.mifos.individuallending.IndividualLendingConfiguration;
 import io.mifos.portfolio.service.ServiceConstants;
 import io.mifos.rhythm.api.v1.client.RhythmManager;
@@ -60,7 +61,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 })
 @EnableJpaRepositories(basePackages = "io.mifos.portfolio.service.internal.repository")
 @EntityScan(basePackages = "io.mifos.portfolio.service.internal.repository")
-@EnableFeignClients(clients = {LedgerManager.class, RhythmManager.class})
+@EnableFeignClients(clients = {LedgerManager.class, RhythmManager.class, CustomerManager.class})
 @RibbonClient(name = "portfolio-v1")
 @EnableApplicationName
 @Import(IndividualLendingConfiguration.class)

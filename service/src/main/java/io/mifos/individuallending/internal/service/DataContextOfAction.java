@@ -23,6 +23,7 @@ import io.mifos.portfolio.service.internal.repository.ProductEntity;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
 
@@ -34,6 +35,7 @@ public class DataContextOfAction {
   private final CaseEntity customerCase;
   private final CaseParameters caseParameters;
   private final List<AccountAssignment> oneTimeAccountAssignments;
+  private final BigDecimal interestAsFraction;
 
   DataContextOfAction(final @Nonnull ProductEntity product,
                       final @Nonnull CaseEntity customerCase,
@@ -43,6 +45,7 @@ public class DataContextOfAction {
     this.customerCase = customerCase;
     this.caseParameters = caseParameters;
     this.oneTimeAccountAssignments = oneTimeAccountAssignments == null ? Collections.emptyList() : oneTimeAccountAssignments;
+    interestAsFraction = customerCase.getInterest().divide(BigDecimal.valueOf(100), 4, BigDecimal.ROUND_HALF_EVEN);;
   }
 
   public @Nonnull ProductEntity getProduct() {
@@ -67,5 +70,9 @@ public class DataContextOfAction {
 
   public String getMessageForCharge(final Action action) {
     return getCompoundIdentifer() + "." + action.name();
+  }
+
+  BigDecimal getInterestAsFraction() {
+    return interestAsFraction;
   }
 }

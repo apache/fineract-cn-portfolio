@@ -25,6 +25,7 @@ import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
 import io.mifos.portfolio.api.v1.domain.Command;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
+import io.mifos.portfolio.service.internal.checker.CaseChecker;
 import io.mifos.portfolio.service.internal.command.ChangeCaseCommand;
 import io.mifos.portfolio.service.internal.command.CreateCaseCommand;
 import io.mifos.portfolio.service.internal.service.CaseService;
@@ -40,7 +41,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -53,17 +53,21 @@ public class CaseRestController {
 
   private final CommandGateway commandGateway;
   private final CaseService caseService;
+  private final CaseChecker caseChecker;
   private final ProductService productService;
   private final TaskInstanceService taskInstanceService;
 
-  @Autowired public CaseRestController(
+  @Autowired
+  public CaseRestController(
       final CommandGateway commandGateway,
       final CaseService caseService,
+      final CaseChecker caseChecker,
       final ProductService productService,
       final TaskInstanceService taskInstanceService) {
     super();
     this.commandGateway = commandGateway;
     this.caseService = caseService;
+    this.caseChecker = caseChecker;
     this.productService = productService;
     this.taskInstanceService = taskInstanceService;
   }
@@ -94,13 +98,6 @@ public class CaseRestController {
   {
     checkThatProductExists(productIdentifier);
 
-    caseService.findByIdentifier(productIdentifier, instance.getIdentifier())
-            .ifPresent(x -> {throw ServiceException.conflict("Duplicate identifier: " + productIdentifier + "." + x.getIdentifier());});
-
-    final Optional<Boolean> productEnabled = productService.findEnabledByIdentifier(productIdentifier);
-    if (!productEnabled.orElseThrow(() -> ServiceException.internalError("Product should exist, but doesn't"))) {
-      throw ServiceException.badRequest("Product must be enabled before cases for it can be created: " + productIdentifier);}
-
     if (!instance.getProductIdentifier().equals(productIdentifier))
       throw ServiceException.badRequest("Product identifier in request body must match product identifier in request path.");
 
@@ -119,6 +116,8 @@ public class CaseRestController {
 
     if (instance.getLastModifiedOn() != null)
       throw ServiceException.badRequest("LastModifiedOn must 'null' be upon initial creation.");
+
+    caseChecker.checkForCreate(productIdentifier, instance);
 
     this.commandGateway.process(new CreateCaseCommand(instance));
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
@@ -158,6 +157,8 @@ public class CaseRestController {
 
     if (!caseIdentifier.equals(instance.getIdentifier()))
       throw ServiceException.badRequest("Instance identifier may not be changed.");
+
+    caseChecker.checkForChange(productIdentifier, instance);
 
     this.commandGateway.process(new ChangeCaseCommand(instance));
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
@@ -245,5 +246,5 @@ public class CaseRestController {
       throw ServiceException.notFound("Product with identifier ''{0}'' doesn''t exist.", productIdentifier);
   }
 
-  //TODO: check that case parameters are within product parameters in put and post.
+  //TODO: createCheck that case parameters are within product parameters in put and post.
 }

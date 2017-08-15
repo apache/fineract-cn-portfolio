@@ -27,8 +27,10 @@ import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
-import io.mifos.portfolio.api.v1.domain.*;
-import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.CostComponent;
+import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.domain.TaskDefinition;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.rhythm.spi.v1.client.BeatListener;
 import io.mifos.rhythm.spi.v1.domain.BeatPublish;
@@ -125,13 +127,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.PROCESSING_FEE_ID, PROCESSING_FEE_AMOUNT);
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID, LOAN_ORIGINATION_FEE_AMOUNT);
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.DISBURSEMENT_FEE_ID, DISBURSEMENT_FEE_AMOUNT);
-
-    final ChargeDefinition interestChargeDefinition = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.INTEREST_ID);
-    interestChargeDefinition.setAmount(Fixture.INTEREST_RATE);
-
-    portfolioManager.changeChargeDefinition(product.getIdentifier(), interestChargeDefinition.getIdentifier(), interestChargeDefinition);
-    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CHARGE_DEFINITION,
-        new ChargeDefinitionEvent(product.getIdentifier(), interestChargeDefinition.getIdentifier())));
 
     taskDefinition = createTaskDefinition(product);
 

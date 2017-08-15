@@ -61,6 +61,7 @@ import java.util.stream.Collectors;
 @Aggregate
 public class IndividualLoanCommandHandler {
   private final CaseRepository caseRepository;
+  private final DataContextService dataContextService;
   private final CostComponentService costComponentService;
   private final AccountingAdapter accountingAdapter;
   private final TaskInstanceRepository taskInstanceRepository;
@@ -68,10 +69,12 @@ public class IndividualLoanCommandHandler {
   @Autowired
   public IndividualLoanCommandHandler(
       final CaseRepository caseRepository,
+      final DataContextService dataContextService,
       final CostComponentService costComponentService,
       final AccountingAdapter accountingAdapter,
       final TaskInstanceRepository taskInstanceRepository) {
     this.caseRepository = caseRepository;
+    this.dataContextService = dataContextService;
     this.costComponentService = costComponentService;
     this.accountingAdapter = accountingAdapter;
     this.taskInstanceRepository = taskInstanceRepository;
@@ -85,7 +88,7 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final OpenCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
             productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.OPEN);
 
@@ -126,7 +129,7 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final DenyCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.DENY);
 
@@ -162,7 +165,7 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final ApproveCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.APPROVE);
 
@@ -213,7 +216,7 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final DisburseCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.DISBURSE);
 
@@ -262,7 +265,7 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final ApplyInterestCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, null);
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.APPLY_INTEREST);
 
@@ -301,7 +304,7 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final AcceptPaymentCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.ACCEPT_PAYMENT);
 
@@ -346,7 +349,7 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final WriteOffCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.WRITE_OFF);
 
@@ -364,7 +367,7 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final CloseCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.CLOSE);
 
@@ -403,7 +406,7 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandEvent process(final RecoverCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final DataContextOfAction dataContextOfAction = costComponentService.checkedGetDataContext(
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, command.getCommand().getOneTimeAccountAssignments());
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState()), Action.RECOVER);
 

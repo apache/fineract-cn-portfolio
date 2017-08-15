@@ -38,6 +38,7 @@ public class PeriodChargeCalculatorTest {
     List<ScheduledCharge> scheduledCharges;
     int precision;
     Map<Period, BigDecimal> expectedPeriodRates;
+    private BigDecimal interest;
 
     private TestCase(final String description) {
       this.description = description;
@@ -64,6 +65,11 @@ public class PeriodChargeCalculatorTest {
               "description='" + description + '\'' +
               '}';
     }
+
+    TestCase interest(BigDecimal newVal) {
+      this.interest = newVal;
+      return this;
+    }
   }
 
   @Parameterized.Parameters
@@ -79,8 +85,8 @@ public class PeriodChargeCalculatorTest {
   {
     final LocalDate initialDate = LocalDate.now();
     final List<ScheduledCharge> scheduledCharges = new ArrayList<>();
-    scheduledCharges.add(scheduledInterestBookingCharge(0.01, initialDate, 0, 0, 1));
-    scheduledCharges.add(scheduledInterestBookingCharge(0.01, initialDate, 1, 1, 1));
+    scheduledCharges.add(scheduledInterestBookingCharge(initialDate, 0, 0, 1));
+    scheduledCharges.add(scheduledInterestBookingCharge(initialDate, 1, 1, 1));
 
     final BigDecimal dailyInterestRate = BigDecimal.valueOf(0.01)
         .divide(BigDecimal.valueOf(365.2425), 20, BigDecimal.ROUND_HALF_EVEN);
@@ -90,6 +96,7 @@ public class PeriodChargeCalculatorTest {
     expectedPeriodRates.put(getPeriod(initialDate, 1, 1), dailyInterestRate);
 
     return new TestCase("simpleCase")
+        .interest(BigDecimal.valueOf(0.01))
         .scheduledCharges(scheduledCharges)
         .precision(20)
         .expectedPeriodRates(expectedPeriodRates);
@@ -99,8 +106,8 @@ public class PeriodChargeCalculatorTest {
   {
     final LocalDate initialDate = LocalDate.now();
     final List<ScheduledCharge> scheduledCharges = new ArrayList<>();
-    scheduledCharges.add(scheduledInterestBookingCharge(0.10, initialDate, 2, 0, 3));
-    scheduledCharges.add(scheduledInterestBookingCharge(0.10, initialDate, 4, 2, 2));
+    scheduledCharges.add(scheduledInterestBookingCharge(initialDate, 2, 0, 3));
+    scheduledCharges.add(scheduledInterestBookingCharge(initialDate, 4, 2, 2));
 
     final BigDecimal dailyInterestRate = BigDecimal.valueOf(0.10)
         .divide(BigDecimal.valueOf(365.2425), 20, BigDecimal.ROUND_HALF_EVEN);
@@ -110,6 +117,7 @@ public class PeriodChargeCalculatorTest {
     expectedPeriodRates.put(getPeriod(initialDate, 2, 2), PeriodChargeCalculator.createCompoundedRate(dailyInterestRate, 2, 20));
 
     return new TestCase("bitOfCompoundingCase")
+        .interest(BigDecimal.valueOf(0.10))
         .scheduledCharges(scheduledCharges)
         .precision(20)
         .expectedPeriodRates(expectedPeriodRates);
@@ -119,14 +127,15 @@ public class PeriodChargeCalculatorTest {
   {
     final LocalDate initialDate = LocalDate.now();
     final List<ScheduledCharge> scheduledCharges = new ArrayList<>();
-    scheduledCharges.add(scheduledInterestBookingCharge(0.00, initialDate, 2, 0, 3));
-    scheduledCharges.add(scheduledInterestBookingCharge(0.00, initialDate, 4, 2, 2));
+    scheduledCharges.add(scheduledInterestBookingCharge(initialDate, 2, 0, 3));
+    scheduledCharges.add(scheduledInterestBookingCharge(initialDate, 4, 2, 2));
 
     final Map<Period, BigDecimal> expectedPeriodRates = new HashMap<>();
     expectedPeriodRates.put(getPeriod(initialDate, 0, 3), BigDecimal.ZERO.setScale(20, BigDecimal.ROUND_UNNECESSARY));
     expectedPeriodRates.put(getPeriod(initialDate, 2, 2), BigDecimal.ZERO.setScale(20, BigDecimal.ROUND_UNNECESSARY));
 
     return new TestCase("zeroInterestPerPeriod")
+        .interest(BigDecimal.valueOf(0.00))
         .scheduledCharges(scheduledCharges)
         .precision(20)
         .expectedPeriodRates(expectedPeriodRates);
@@ -141,7 +150,7 @@ public class PeriodChargeCalculatorTest {
   @Test
   public void getPeriodAccrualRatesTest()
   {
-    final Map<Period, BigDecimal> periodRates = PeriodChargeCalculator.getPeriodAccrualInterestRate(testCase.scheduledCharges, testCase.precision);
+    final Map<Period, BigDecimal> periodRates = PeriodChargeCalculator.getPeriodAccrualInterestRate(testCase.interest, testCase.scheduledCharges, testCase.precision);
     Assert.assertEquals(testCase.expectedPeriodRates, periodRates);
   }
 }

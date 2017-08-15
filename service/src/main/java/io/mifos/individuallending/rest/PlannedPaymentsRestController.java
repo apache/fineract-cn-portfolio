@@ -18,12 +18,11 @@ package io.mifos.individuallending.rest;
 
 import io.mifos.anubis.annotation.AcceptedTokenType;
 import io.mifos.anubis.annotation.Permittable;
-import io.mifos.individuallending.internal.service.CaseParametersService;
-import io.mifos.individuallending.internal.service.IndividualLoanService;
 import io.mifos.core.lang.DateConverter;
-import io.mifos.core.lang.ServiceException;
-import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
+import io.mifos.individuallending.internal.service.DataContextOfAction;
+import io.mifos.individuallending.internal.service.DataContextService;
+import io.mifos.individuallending.internal.service.IndividualLoanService;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -31,6 +30,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Collections;
 
 /**
  * @author Myrle Krantz
@@ -39,14 +39,14 @@ import java.time.ZoneId;
 @RestController
 @RequestMapping("/individuallending/products/{productidentifier}/cases/{caseidentifier}/plannedpayments")
 public class PlannedPaymentsRestController {
-  private final CaseParametersService caseParametersService;
+  private final DataContextService dataContextService;
   private final IndividualLoanService individualLoanService;
 
   @Autowired
   public PlannedPaymentsRestController(
-          final CaseParametersService caseParametersService,
-          final IndividualLoanService individualLoanService) {
-    this.caseParametersService = caseParametersService;
+      final DataContextService dataContextService,
+      final IndividualLoanService individualLoanService) {
+    this.dataContextService = dataContextService;
     this.individualLoanService = individualLoanService;
   }
 
@@ -63,11 +63,7 @@ public class PlannedPaymentsRestController {
           @RequestParam(value = "size", required = false) final Integer size,
           @RequestParam(value = "initialDisbursalDate", required = false) final String initialDisbursalDate)
   {
-    final CaseParameters caseParameters = caseParametersService
-            .findByIdentifier(productIdentifier, caseIdentifier)
-            .orElseThrow(() -> ServiceException.notFound(
-                    "Instance with identifier " + productIdentifier + "." + caseIdentifier + " doesn't exist or it is not an individual loan."));
-
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(productIdentifier, caseIdentifier, Collections.emptyList());
 
     final LocalDate parsedInitialDisbursalDate = initialDisbursalDate == null
             ? LocalDate.now(ZoneId.of("UTC"))
@@ -75,6 +71,6 @@ public class PlannedPaymentsRestController {
     final Integer pageIndexToUse = pageIndex != null ? pageIndex : 0;
     final Integer sizeToUse = size != null ? size : 20;
 
-    return individualLoanService.getPlannedPaymentsPage(productIdentifier, caseParameters, pageIndexToUse, sizeToUse, parsedInitialDisbursalDate);
+    return individualLoanService.getPlannedPaymentsPage(dataContextOfAction, pageIndexToUse, sizeToUse, parsedInitialDisbursalDate);
   }
 }

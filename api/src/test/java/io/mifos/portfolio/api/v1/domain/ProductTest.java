@@ -80,6 +80,22 @@ public class ProductTest extends ValidationTest<Product> {
     ret.add(new ValidationTestCase<Product>("switchedBalanceRangeMinMax")
             .adjustment(product -> product.setBalanceRange(new BalanceRange(Fixture.fixScale(BigDecimal.TEN), Fixture.fixScale(BigDecimal.ZERO))))
             .valid(false));
+    ret.add(new ValidationTestCase<Product>("nullInterestRange")
+            .adjustment(product -> product.setInterestRange(null))
+            .valid(false));
+    //noinspection BigDecimalMethodWithoutRoundingCalled
+    ret.add(new ValidationTestCase<Product>("switchedInterestRangeMinMax")
+            .adjustment(product -> product.setInterestRange(new InterestRange(BigDecimal.valueOf(200, 2), BigDecimal.valueOf(0.9).setScale(2))))
+            .valid(false));
+    ret.add(new ValidationTestCase<Product>("tooBigMaximumInterestRange")
+            .adjustment(product -> product.setInterestRange(new InterestRange(new BigDecimal("999.99"), new BigDecimal("1000.00"))))
+            .valid(false));
+    ret.add(new ValidationTestCase<Product>("negativeMinimumInterestRange")
+            .adjustment(product -> product.setInterestRange(new InterestRange(BigDecimal.valueOf(-1, 2), BigDecimal.valueOf(1, 2))))
+            .valid(false));
+    ret.add(new ValidationTestCase<Product>("tooManyDigitsAfterTheDecimalInterestRange")
+            .adjustment(product -> product.setInterestRange(new InterestRange(BigDecimal.valueOf(1, 2), new BigDecimal("1.001"))))
+            .valid(false));
     ret.add(new ValidationTestCase<Product>("nullInterestBasis")
             .adjustment(product -> product.setInterestBasis(null))
             .valid(false));

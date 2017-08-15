@@ -20,15 +20,8 @@ import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
-import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
-import io.mifos.individuallending.internal.repository.CaseParametersRepository;
-import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.service.internal.repository.CaseEntity;
-import io.mifos.portfolio.service.internal.repository.CaseRepository;
-import io.mifos.portfolio.service.internal.repository.ProductEntity;
-import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import org.javamoney.calc.common.Rate;
 import org.javamoney.moneta.Money;
@@ -54,46 +47,15 @@ public class CostComponentService {
   private static final int EXTRA_PRECISION = 4;
   private static final int RUNNING_CALCULATION_PRECISION = 8;
 
-  private final ProductRepository productRepository;
-  private final CaseRepository caseRepository;
-  private final CaseParametersRepository caseParametersRepository;
   private final IndividualLoanService individualLoanService;
   private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public CostComponentService(
-          final ProductRepository productRepository,
-          final CaseRepository caseRepository,
-          final CaseParametersRepository caseParametersRepository,
           final IndividualLoanService individualLoanService,
           final AccountingAdapter accountingAdapter) {
-    this.productRepository = productRepository;
-    this.caseRepository = caseRepository;
-    this.caseParametersRepository = caseParametersRepository;
     this.individualLoanService = individualLoanService;
     this.accountingAdapter = accountingAdapter;
-  }
-
-  public DataContextOfAction checkedGetDataContext(
-          final String productIdentifier,
-          final String caseIdentifier,
-          final @Nullable List<AccountAssignment> oneTimeAccountAssignments) {
-
-    final ProductEntity product =
-            productRepository.findByIdentifier(productIdentifier)
-                    .orElseThrow(() -> ServiceException.notFound("Product not found ''{0}''.", productIdentifier));
-    final CaseEntity customerCase =
-            caseRepository.findByProductIdentifierAndIdentifier(productIdentifier, caseIdentifier)
-                    .orElseThrow(() -> ServiceException.notFound("Case not found ''{0}.{1}''.", productIdentifier, caseIdentifier));
-
-    final CaseParameters caseParameters =
-            caseParametersRepository.findByCaseId(customerCase.getId())
-                    .map(x -> CaseParametersMapper.mapEntity(x, product.getMinorCurrencyUnitDigits()))
-                    .orElseThrow(() -> ServiceException.notFound(
-                            "Individual loan not found ''{0}.{1}''.",
-                            productIdentifier, caseIdentifier));
-
-    return new DataContextOfAction(product, customerCase, caseParameters, oneTimeAccountAssignments);
   }
 
   public CostComponentsForRepaymentPeriod getCostComponentsForAction(
@@ -140,6 +102,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -158,6 +121,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -177,6 +141,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -233,6 +198,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         disbursalSize,
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -272,6 +238,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         BigDecimal.ZERO,
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -307,7 +274,11 @@ public class CostComponentService {
       final List<ScheduledCharge> hypotheticalScheduledCharges = individualLoanService.getScheduledCharges(
           productIdentifier,
           hypotheticalScheduledActions);
-      loanPaymentSize = getLoanPaymentSize(currentBalance, minorCurrencyUnitDigits, hypotheticalScheduledCharges);
+      loanPaymentSize = getLoanPaymentSize(
+          currentBalance,
+          dataContextOfAction.getInterestAsFraction(),
+          minorCurrencyUnitDigits,
+          hypotheticalScheduledCharges);
     }
 
     final List<ScheduledCharge> scheduledChargesForThisAction = individualLoanService.getScheduledCharges(
@@ -331,6 +302,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         loanPaymentSize,
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -414,6 +386,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         BigDecimal.ZERO,
+        dataContextOfAction.getInterestAsFraction(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -436,6 +409,7 @@ public class CostComponentService {
       final BigDecimal maximumBalance,
       final BigDecimal runningBalance,
       final BigDecimal entryAccountAdjustment, //disbursement or payment size.
+      final BigDecimal interest,
       final int minorCurrencyUnitDigits,
       final boolean accrualAccounting) {
     final Map<String, BigDecimal> balanceAdjustments = new HashMap<>();
@@ -470,7 +444,7 @@ public class CostComponentService {
         final CostComponent costComponent = costComponentMap
             .computeIfAbsent(scheduledCharge.getChargeDefinition(), CostComponentService::constructEmptyCostComponent);
 
-        final BigDecimal chargeAmount = howToApplyScheduledChargeToAmount(scheduledCharge)
+        final BigDecimal chargeAmount = howToApplyScheduledChargeToAmount(scheduledCharge, interest)
             .apply(amountProportionalTo)
             .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
         adjustBalances(
@@ -526,34 +500,42 @@ public class CostComponentService {
   }
 
   private static Optional<ChargeProportionalDesignator> proportionalToDesignator(final ScheduledCharge scheduledCharge) {
-    if (!scheduledCharge.getChargeDefinition().getChargeMethod().equals(ChargeDefinition.ChargeMethod.PROPORTIONAL))
+    if (!scheduledCharge.getChargeDefinition().getChargeMethod().equals(ChargeDefinition.ChargeMethod.PROPORTIONAL) &&
+        !scheduledCharge.getChargeDefinition().getChargeMethod().equals(ChargeDefinition.ChargeMethod.INTEREST))
       return Optional.of(ChargeProportionalDesignator.NOT_PROPORTIONAL);
 
     return ChargeProportionalDesignator.fromString(scheduledCharge.getChargeDefinition().getProportionalTo());
   }
 
   private static Function<BigDecimal, BigDecimal> howToApplyScheduledChargeToAmount(
-      final ScheduledCharge scheduledCharge)
+      final ScheduledCharge scheduledCharge, final BigDecimal interest)
   {
     switch (scheduledCharge.getChargeDefinition().getChargeMethod())
     {
-      case FIXED:
+      case FIXED: {
         return (amountProportionalTo) -> scheduledCharge.getChargeDefinition().getAmount();
-      case PROPORTIONAL:
-        return (amountProportionalTo) ->
-            PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, RUNNING_CALCULATION_PRECISION)
-                .multiply(amountProportionalTo);
-      default:
+      }
+      case PROPORTIONAL: {
+        final BigDecimal chargeAmountPerPeriod = PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, scheduledCharge.getChargeDefinition().getAmount(), RUNNING_CALCULATION_PRECISION);
+        return chargeAmountPerPeriod::multiply;
+      }
+      case INTEREST: {
+        final BigDecimal chargeAmountPerPeriod = PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, interest, RUNNING_CALCULATION_PRECISION);
+        return chargeAmountPerPeriod::multiply;
+      }
+      default: {
         return (amountProportionalTo) -> BigDecimal.ZERO;
+      }
     }
   }
 
   static BigDecimal getLoanPaymentSize(final BigDecimal startingBalance,
+                                       final BigDecimal interest,
                                        final int minorCurrencyUnitDigits,
                                        final List<ScheduledCharge> scheduledCharges) {
     final int precision = startingBalance.precision() + minorCurrencyUnitDigits + EXTRA_PRECISION;
     final Map<Period, BigDecimal> accrualRatesByPeriod
-        = PeriodChargeCalculator.getPeriodAccrualInterestRate(scheduledCharges, precision);
+        = PeriodChargeCalculator.getPeriodAccrualInterestRate(interest, scheduledCharges, precision);
 
     final int periodCount = accrualRatesByPeriod.size();
     if (periodCount == 0)

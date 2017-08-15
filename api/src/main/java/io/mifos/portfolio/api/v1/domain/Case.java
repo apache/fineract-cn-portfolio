@@ -15,10 +15,14 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
-import io.mifos.portfolio.api.v1.validation.ValidAccountAssignments;
 import io.mifos.core.lang.validation.constraints.ValidIdentifier;
+import io.mifos.portfolio.api.v1.validation.ValidAccountAssignments;
 import org.hibernate.validator.constraints.NotBlank;
 
+import javax.validation.constraints.DecimalMax;
+import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.NotNull;
+import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.Set;
 
@@ -31,6 +35,12 @@ public final class Case {
   private String identifier;
   @ValidIdentifier
   private String productIdentifier;
+
+  @DecimalMin(value = "0.00")
+  @DecimalMax(value = "999.99")
+  @NotNull
+  private BigDecimal interest;
+
   @NotBlank
   private String parameters;
   @ValidAccountAssignments
@@ -59,6 +69,14 @@ public final class Case {
 
   public void setProductIdentifier(String productIdentifier) {
     this.productIdentifier = productIdentifier;
+  }
+
+  public BigDecimal getInterest() {
+    return interest;
+  }
+
+  public void setInterest(BigDecimal interest) {
+    this.interest = interest;
   }
 
   public String getParameters() {
@@ -123,30 +141,32 @@ public final class Case {
     if (o == null || getClass() != o.getClass()) return false;
     Case aCase = (Case) o;
     return Objects.equals(identifier, aCase.identifier) &&
-            Objects.equals(productIdentifier, aCase.productIdentifier) &&
-            Objects.equals(parameters, aCase.parameters) &&
-            Objects.equals(accountAssignments, aCase.accountAssignments) &&
-            currentState == aCase.currentState;
+        Objects.equals(productIdentifier, aCase.productIdentifier) &&
+        Objects.equals(interest, aCase.interest) &&
+        Objects.equals(parameters, aCase.parameters) &&
+        Objects.equals(accountAssignments, aCase.accountAssignments) &&
+        currentState == aCase.currentState;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(identifier, productIdentifier, parameters, accountAssignments, currentState);
+    return Objects.hash(identifier, productIdentifier, interest, parameters, accountAssignments, currentState);
   }
 
   @Override
   public String toString() {
     return "Case{" +
-            "identifier='" + identifier + '\'' +
-            ", productIdentifier='" + productIdentifier + '\'' +
-            ", parameters='" + parameters + '\'' +
-            ", accountAssignments=" + accountAssignments +
-            ", currentState=" + currentState +
-            ", createdOn='" + createdOn + '\'' +
-            ", createdBy='" + createdBy + '\'' +
-            ", lastModifiedOn='" + lastModifiedOn + '\'' +
-            ", lastModifiedBy='" + lastModifiedBy + '\'' +
-            '}';
+        "identifier='" + identifier + '\'' +
+        ", productIdentifier='" + productIdentifier + '\'' +
+        ", interest=" + interest +
+        ", parameters='" + parameters + '\'' +
+        ", accountAssignments=" + accountAssignments +
+        ", currentState=" + currentState +
+        ", createdOn='" + createdOn + '\'' +
+        ", createdBy='" + createdBy + '\'' +
+        ", lastModifiedOn='" + lastModifiedOn + '\'' +
+        ", lastModifiedBy='" + lastModifiedBy + '\'' +
+        '}';
   }
 
   public enum State {

@@ -21,6 +21,7 @@ import io.mifos.core.test.domain.ValidationTestCase;
 import org.apache.commons.lang.RandomStringUtils;
 import org.junit.runners.Parameterized;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -61,8 +62,14 @@ public class CaseTest extends ValidationTest<Case> {
             .adjustment(x -> x.setProductIdentifier(null))
             .valid(false));
     ret.add(new ValidationTestCase<Case>("tooLongAccountIdentifier")
-            .adjustment(x -> x.getAccountAssignments().add(new AccountAssignment("x", "0123456789")))
-            .valid(false));
+        .adjustment(x -> x.getAccountAssignments().add(new AccountAssignment("x", "0123456789")))
+        .valid(false));
+    ret.add(new ValidationTestCase<Case>("out of range interest")
+        .adjustment(x -> x.setInterest(BigDecimal.TEN.negate()))
+        .valid(false));
+    ret.add(new ValidationTestCase<Case>("null interest")
+        .adjustment(x -> x.setInterest(BigDecimal.TEN.negate()))
+        .valid(false));
 
     return ret;
   }

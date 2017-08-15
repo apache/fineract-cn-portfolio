@@ -80,7 +80,7 @@ public class CaseCommandHandler {
     return new CaseEvent(caseInstance.getProductIdentifier(), caseInstance.getIdentifier());
   }
 
-  private PatternFactory getPatternFactory(String productIdentifier) {
+  private PatternFactory getPatternFactory(final String productIdentifier) {
     return productRepository.findByIdentifier(productIdentifier)
               .map(ProductEntity::getPatternPackage)
               .flatMap(patternFactoryRegistry::getPatternFactoryForPackage)

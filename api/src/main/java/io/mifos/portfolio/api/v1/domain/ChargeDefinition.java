@@ -39,7 +39,8 @@ public class ChargeDefinition {
   @SuppressWarnings("WeakerAccess")
   public enum ChargeMethod {
     FIXED,
-    PROPORTIONAL
+    PROPORTIONAL,
+    INTEREST
   }
 
   @ValidIdentifier

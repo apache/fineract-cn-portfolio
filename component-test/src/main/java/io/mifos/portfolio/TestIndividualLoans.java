@@ -26,6 +26,7 @@ import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -37,6 +38,9 @@ public class TestIndividualLoans extends AbstractPortfolioTest {
 
   @Test
   public void shouldReturnIndividualLoansCases() throws InterruptedException {
+    Mockito.doReturn(true).when(customerManager).isCustomerInGoodStanding("susi");
+    Mockito.doReturn(true).when(customerManager).isCustomerInGoodStanding("george");
+    Mockito.doReturn(true).when(customerManager).isCustomerInGoodStanding("harold");
     final Product product = createAndEnableProduct();
     final Set<String> susisCaseIdentifiers = new HashSet<>();
     final Set<String> georgeCaseIdentifiers = new HashSet<>();

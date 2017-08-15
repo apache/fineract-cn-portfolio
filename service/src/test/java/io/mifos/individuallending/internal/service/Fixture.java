@@ -86,7 +86,6 @@ class Fixture {
   }
 
   static ScheduledCharge scheduledInterestBookingCharge(
-      final double amount,
       final LocalDate initialDate,
       final int chargeDateDelta,
       final int periodBeginDelta,
@@ -99,12 +98,12 @@ class Fixture {
         new Period(chargeDate, periodLength),
         getPeriod(initialDate, periodBeginDelta, periodLength));
     final ChargeDefinition chargeDefinition = new ChargeDefinition();
-    chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
+    chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.INTEREST);
     chargeDefinition.setForCycleSizeUnit(ChronoUnit.YEARS);
     chargeDefinition.setIdentifier("blah");
     chargeDefinition.setAccrueAction(Action.APPLY_INTEREST.name());
     chargeDefinition.setChargeAction(Action.ACCEPT_PAYMENT.name());
-    chargeDefinition.setAmount(BigDecimal.valueOf(amount));
+    chargeDefinition.setAmount(BigDecimal.ONE);
     chargeDefinition.setFromAccountDesignator(AccountDesignators.CUSTOMER_LOAN);
     chargeDefinition.setAccrualAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
     chargeDefinition.setToAccountDesignator(AccountDesignators.INTEREST_INCOME);

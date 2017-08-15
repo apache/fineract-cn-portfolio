@@ -24,8 +24,9 @@ import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.service.internal.repository.CaseEntity;
+import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
-import io.mifos.portfolio.service.internal.service.ProductService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -86,6 +87,7 @@ public class IndividualLoanServiceTest {
     private CaseParameters caseParameters;
     private LocalDate initialDisbursementDate;
     private List<ChargeDefinition> chargeDefinitions;
+    private BigDecimal interest;
     private Set<String> expectedChargeIdentifiers = new HashSet<>(Arrays.asList(
         PROCESSING_FEE_ID,
         LOAN_FUNDS_ALLOCATION_ID,
@@ -127,11 +129,27 @@ public class IndividualLoanServiceTest {
       return this;
     }
 
+    TestCase interest(final BigDecimal newVal) {
+      this.interest = newVal;
+      return this;
+    }
+
     TestCase expectChargeInstancesForActionDatePair(final Action action,
                                                     final LocalDate forDate,
                                                     final List<ChargeDefinition> chargeDefinitions) {
       this.chargeDefinitionsForActions.put(new ActionDatePair(action, forDate), chargeDefinitions);
       return this;
+    }
+
+    DataContextOfAction getDataContextOfAction() {
+
+      final ProductEntity product = new ProductEntity();
+      product.setMinorCurrencyUnitDigits(minorCurrencyUnitDigits);
+      product.setIdentifier(productIdentifier);
+      final CaseEntity customerCase = new CaseEntity();
+      customerCase.setInterest(interest);
+
+      return new DataContextOfAction(product, customerCase, caseParameters, Collections.emptyList());
     }
 
     @Override
@@ -153,7 +171,6 @@ public class IndividualLoanServiceTest {
 
   private final TestCase testCase;
   private final IndividualLoanService testSubject;
-  private final Product product;
   private final Map<String, List<ChargeDefinition>> chargeDefinitionsByChargeAction;
   private final Map<String, List<ChargeDefinition>> chargeDefinitionsByAccrueAction;
 
@@ -169,7 +186,7 @@ public class IndividualLoanServiceTest {
     final ChargeDefinition processingFeeCharge = getFixedSingleChargeDefinition(10.0, Action.OPEN, PROCESSING_FEE_ID, AccountDesignators.PROCESSING_FEE_INCOME);
     final ChargeDefinition loanOriginationFeeCharge = getFixedSingleChargeDefinition(100.0, Action.APPROVE, LOAN_ORIGINATION_FEE_ID, AccountDesignators.ORIGINATION_FEE_INCOME);
     final List<ChargeDefinition> defaultChargesWithFeesReplaced =
-    chargesWithInterestRate(0.01).stream().map(x -> {
+    charges().stream().map(x -> {
       switch (x.getIdentifier()) {
         case PROCESSING_FEE_ID:
           return processingFeeCharge;
@@ -185,6 +202,7 @@ public class IndividualLoanServiceTest {
         .caseParameters(caseParameters)
         .initialDisbursementDate(initialDisbursementDate)
         .chargeDefinitions(defaultChargesWithFeesReplaced)
+        .interest(BigDecimal.valueOf(1))
         .expectChargeInstancesForActionDatePair(Action.OPEN, initialDisbursementDate, Collections.singletonList(processingFeeCharge))
         .expectChargeInstancesForActionDatePair(Action.APPROVE, initialDisbursementDate,
             Collections.singletonList(loanOriginationFeeCharge));
@@ -199,13 +217,14 @@ public class IndividualLoanServiceTest {
     caseParameters.setPaymentCycle(new PaymentCycle(ChronoUnit.MONTHS, 1, 0, null, null));
     caseParameters.setMaximumBalance(BigDecimal.valueOf(200000));
 
-    final List<ChargeDefinition> charges = chargesWithInterestRate(0.10);
+    final List<ChargeDefinition> charges = charges();
 
     return new TestCase("yearLoanTestCase")
         .minorCurrencyUnitDigits(3)
         .caseParameters(caseParameters)
         .initialDisbursementDate(initialDisbursementDate)
-        .chargeDefinitions(charges);
+        .chargeDefinitions(charges)
+        .interest(BigDecimal.valueOf(10));
   }
 
   private static TestCase chargeDefaultsCase()
@@ -216,24 +235,18 @@ public class IndividualLoanServiceTest {
     caseParameters.setPaymentCycle(new PaymentCycle(ChronoUnit.WEEKS, 1, 1, 0, 0));
     caseParameters.setMaximumBalance(BigDecimal.valueOf(2000));
 
-    final List<ChargeDefinition> charges = chargesWithInterestRate(0.05);
+    final List<ChargeDefinition> charges = charges();
 
     return new TestCase("chargeDefaultsCase")
         .minorCurrencyUnitDigits(2)
         .caseParameters(caseParameters)
         .initialDisbursementDate(initialDisbursementDate)
-        .chargeDefinitions(charges);
+        .chargeDefinitions(charges)
+        .interest(BigDecimal.valueOf(5));
   }
 
-  private static List<ChargeDefinition> chargesWithInterestRate(final double interestRate) {
-    final List<ChargeDefinition> defaultLoanCharges = IndividualLendingPatternFactory.defaultIndividualLoanCharges();
-
-    defaultLoanCharges.forEach(x -> {
-      if (x.getIdentifier().equals(ChargeIdentifiers.INTEREST_ID))
-        x.setAmount(BigDecimal.valueOf(interestRate));
-    });
-
-    return defaultLoanCharges;
+  private static List<ChargeDefinition> charges() {
+    return IndividualLendingPatternFactory.defaultIndividualLoanCharges();
   }
 
   private static ChargeDefinition getFixedSingleChargeDefinition(
@@ -258,11 +271,7 @@ public class IndividualLoanServiceTest {
   {
     this.testCase = testCase;
 
-    final ProductService productServiceMock = Mockito.mock(ProductService.class);
     final ChargeDefinitionService chargeDefinitionServiceMock = Mockito.mock(ChargeDefinitionService.class);
-    product = new Product();
-    product.setMinorCurrencyUnitDigits(testCase.minorCurrencyUnitDigits);
-    Mockito.doReturn(Optional.of(product)).when(productServiceMock).findByIdentifier(testCase.productIdentifier);
     chargeDefinitionsByChargeAction = testCase.chargeDefinitions.stream()
         .collect(Collectors.groupingBy(ChargeDefinition::getChargeAction,
             Collectors.mapping(x -> x, Collectors.toList())));
@@ -273,21 +282,24 @@ public class IndividualLoanServiceTest {
     Mockito.doReturn(chargeDefinitionsByChargeAction).when(chargeDefinitionServiceMock).getChargeDefinitionsMappedByChargeAction(testCase.productIdentifier);
     Mockito.doReturn(chargeDefinitionsByAccrueAction).when(chargeDefinitionServiceMock).getChargeDefinitionsMappedByAccrueAction(testCase.productIdentifier);
 
-    testSubject = new IndividualLoanService(productServiceMock, chargeDefinitionServiceMock);
+    testSubject = new IndividualLoanService(chargeDefinitionServiceMock);
   }
 
   @Test
   public void getPlannedPayments() throws Exception {
-    final PlannedPaymentPage firstPage = testSubject.getPlannedPaymentsPage(testCase.productIdentifier,
-            testCase.caseParameters,
+    final PlannedPaymentPage firstPage = testSubject.getPlannedPaymentsPage(testCase.getDataContextOfAction(),
             0,
             20,
             testCase.initialDisbursementDate);
 
+    Assert.assertFalse(firstPage.getElements().size() == 0);
+
     final List<PlannedPayment> allPlannedPayments =
-            Stream.iterate(0, x -> x + 1).limit(firstPage.getTotalPages())
-            .map(x -> testSubject.getPlannedPaymentsPage(testCase.productIdentifier,
-                    testCase.caseParameters, x, 20, testCase.initialDisbursementDate))
+        Stream.iterate(0, x -> x + 1).limit(firstPage.getTotalPages())
+            .map(x -> testSubject.getPlannedPaymentsPage(testCase.getDataContextOfAction(),
+                x,
+                20,
+                testCase.initialDisbursementDate))
             .flatMap(x -> x.getElements().stream())
             .collect(Collectors.toList());
 
@@ -314,8 +326,8 @@ public class IndividualLoanServiceTest {
 
     //All entries should have the correct scale.
     allPlannedPayments.forEach(x -> {
-      x.getCostComponents().forEach(y -> Assert.assertEquals(product.getMinorCurrencyUnitDigits(), y.getAmount().scale()));
-      Assert.assertEquals(product.getMinorCurrencyUnitDigits(), x.getRemainingPrincipal().scale());
+      x.getCostComponents().forEach(y -> Assert.assertEquals(testCase.minorCurrencyUnitDigits, y.getAmount().scale()));
+      Assert.assertEquals(testCase.minorCurrencyUnitDigits, x.getRemainingPrincipal().scale());
       final int uniqueChargeIdentifierCount = x.getCostComponents().stream()
           .map(CostComponent::getChargeIdentifier)
           .collect(Collectors.toSet())

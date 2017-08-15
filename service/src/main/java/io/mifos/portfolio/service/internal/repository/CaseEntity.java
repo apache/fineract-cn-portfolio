@@ -19,6 +19,7 @@ import io.mifos.core.mariadb.util.LocalDateTimeConverter;
 
 import javax.annotation.Nullable;
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Set;
@@ -40,6 +41,9 @@ public class CaseEntity {
 
   @Column(name = "product_identifier", nullable = false)
   private String productIdentifier;
+
+  @Column(name = "interest")
+  private BigDecimal interest;
 
   @OneToMany(targetEntity = CaseAccountAssignmentEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "caseEntity")
   private Set<CaseAccountAssignmentEntity> accountAssignments;
@@ -93,6 +97,14 @@ public class CaseEntity {
 
   public void setProductIdentifier(String productIdentifier) {
     this.productIdentifier = productIdentifier;
+  }
+
+  public BigDecimal getInterest() {
+    return interest;
+  }
+
+  public void setInterest(BigDecimal interest) {
+    this.interest = interest;
   }
 
   public Set<CaseAccountAssignmentEntity> getAccountAssignments() {

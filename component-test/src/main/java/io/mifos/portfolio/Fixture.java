@@ -53,7 +53,7 @@ public class Fixture {
     product.setDescription("Loan for seeds or agricultural equipment");
     product.setTermRange(new TermRange(ChronoUnit.MONTHS, 12));
     product.setBalanceRange(new BalanceRange(fixScale(BigDecimal.ZERO), fixScale(new BigDecimal(10000))));
-    product.setInterestRange(new InterestRange(BigDecimal.valueOf(3, 2), BigDecimal.valueOf(12, 2)));
+    product.setInterestRange(new InterestRange(BigDecimal.valueOf(3_00, 2), BigDecimal.valueOf(12_00, 2)));
     product.setInterestBasis(InterestBasis.CURRENT_BALANCE);
 
     product.setCurrencyCode("XXX");
@@ -118,6 +118,7 @@ public class Fixture {
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
     ret.setAccountAssignments(accountAssignments);
     ret.setCurrentState(Case.State.CREATED.name());
+    ret.setInterest(BigDecimal.valueOf(10_0000, 4));
 
     final CaseParameters caseParameters = getTestCaseParameters();
     final Gson gson = new Gson();

@@ -37,6 +37,7 @@ public class CaseMapper {
 
     ret.setIdentifier(instance.getIdentifier());
     ret.setProductIdentifier(instance.getProductIdentifier());
+    ret.setInterest(instance.getInterest());
     ret.setParameters(parameters);
     ret.setAccountAssignments(instance.getAccountAssignments().stream().map(CaseMapper::mapAccountAssignmentEntity).collect(Collectors.toSet()));
     ret.setCurrentState(instance.getCurrentState());
@@ -62,6 +63,7 @@ public class CaseMapper {
 
     ret.setIdentifier(instance.getIdentifier());
     ret.setProductIdentifier(instance.getProductIdentifier());
+    ret.setInterest(instance.getInterest());
     ret.setAccountAssignments(instance.getAccountAssignments().stream()
         .map(x -> CaseMapper.map(x, ret))
         .collect(Collectors.toSet()));

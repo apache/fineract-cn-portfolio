@@ -63,6 +63,13 @@ public class TestCases extends AbstractPortfolioTest {
     }
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldFailToCreateCaseWithInterestOutOfRange() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+
+    createAdjustedCase(product.getIdentifier(), x -> x.setInterest(BigDecimal.valueOf(13_0000, 4)));
+  }
+
   @Test
   public void shouldCreateCase() throws InterruptedException {
     final Product product = createAndEnableProduct();

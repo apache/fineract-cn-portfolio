@@ -17,6 +17,8 @@ package io.mifos.portfolio.service.internal.checker;
 
 import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.InterestRange;
+import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
@@ -26,6 +28,7 @@ import io.mifos.products.spi.PatternFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 /**
@@ -57,10 +60,19 @@ public class CaseChecker {
     if (!productEnabled.orElseThrow(() -> ServiceException.internalError("Product should exist, but doesn't"))) {
       throw ServiceException.badRequest("Product must be enabled before cases for it can be created: " + productIdentifier);}
 
-    getPatternFactory(productIdentifier).checkParameters(instance.getParameters());
+    checkForChange(productIdentifier, instance);
   }
 
   public void checkForChange(final String productIdentifier, final Case instance) {
+    final Product product = productService.findByIdentifier(productIdentifier)
+        .orElseThrow(() -> ServiceException.badRequest("Product must exist ''{0}''.", productIdentifier));
+    final InterestRange interestRange = product.getInterestRange();
+
+    final BigDecimal interest = instance.getInterest();
+    if (interest.compareTo(interestRange.getMinimum()) < 0 ||
+        interest.compareTo(interestRange.getMaximum()) > 0)
+      throw ServiceException.badRequest("Interest for the case ({0}) must be within the range defined by the product ({1}).", interest, interestRange.toString());
+
     getPatternFactory(productIdentifier).checkParameters(instance.getParameters());
   }
 

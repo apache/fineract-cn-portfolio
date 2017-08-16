@@ -109,7 +109,10 @@ public class ProductRestController {
       throw ServiceException.badRequest("CreatedOn must be 'null' upon initial creation.");
 
     if (instance.getLastModifiedOn() != null)
-      throw ServiceException.badRequest("LastModifiedOn must 'null' be upon initial creation.");
+      throw ServiceException.badRequest("LastModifiedOn must be 'null' be upon initial creation.");
+
+    if (instance.isEnabled())
+      throw ServiceException.badRequest("Enabled must be 'false' be upon initial creation.");
 
     this.commandGateway.process(new CreateProductCommand(instance));
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
@@ -145,6 +148,9 @@ public class ProductRestController {
 
     if (caseService.existsByProductIdentifier(productIdentifier))
       throw ServiceException.conflict("Cases exist for product with the identifier '" + productIdentifier + "'. Product cannot be changed.");
+
+    if (instance.isEnabled())
+      throw ServiceException.badRequest("Enabled must be 'false' be during editing.");
 
     commandGateway.process(new ChangeProductCommand(instance));
 

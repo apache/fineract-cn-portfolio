@@ -48,12 +48,13 @@ public interface PortfolioManager {
   List<Pattern> getAllPatterns();
 
   @RequestMapping(
-          value = "/patterns/{patternpackage}/charges/",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/patterns/{patternpackage}/charges/",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<ChargeDefinition> getAllDefaultChargeDefinitionsForPattern(@PathVariable("patternpackage") final String patternPackage);
+  List<ChargeDefinition> getAllDefaultChargeDefinitionsForPattern(
+      @PathVariable("patternpackage") final String patternPackage);
 
   @RequestMapping(
       value = "/products/",
@@ -61,98 +62,104 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  ProductPage getProducts(@RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled,
-                          @RequestParam(value = "term", required = false) final String term,
-                          @RequestParam(value = "pageIndex") final Integer pageIndex,
-                          @RequestParam(value = "size") final Integer size,
-                          @RequestParam(value = "sortColumn", required = false) @ValidSortColumn(value = {"lastModifiedOn", "identifier", "name"}) final String sortColumn,
-                          @RequestParam(value = "sortDirection", required = false) @ValidSortDirection final String sortDirection);
+  ProductPage getProducts(
+      @RequestParam(value = "includeDisabled", required = false) final Boolean includeDisabled,
+      @RequestParam(value = "term", required = false) final String term,
+      @RequestParam(value = "pageIndex") final Integer pageIndex,
+      @RequestParam(value = "size") final Integer size,
+      @RequestParam(value = "sortColumn", required = false) @ValidSortColumn(value = {"lastModifiedOn", "identifier", "name"}) final String sortColumn,
+      @RequestParam(value = "sortDirection", required = false) @ValidSortDirection final String sortDirection);
 
   @RequestMapping(
-          value = "/products",
-          method = RequestMethod.POST,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products",
+      method = RequestMethod.POST,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductAlreadyExistsException.class)
   void createProduct(final Product product);
 
   @RequestMapping(
-          value = "/products/{productidentifier}",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE)
+      value = "/products/{productidentifier}",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
   Product getProduct(@PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}",
-          method = RequestMethod.PUT,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE)
+      value = "/products/{productidentifier}",
+      method = RequestMethod.PUT,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
   @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
-  void changeProduct(@PathVariable("productidentifier") final String productIdentifier,
-                     final Product product);
+  void changeProduct(
+      @PathVariable("productidentifier") final String productIdentifier,
+      final Product product);
 
   @RequestMapping(
-          value = "/products/{productidentifier}",
-          method = RequestMethod.DELETE,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}",
+      method = RequestMethod.DELETE,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
-  void deleteProduct(@PathVariable("productidentifier") final String productIdentifier);
+  void deleteProduct(
+      @PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/incompleteaccountassignments",
-          method = RequestMethod.GET,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE)
-  Set<AccountAssignment> getIncompleteAccountAssignments(@PathVariable("productidentifier") final String productIdentifier);
+      value = "/products/{productidentifier}/incompleteaccountassignments",
+      method = RequestMethod.GET,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  Set<AccountAssignment> getIncompleteAccountAssignments(
+      @PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/enabled",
-          method = RequestMethod.PUT,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE)
+      value = "/products/{productidentifier}/enabled",
+      method = RequestMethod.PUT,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
   @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductDefinitionIncomplete.class)
-  void enableProduct(@PathVariable("productidentifier") final String productIdentifier,
-                     final Boolean enabled);
+  void enableProduct(
+      @PathVariable("productidentifier") final String productIdentifier,
+      final Boolean enabled);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/enabled",
-          method = RequestMethod.GET,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE)
+      value = "/products/{productidentifier}/enabled",
+      method = RequestMethod.GET,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
   Boolean getProductEnabled(@PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/tasks/",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/tasks/",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<TaskDefinition> getAllTaskDefinitionsForProduct(@PathVariable("productidentifier") final String productIdentifier);
+  List<TaskDefinition> getAllTaskDefinitionsForProduct(
+      @PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/tasks/",
-          method = RequestMethod.POST,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/tasks/",
+      method = RequestMethod.POST,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
   void createTaskDefinition(
-          @PathVariable("productidentifier") final String productIdentifier,
-          final TaskDefinition taskDefinition);
+      @PathVariable("productidentifier") final String productIdentifier,
+      final TaskDefinition taskDefinition);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/tasks/{taskidentifier}",
-          method = RequestMethod.GET,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/tasks/{taskidentifier}",
+      method = RequestMethod.GET,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   TaskDefinition getTaskDefinition(
-          @PathVariable("productidentifier") final String productIdentifier,
-          @PathVariable("taskidentifier") final String taskDefinitionIdentifier);
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("taskidentifier") final String taskDefinitionIdentifier);
 
   @RequestMapping(
       value = "/products/{productidentifier}/tasks/{taskidentifier}",
@@ -176,103 +183,109 @@ public interface PortfolioManager {
       @PathVariable("taskidentifier") final String taskDefinitionIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/charges/",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/charges/",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<ChargeDefinition> getAllChargeDefinitionsForProduct(@PathVariable("productidentifier") final String productIdentifier);
+  List<ChargeDefinition> getAllChargeDefinitionsForProduct(
+      @PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/charges/",
-          method = RequestMethod.POST,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/charges/",
+      method = RequestMethod.POST,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   void createChargeDefinition(
-          @PathVariable("productidentifier") final String productIdentifier,
-          final ChargeDefinition taskDefinition);
+      @PathVariable("productidentifier") final String productIdentifier,
+      final ChargeDefinition taskDefinition);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/charges/{chargedefinitionidentifier}",
-          method = RequestMethod.GET,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/charges/{chargedefinitionidentifier}",
+      method = RequestMethod.GET,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   ChargeDefinition getChargeDefinition(
-          @PathVariable("productidentifier") final String productIdentifier,
-          @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier);
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/charges/{chargedefinitionidentifier}",
-          method = RequestMethod.PUT,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/charges/{chargedefinitionidentifier}",
+      method = RequestMethod.PUT,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   @ThrowsException(status = HttpStatus.CONFLICT, exception = ChargeDefinitionIsReadOnly.class)
   void changeChargeDefinition(
-          @PathVariable("productidentifier") final String productIdentifier,
-          @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier,
-          final ChargeDefinition chargeDefinition);
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier,
+      final ChargeDefinition chargeDefinition);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/charges/{chargedefinitionidentifier}",
-          method = RequestMethod.DELETE,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/charges/{chargedefinitionidentifier}",
+      method = RequestMethod.DELETE,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   @ThrowsException(status = HttpStatus.CONFLICT, exception = ChargeDefinitionIsReadOnly.class)
   void deleteChargeDefinition(
-          @PathVariable("productidentifier") final String productIdentifier,
-          @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier);
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/cases/",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  CasePage getAllCasesForProduct(@PathVariable("productidentifier") final String productIdentifier,
-                                 @RequestParam(value = "includeClosed", required = false) final Boolean includeClosed,
-                                 @RequestParam("pageIndex") final Integer pageIndex,
-                                 @RequestParam("size") final Integer size);
+  CasePage getAllCasesForProduct(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @RequestParam(value = "includeClosed", required = false) final Boolean includeClosed,
+      @RequestParam("pageIndex") final Integer pageIndex,
+      @RequestParam("size") final Integer size);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/",
-          method = RequestMethod.POST,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/cases/",
+      method = RequestMethod.POST,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   @ThrowsException(status = HttpStatus.CONFLICT, exception = CaseAlreadyExistsException.class)
-  void createCase(@PathVariable("productidentifier") final String productIdentifier,
-                  final Case caseInstance);
+  void createCase(
+      @PathVariable("productidentifier") final String productIdentifier,
+      final Case caseInstance);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/{caseidentifier}",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE)
-  Case getCase(@PathVariable("productidentifier") final String productIdentifier,
-               @PathVariable("caseidentifier") final String caseIdentifier);
+      value = "/products/{productidentifier}/cases/{caseidentifier}",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  Case getCase(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/{caseidentifier}",
-          method = RequestMethod.PUT,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/cases/{caseidentifier}",
+      method = RequestMethod.PUT,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  void changeCase(@PathVariable("productidentifier") final String productIdentifier,
-                  @PathVariable("caseidentifier") final String caseIdentifier,
-                  final Case caseInstance);
+  void changeCase(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      final Case caseInstance);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/{caseidentifier}/actions/",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/cases/{caseidentifier}/actions/",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  Set<String> getActionsForCase(@PathVariable("productidentifier") final String productIdentifier,
-                                @PathVariable("caseidentifier") final String caseIdentifier);
+  Set<String> getActionsForCase(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier);
 
 
   @RequestMapping(
@@ -281,11 +294,12 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
-                                                 @PathVariable("caseidentifier") final String caseIdentifier,
-                                                 @PathVariable("actionidentifier") final String actionIdentifier,
-                                                 @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators,
-                                                 @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize);
+  List<CostComponent> getCostComponentsForAction(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @PathVariable("actionidentifier") final String actionIdentifier,
+      @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators,
+      @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize);
 
 
   @RequestMapping(
@@ -294,10 +308,11 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
-                                                 @PathVariable("caseidentifier") final String caseIdentifier,
-                                                 @PathVariable("actionidentifier") final String actionIdentifier,
-                                                 @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators);
+  List<CostComponent> getCostComponentsForAction(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @PathVariable("actionidentifier") final String actionIdentifier,
+      @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators);
 
 
   @RequestMapping(
@@ -306,41 +321,45 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
-                                                 @PathVariable("caseidentifier") final String caseIdentifier,
-                                                 @PathVariable("actionidentifier") final String actionIdentifier);
+  List<CostComponent> getCostComponentsForAction(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @PathVariable("actionidentifier") final String actionIdentifier);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/{caseidentifier}/commands/{actionidentifier}",
-          method = RequestMethod.POST,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/cases/{caseidentifier}/commands/{actionidentifier}",
+      method = RequestMethod.POST,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   @ThrowsException(status = HttpStatus.CONFLICT, exception = TaskOutstanding.class)
-  void executeCaseCommand(@PathVariable("productidentifier") final String productIdentifier,
-                          @PathVariable("caseidentifier") final String caseIdentifier,
-                          @PathVariable("actionidentifier") final String actionIdentifier,
-                          final Command command);
+  void executeCaseCommand(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @PathVariable("actionidentifier") final String actionIdentifier,
+      final Command command);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<TaskInstance> getAllTasksForCase(@PathVariable("productidentifier") final String productIdentifier,
-                                        @PathVariable("caseidentifier") final String caseIdentifier,
-                                        @RequestParam(value = "includeExecuted", required = false) final Boolean includeExecuted);
+  List<TaskInstance> getAllTasksForCase(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @RequestParam(value = "includeExecuted", required = false) final Boolean includeExecuted);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/{taskidentifier}",
-          method = RequestMethod.GET,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/{taskidentifier}",
+      method = RequestMethod.GET,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  TaskInstance getTaskForCase(@PathVariable("productidentifier") final String productIdentifier,
-                              @PathVariable("caseidentifier") final String caseIdentifier,
-                              @PathVariable("taskidentifier") final String taskIdentifier);
+  TaskInstance getTaskForCase(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @PathVariable("taskidentifier") final String taskIdentifier);
 
   @RequestMapping(
       value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/{taskidentifier}",
@@ -348,31 +367,34 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  void changeTaskForCase(@PathVariable("productidentifier") final String productIdentifier,
-                         @PathVariable("caseidentifier") final String caseIdentifier,
-                         @PathVariable("taskidentifier") final String taskIdentifier,
-                         final TaskInstance instance);
+  void changeTaskForCase(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @PathVariable("taskidentifier") final String taskIdentifier,
+      final TaskInstance instance);
 
   @RequestMapping(
-          value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/{taskidentifier}/executed",
-          method = RequestMethod.PUT,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/{taskidentifier}/executed",
+      method = RequestMethod.PUT,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   @ThrowsException(status = HttpStatus.CONFLICT, exception = TaskExecutionBySameUserAsCaseCreation.class)
-  void markTaskExecution(@PathVariable("productidentifier") final String productIdentifier,
-                         @PathVariable("caseidentifier") final String caseIdentifier,
-                         @PathVariable("taskidentifier") final String taskIdentifier,
-                         final Boolean executed);
+  void markTaskExecution(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @PathVariable("taskidentifier") final String taskIdentifier,
+      final Boolean executed);
 
   @RequestMapping(
-          value = "/cases/",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/cases/",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  CasePage getAllCases(@RequestParam("pageIndex") final Integer pageIndex,
-                        @RequestParam("size") final Integer size);
+  CasePage getAllCases(
+      @RequestParam("pageIndex") final Integer pageIndex,
+      @RequestParam("size") final Integer size);
 
   //TODO: find a way to list cases by customer even though the portfolio contains products which may be associated with groups instead of customers.
 }

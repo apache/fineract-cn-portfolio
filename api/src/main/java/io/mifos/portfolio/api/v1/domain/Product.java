@@ -68,6 +68,7 @@ public final class Product {
   private String createdBy;
   private String lastModifiedOn;
   private String lastModifiedBy;
+  private boolean enabled;
 
   public Product() {
   }
@@ -200,6 +201,14 @@ public final class Product {
     this.lastModifiedBy = lastModifiedBy;
   }
 
+  public boolean isEnabled() {
+    return enabled;
+  }
+
+  public void setEnabled(boolean enabled) {
+    this.enabled = enabled;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -227,22 +236,23 @@ public final class Product {
   @Override
   public String toString() {
     return "Product{" +
-            "identifier='" + identifier + '\'' +
-            ", name='" + name + '\'' +
-            ", termRange=" + termRange +
-            ", balanceRange=" + balanceRange +
-            ", interestRange=" + interestRange +
-            ", interestBasis=" + interestBasis +
-            ", patternPackage='" + patternPackage + '\'' +
-            ", description='" + description + '\'' +
-            ", currencyCode='" + currencyCode + '\'' +
-            ", minorCurrencyUnitDigits=" + minorCurrencyUnitDigits +
-            ", accountAssignments=" + accountAssignments +
-            ", parameters='" + parameters + '\'' +
-            ", createdOn='" + createdOn + '\'' +
-            ", createdBy='" + createdBy + '\'' +
-            ", lastModifiedOn='" + lastModifiedOn + '\'' +
-            ", lastModifiedBy='" + lastModifiedBy + '\'' +
-            '}';
+        "identifier='" + identifier + '\'' +
+        ", name='" + name + '\'' +
+        ", termRange=" + termRange +
+        ", balanceRange=" + balanceRange +
+        ", interestRange=" + interestRange +
+        ", interestBasis=" + interestBasis +
+        ", patternPackage='" + patternPackage + '\'' +
+        ", description='" + description + '\'' +
+        ", currencyCode='" + currencyCode + '\'' +
+        ", minorCurrencyUnitDigits=" + minorCurrencyUnitDigits +
+        ", accountAssignments=" + accountAssignments +
+        ", parameters='" + parameters + '\'' +
+        ", createdOn='" + createdOn + '\'' +
+        ", createdBy='" + createdBy + '\'' +
+        ", lastModifiedOn='" + lastModifiedOn + '\'' +
+        ", lastModifiedBy='" + lastModifiedBy + '\'' +
+        ", enabled='" + enabled + '\'' +
+        '}';
   }
 }

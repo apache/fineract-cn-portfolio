@@ -57,6 +57,7 @@ public class ProductMapper {
     product.setCreatedOn(DateConverter.toIsoString(productEntity.getCreatedOn()));
     product.setLastModifiedBy(productEntity.getLastModifiedBy());
     product.setLastModifiedOn(DateConverter.toIsoString(productEntity.getLastModifiedOn()));
+    product.setEnabled(productEntity.getEnabled());
 
     return product;
   }

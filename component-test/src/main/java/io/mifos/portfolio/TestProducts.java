@@ -50,6 +50,7 @@ public class TestProducts extends AbstractPortfolioTest {
     final Product productAsSaved = portfolioManager.getProduct(product.getIdentifier());
 
     Assert.assertEquals(product, productAsSaved);
+    Assert.assertFalse(productAsSaved.isEnabled());
 
     Assert.assertFalse(portfolioManager.getProductEnabled(product.getIdentifier()));
 
@@ -76,6 +77,9 @@ public class TestProducts extends AbstractPortfolioTest {
     portfolioManager.enableProduct(product.getIdentifier(), true);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
 
+    final Product productAfterEnable = portfolioManager.getProduct(product.getIdentifier());
+
+    Assert.assertTrue(productAfterEnable.isEnabled());
     Assert.assertTrue(portfolioManager.getProductEnabled(product.getIdentifier()));
 
     {
@@ -298,6 +302,13 @@ public class TestProducts extends AbstractPortfolioTest {
   @Test(expected = NotFoundException.class)
   public void shouldFailToDeleteNonExistentProduct() throws InterruptedException {
     portfolioManager.deleteProduct("habberdash");
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldFailToCreateProductDirectlyAsEnabled() throws InterruptedException {
+    final Product product = Fixture.createAdjustedProduct(x -> {});
+    product.setEnabled(true);
+    portfolioManager.createProduct(product);
   }
 
   @Test

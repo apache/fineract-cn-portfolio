@@ -102,7 +102,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
-        dataContextOfAction.getInterestAsFraction(),
+        dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -121,7 +121,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
-        dataContextOfAction.getInterestAsFraction(),
+        dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -141,7 +141,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         BigDecimal.ZERO,
         BigDecimal.ZERO,
-        dataContextOfAction.getInterestAsFraction(),
+        dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -198,7 +198,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         disbursalSize,
-        dataContextOfAction.getInterestAsFraction(),
+        dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -238,7 +238,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         BigDecimal.ZERO,
-        dataContextOfAction.getInterestAsFraction(),
+        dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -276,7 +276,7 @@ public class CostComponentService {
           hypotheticalScheduledActions);
       loanPaymentSize = getLoanPaymentSize(
           currentBalance,
-          dataContextOfAction.getInterestAsFraction(),
+          dataContextOfAction.getInterest(),
           minorCurrencyUnitDigits,
           hypotheticalScheduledCharges);
     }
@@ -302,7 +302,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         loanPaymentSize,
-        dataContextOfAction.getInterestAsFraction(),
+        dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         true);
   }
@@ -386,7 +386,7 @@ public class CostComponentService {
         caseParameters.getMaximumBalance(),
         currentBalance,
         BigDecimal.ZERO,
-        dataContextOfAction.getInterestAsFraction(),
+        dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         true);
   }

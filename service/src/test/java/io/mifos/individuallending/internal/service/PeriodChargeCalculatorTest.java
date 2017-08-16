@@ -96,7 +96,7 @@ public class PeriodChargeCalculatorTest {
     expectedPeriodRates.put(getPeriod(initialDate, 1, 1), dailyInterestRate);
 
     return new TestCase("simpleCase")
-        .interest(BigDecimal.valueOf(0.01))
+        .interest(BigDecimal.ONE)
         .scheduledCharges(scheduledCharges)
         .precision(20)
         .expectedPeriodRates(expectedPeriodRates);
@@ -117,7 +117,7 @@ public class PeriodChargeCalculatorTest {
     expectedPeriodRates.put(getPeriod(initialDate, 2, 2), PeriodChargeCalculator.createCompoundedRate(dailyInterestRate, 2, 20));
 
     return new TestCase("bitOfCompoundingCase")
-        .interest(BigDecimal.valueOf(0.10))
+        .interest(BigDecimal.TEN)
         .scheduledCharges(scheduledCharges)
         .precision(20)
         .expectedPeriodRates(expectedPeriodRates);
@@ -135,7 +135,7 @@ public class PeriodChargeCalculatorTest {
     expectedPeriodRates.put(getPeriod(initialDate, 2, 2), BigDecimal.ZERO.setScale(20, BigDecimal.ROUND_UNNECESSARY));
 
     return new TestCase("zeroInterestPerPeriod")
-        .interest(BigDecimal.valueOf(0.00))
+        .interest(BigDecimal.ZERO)
         .scheduledCharges(scheduledCharges)
         .precision(20)
         .expectedPeriodRates(expectedPeriodRates);

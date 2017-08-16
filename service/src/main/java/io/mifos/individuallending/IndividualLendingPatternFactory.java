@@ -112,7 +112,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     final ChargeDefinition processingFee = charge(
             PROCESSING_FEE_NAME,
             Action.OPEN,
-            BigDecimal.valueOf(0.01),
+            BigDecimal.ONE,
             ENTRY,
             PROCESSING_FEE_INCOME);
     processingFee.setReadOnly(false);
@@ -120,7 +120,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     final ChargeDefinition loanOriginationFee = charge(
             LOAN_ORIGINATION_FEE_NAME,
             Action.APPROVE,
-            BigDecimal.valueOf(0.01),
+            BigDecimal.ONE,
             ENTRY,
             ORIGINATION_FEE_INCOME);
     loanOriginationFee.setReadOnly(false);
@@ -128,7 +128,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     final ChargeDefinition loanFundsAllocation = charge(
             LOAN_FUNDS_ALLOCATION_ID,
             Action.APPROVE,
-            BigDecimal.valueOf(1.00),
+            BigDecimal.valueOf(100),
             LOAN_FUNDS_SOURCE,
             PENDING_DISBURSAL);
     loanFundsAllocation.setReadOnly(true);
@@ -136,7 +136,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     final ChargeDefinition disbursementFee = charge(
             DISBURSEMENT_FEE_NAME,
             Action.DISBURSE,
-            BigDecimal.valueOf(0.001),
+            BigDecimal.valueOf(0.1),
             ENTRY,
             DISBURSEMENT_FEE_INCOME);
     disbursementFee.setReadOnly(false);
@@ -150,7 +150,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     disbursePayment.setToAccountDesignator(ENTRY);
     disbursePayment.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.getValue());
     disbursePayment.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    disbursePayment.setAmount(BigDecimal.ONE);
+    disbursePayment.setAmount(BigDecimal.valueOf(100));
     disbursePayment.setReadOnly(true);
 
     final ChargeDefinition trackPrincipalDisbursePayment = new ChargeDefinition();
@@ -162,14 +162,14 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     trackPrincipalDisbursePayment.setToAccountDesignator(CUSTOMER_LOAN);
     trackPrincipalDisbursePayment.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.getValue());
     trackPrincipalDisbursePayment.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    trackPrincipalDisbursePayment.setAmount(BigDecimal.ONE);
+    trackPrincipalDisbursePayment.setAmount(BigDecimal.valueOf(100));
     trackPrincipalDisbursePayment.setReadOnly(true);
 
     //TODO: Make payable at time of ACCEPT_PAYMENT but accrued at MARK_LATE
     final ChargeDefinition lateFee = charge(
             LATE_FEE_NAME,
             Action.MARK_LATE,
-            BigDecimal.valueOf(0.01),
+            BigDecimal.ONE,
             CUSTOMER_LOAN,
             LATE_FEE_INCOME);
     lateFee.setAccrueAction(Action.MARK_LATE.name());
@@ -181,7 +181,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     final ChargeDefinition writeOffAllowanceCharge = charge(
             ALLOW_FOR_WRITE_OFF_NAME,
             Action.MARK_LATE,
-            BigDecimal.valueOf(0.30),
+            BigDecimal.valueOf(30),
             PENDING_DISBURSAL,
             ARREARS_ALLOWANCE);
     writeOffAllowanceCharge.setProportionalTo(ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue());
@@ -190,7 +190,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     final ChargeDefinition interestCharge = charge(
         INTEREST_NAME,
         Action.ACCEPT_PAYMENT,
-        BigDecimal.ONE,
+        BigDecimal.valueOf(100),
         CUSTOMER_LOAN,
         INTEREST_INCOME);
     interestCharge.setForCycleSizeUnit(ChronoUnit.YEARS);
@@ -209,7 +209,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     customerRepaymentCharge.setToAccountDesignator(ENTRY);
     customerRepaymentCharge.setProportionalTo(ChargeProportionalDesignator.REPAYMENT_DESIGNATOR.getValue());
     customerRepaymentCharge.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    customerRepaymentCharge.setAmount(BigDecimal.ONE);
+    customerRepaymentCharge.setAmount(BigDecimal.valueOf(100));
     customerRepaymentCharge.setReadOnly(true);
 
     final ChargeDefinition trackReturnPrincipalCharge = new ChargeDefinition();
@@ -221,15 +221,15 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     trackReturnPrincipalCharge.setToAccountDesignator(LOANS_PAYABLE);
     trackReturnPrincipalCharge.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.getValue());
     trackReturnPrincipalCharge.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    trackReturnPrincipalCharge.setAmount(BigDecimal.ONE);
+    trackReturnPrincipalCharge.setAmount(BigDecimal.valueOf(100));
     trackReturnPrincipalCharge.setReadOnly(true);
 
     final ChargeDefinition disbursementReturnCharge = charge(
-            RETURN_DISBURSEMENT_NAME,
-            Action.CLOSE,
-            BigDecimal.valueOf(1.0),
-            PENDING_DISBURSAL,
-            LOAN_FUNDS_SOURCE);
+        RETURN_DISBURSEMENT_NAME,
+        Action.CLOSE,
+        BigDecimal.valueOf(100),
+        PENDING_DISBURSAL,
+        LOAN_FUNDS_SOURCE);
     disbursementReturnCharge.setProportionalTo(ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue());
     disbursementReturnCharge.setReadOnly(true);
 

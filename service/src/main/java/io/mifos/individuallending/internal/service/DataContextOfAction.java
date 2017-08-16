@@ -35,7 +35,6 @@ public class DataContextOfAction {
   private final CaseEntity customerCase;
   private final CaseParameters caseParameters;
   private final List<AccountAssignment> oneTimeAccountAssignments;
-  private final BigDecimal interestAsFraction;
 
   DataContextOfAction(final @Nonnull ProductEntity product,
                       final @Nonnull CaseEntity customerCase,
@@ -45,7 +44,6 @@ public class DataContextOfAction {
     this.customerCase = customerCase;
     this.caseParameters = caseParameters;
     this.oneTimeAccountAssignments = oneTimeAccountAssignments == null ? Collections.emptyList() : oneTimeAccountAssignments;
-    interestAsFraction = customerCase.getInterest().divide(BigDecimal.valueOf(100), 4, BigDecimal.ROUND_HALF_EVEN);;
   }
 
   public @Nonnull ProductEntity getProduct() {
@@ -72,7 +70,7 @@ public class DataContextOfAction {
     return getCompoundIdentifer() + "." + action.name();
   }
 
-  BigDecimal getInterestAsFraction() {
-    return interestAsFraction;
+  BigDecimal getInterest() {
+    return customerCase.getInterest();
   }
 }

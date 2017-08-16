@@ -57,7 +57,7 @@ public class IndividualLoanService {
 
     final BigDecimal loanPaymentSize = CostComponentService.getLoanPaymentSize(
         dataContextOfAction.getCaseParameters().getMaximumBalance(),
-        dataContextOfAction.getInterestAsFraction(),
+        dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         scheduledCharges);
 
@@ -66,7 +66,7 @@ public class IndividualLoanService {
         minorCurrencyUnitDigits,
         scheduledCharges,
         loanPaymentSize,
-        dataContextOfAction.getInterestAsFraction());
+        dataContextOfAction.getInterest());
 
     final Set<ChargeName> chargeNames = scheduledCharges.stream()
             .map(IndividualLoanService::chargeNameFromChargeDefinition)

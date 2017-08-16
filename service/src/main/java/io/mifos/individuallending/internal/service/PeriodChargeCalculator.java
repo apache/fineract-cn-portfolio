@@ -58,12 +58,17 @@ public class PeriodChargeCalculator {
         scheduledCharge.getChargeDefinition().getChargeMethod() == ChargeDefinition.ChargeMethod.INTEREST;
   }
 
-  static BigDecimal chargeAmountPerPeriod(final ScheduledCharge scheduledCharge, final BigDecimal amount, final int precision)
+  static BigDecimal chargeAmountPerPeriod(
+      final ScheduledCharge scheduledCharge,
+      final BigDecimal amountInPercentagePoints,
+      final int precision)
   {
+    final BigDecimal amountAsFraction = amountInPercentagePoints.divide(BigDecimal.valueOf(100), 4, BigDecimal.ROUND_HALF_EVEN);
+
     final ChargeDefinition chargeDefinition = scheduledCharge.getChargeDefinition();
     final ScheduledAction scheduledAction = scheduledCharge.getScheduledAction();
     if (chargeDefinition.getForCycleSizeUnit() == null)
-      return amount;
+      return amountAsFraction;
 
     final BigDecimal actionPeriodDuration
         = BigDecimal.valueOf(
@@ -87,7 +92,7 @@ public class PeriodChargeCalculator {
     final int accrualPeriodsInActionPeriod = actionPeriodDuration.divide(
         accrualPeriodDuration.orElse(actionPeriodDuration), precision, BigDecimal.ROUND_HALF_EVEN)
         .intValueExact();
-    final BigDecimal rateForAccrualPeriod = amount.divide(
+    final BigDecimal rateForAccrualPeriod = amountAsFraction.divide(
         accrualPeriodsInCycle, precision, BigDecimal.ROUND_HALF_EVEN);
     return createCompoundedRate(rateForAccrualPeriod, accrualPeriodsInActionPeriod, precision);
   }

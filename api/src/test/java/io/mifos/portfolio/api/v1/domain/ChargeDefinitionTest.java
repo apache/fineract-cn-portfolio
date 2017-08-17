@@ -24,7 +24,9 @@ import org.junit.runners.Parameterized;
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
 /**
  * @author Myrle Krantz
@@ -109,6 +111,24 @@ public class ChargeDefinitionTest extends ValidationTest<ChargeDefinition> {
     ret.add(new ValidationTestCase<ChargeDefinition>("proportionalToMaximumBalance")
         .adjustment(x -> x.setProportionalTo("{maximumbalance}"))
         .valid(true));
+    ret.add(new ValidationTestCase<ChargeDefinition>("segment set set but not list")
+        .adjustment(x -> x.setForSegmentSet("xyz"))
+        .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("segment list set but not set")
+        .adjustment(x -> x.setForSegments(Arrays.asList("mno", "xyz")))
+        .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("empty segment list")
+        .adjustment(x -> { x.setForSegmentSet("xyz"); x.setForSegments(Collections.emptyList());})
+        .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("valid segment references")
+        .adjustment(x -> { x.setForSegmentSet("xyz"); x.setForSegments(Collections.singletonList("abc"));})
+        .valid(true));
+    ret.add(new ValidationTestCase<ChargeDefinition>("invalid segment set identifier")
+        .adjustment(x -> { x.setForSegmentSet("//"); x.setForSegments(Collections.singletonList("abc"));})
+        .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("invalid segment list set identifier")
+        .adjustment(x -> { x.setForSegmentSet("xyz"); x.setForSegments(Collections.singletonList("//"));})
+        .valid(false));
     return ret;
   }
 }

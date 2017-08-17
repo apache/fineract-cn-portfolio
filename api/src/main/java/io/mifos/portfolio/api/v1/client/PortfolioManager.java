@@ -132,6 +132,48 @@ public interface PortfolioManager {
   Boolean getProductEnabled(@PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
+      value = "/products/{productidentifier}/balancesegmentsets/",
+      method = RequestMethod.POST,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
+  void createBalanceSegmentSet(
+      @PathVariable("productidentifier") final String productIdentifier,
+      final BalanceSegmentSet balanceSegmentSet);
+
+  @RequestMapping(
+      value = "/products/{productidentifier}/balancesegmentsets/{balancesegmentsetidentifier}",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  BalanceSegmentSet getBalanceSegmentSet(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("balancesegmentsetidentifier") final String balanceSegmentSetIdentifier);
+
+  @RequestMapping(
+      value = "/products/{productidentifier}/balancesegmentsets/{balancesegmentsetidentifier}",
+      method = RequestMethod.PUT,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
+  void changeBalanceSegmentSet(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("balancesegmentsetidentifier") final String balanceSegmentSetIdentifier,
+      BalanceSegmentSet balanceSegmentSet);
+
+  @RequestMapping(
+      value = "/products/{productidentifier}/balancesegmentsets/{balancesegmentsetidentifier}",
+      method = RequestMethod.DELETE,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
+  void deleteBalanceSegmentSet(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("balancesegmentsetidentifier") final String balanceSegmentSetIdentifier);
+
+  @RequestMapping(
       value = "/products/{productidentifier}/tasks/",
       method = RequestMethod.GET,
       produces = MediaType.ALL_VALUE,

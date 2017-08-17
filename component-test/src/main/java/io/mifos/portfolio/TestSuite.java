@@ -24,6 +24,7 @@ import org.junit.runners.Suite;
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
     TestAccountingInteractionInLoanWorkflow.class,
+    TestBalanceSegmentSets.class,
     TestCases.class,
     TestChargeDefinitions.class,
     TestCommands.class,

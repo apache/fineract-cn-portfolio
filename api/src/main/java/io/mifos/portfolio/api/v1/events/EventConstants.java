@@ -29,6 +29,9 @@ public interface EventConstants {
   String PUT_PRODUCT_ENABLE = "put-enable";
   String POST_CASE = "post-case";
   String PUT_CASE = "put-case";
+  String POST_BALANCE_SEGMENT_SET = "post-balance-segment-set";
+  String PUT_BALANCE_SEGMENT_SET = "put-balance-segment-set";
+  String DELETE_BALANCE_SEGMENT_SET = "delete-balance-segment-set";
   String POST_TASK_DEFINITION = "post-task-definition";
   String PUT_TASK_DEFINITION = "put-task-definition";
   String DELETE_TASK_DEFINITION = "delete-task-definition";
@@ -44,6 +47,9 @@ public interface EventConstants {
   String SELECTOR_PUT_PRODUCT_ENABLE = SELECTOR_NAME + " = '" + PUT_PRODUCT_ENABLE + "'";
   String SELECTOR_POST_CASE = SELECTOR_NAME + " = '" + POST_CASE + "'";
   String SELECTOR_PUT_CASE = SELECTOR_NAME + " = '" + PUT_CASE + "'";
+  String SELECTOR_POST_BALANCE_SEGMENT_SET = SELECTOR_NAME + " = '" + POST_BALANCE_SEGMENT_SET + "'";
+  String SELECTOR_PUT_BALANCE_SEGMENT_SET = SELECTOR_NAME + " = '" + PUT_BALANCE_SEGMENT_SET + "'";
+  String SELECTOR_DELETE_BALANCE_SEGMENT_SET = SELECTOR_NAME + " = '" + DELETE_BALANCE_SEGMENT_SET + "'";
   String SELECTOR_POST_TASK_DEFINITION = SELECTOR_NAME + " = '" + POST_TASK_DEFINITION + "'";
   String SELECTOR_PUT_TASK_DEFINITION = SELECTOR_NAME + " = '" + PUT_TASK_DEFINITION + "'";
   String SELECTOR_DELETE_TASK_DEFINITION = SELECTOR_NAME + " = '" + DELETE_TASK_DEFINITION + "'";

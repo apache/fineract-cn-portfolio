@@ -37,11 +37,20 @@ public class CheckValidSegmentList implements ConstraintValidator<ValidSegmentLi
     if (value.getSegmentIdentifiers() == null)
       return false;
 
-    if (value.getSegments().size() + 1 != value.getSegmentIdentifiers().size())
+    if (value.getSegments().size() == 0)
       return false;
 
-    for (final BigDecimal segment : value.getSegments()) {
-      if (segment.compareTo(BigDecimal.ZERO) <= 0)
+    if (value.getSegments().size() != value.getSegmentIdentifiers().size())
+      return false;
+
+    if (value.getSegments().get(0).compareTo(BigDecimal.ZERO) != 0)
+      return false;
+
+    for (int i = 0; i < value.getSegments().size() -1; i++) {
+      final BigDecimal segment1 = value.getSegments().get(i);
+      final BigDecimal segment2 = value.getSegments().get(i+1);
+
+      if (segment1.compareTo(segment2) > 0)
         return false;
     }
 

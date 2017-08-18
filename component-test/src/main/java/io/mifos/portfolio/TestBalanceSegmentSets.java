@@ -25,7 +25,6 @@ import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
-import java.util.TreeSet;
 
 /**
  * @author Myrle Krantz
@@ -37,8 +36,11 @@ public class TestBalanceSegmentSets extends AbstractPortfolioTest {
 
     final BalanceSegmentSet balanceSegmentSet = new BalanceSegmentSet();
     balanceSegmentSet.setIdentifier(testEnvironment.generateUniqueIdentifer("bss"));
-    balanceSegmentSet.setSegments(new TreeSet<>(Arrays.asList(BigDecimal.TEN, BigDecimal.valueOf(10_000))));
-    balanceSegmentSet.setSegmentIdentifiers(Arrays.asList("a", "b", "c"));
+    balanceSegmentSet.setSegments(Arrays.asList(
+        BigDecimal.ZERO.setScale(4, BigDecimal.ROUND_HALF_EVEN),
+        BigDecimal.TEN.setScale(4, BigDecimal.ROUND_HALF_EVEN),
+        BigDecimal.valueOf(10_000_0000, 4)));
+    balanceSegmentSet.setSegmentIdentifiers(Arrays.asList("abc", "def", "ghi"));
 
     portfolioManager.createBalanceSegmentSet(product.getIdentifier(), balanceSegmentSet);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_BALANCE_SEGMENT_SET, new BalanceSegmentSetEvent(product.getIdentifier(), balanceSegmentSet.getIdentifier())));
@@ -46,8 +48,11 @@ public class TestBalanceSegmentSets extends AbstractPortfolioTest {
     final BalanceSegmentSet createdBalanceSegmentSet = portfolioManager.getBalanceSegmentSet(product.getIdentifier(), balanceSegmentSet.getIdentifier());
     Assert.assertEquals(balanceSegmentSet, createdBalanceSegmentSet);
 
-    balanceSegmentSet.setSegments(new TreeSet<>(Arrays.asList(BigDecimal.valueOf(100), BigDecimal.valueOf(10_000))));
-    balanceSegmentSet.setSegmentIdentifiers(Arrays.asList("a", "b", "c"));
+    balanceSegmentSet.setSegments(Arrays.asList(
+        BigDecimal.ZERO.setScale(4, BigDecimal.ROUND_HALF_EVEN),
+        BigDecimal.valueOf(100_0000, 4),
+        BigDecimal.valueOf(10_000_0000, 4)));
+    balanceSegmentSet.setSegmentIdentifiers(Arrays.asList("abc", "def", "ghi"));
 
     portfolioManager.changeBalanceSegmentSet(product.getIdentifier(), balanceSegmentSet.getIdentifier(), balanceSegmentSet);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_BALANCE_SEGMENT_SET, new BalanceSegmentSetEvent(product.getIdentifier(), balanceSegmentSet.getIdentifier())));

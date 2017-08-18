@@ -22,7 +22,6 @@ import io.mifos.portfolio.api.v1.validation.ValidSegmentList;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
-import java.util.SortedSet;
 
 /**
  * @author Myrle Krantz
@@ -32,18 +31,12 @@ public class BalanceSegmentSet {
   @ValidIdentifier
   private String identifier;
 
-  private SortedSet<BigDecimal> segments;
+  private List<BigDecimal> segments;
 
   @ValidIdentifiers
   private List<String> segmentIdentifiers;
 
   public BalanceSegmentSet() {
-  }
-
-  public BalanceSegmentSet(String identifier, SortedSet<BigDecimal> segments, List<String> segmentIdentifiers) {
-    this.identifier = identifier;
-    this.segments = segments;
-    this.segmentIdentifiers = segmentIdentifiers;
   }
 
   public String getIdentifier() {
@@ -54,11 +47,11 @@ public class BalanceSegmentSet {
     this.identifier = identifier;
   }
 
-  public SortedSet<BigDecimal> getSegments() {
+  public List<BigDecimal> getSegments() {
     return segments;
   }
 
-  public void setSegments(SortedSet<BigDecimal> segments) {
+  public void setSegments(List<BigDecimal> segments) {
     this.segments = segments;
   }
 

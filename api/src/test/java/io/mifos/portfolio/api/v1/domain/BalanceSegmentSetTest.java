@@ -34,7 +34,7 @@ public class BalanceSegmentSetTest extends ValidationTest<BalanceSegmentSet> {
   protected BalanceSegmentSet createValidTestSubject() {
     final BalanceSegmentSet ret = new BalanceSegmentSet();
     ret.setIdentifier("valid");
-    ret.setSegments(new TreeSet<>(Arrays.asList(BigDecimal.valueOf(100), BigDecimal.valueOf(10_000))));
+    ret.setSegments(Arrays.asList(BigDecimal.ZERO, BigDecimal.valueOf(100), BigDecimal.valueOf(10_000)));
     ret.setSegmentIdentifiers(Arrays.asList("small", "medium", "large"));
     return ret;
   }
@@ -54,8 +54,14 @@ public class BalanceSegmentSetTest extends ValidationTest<BalanceSegmentSet> {
     ret.add(new ValidationTestCase<BalanceSegmentSet>("too short identifier list")
         .adjustment(x -> x.setSegmentIdentifiers(Arrays.asList("small", "large")))
         .valid(false));
-    ret.add(new ValidationTestCase<BalanceSegmentSet>("negative segmentation")
-        .adjustment(x -> x.setSegments(new TreeSet<>(Arrays.asList(BigDecimal.ONE.negate(), BigDecimal.valueOf(100)))))
+    ret.add(new ValidationTestCase<BalanceSegmentSet>("too short segment list")
+        .adjustment(x -> x.setSegments(Arrays.asList(BigDecimal.ZERO, BigDecimal.valueOf(100))))
+        .valid(false));
+    ret.add(new ValidationTestCase<BalanceSegmentSet>("non-zero first entry")
+        .adjustment(x -> x.setSegments(Arrays.asList(BigDecimal.ONE, BigDecimal.valueOf(100), BigDecimal.valueOf(10_000))))
+        .valid(false));
+    ret.add(new ValidationTestCase<BalanceSegmentSet>("mis-ordered segmentation")
+        .adjustment(x -> x.setSegments(Arrays.asList(BigDecimal.ZERO, BigDecimal.valueOf(10_000), BigDecimal.valueOf(100))))
         .valid(false));
     ret.add(new ValidationTestCase<BalanceSegmentSet>("invalid identifier")
         .adjustment(x -> x.setIdentifier("//"))

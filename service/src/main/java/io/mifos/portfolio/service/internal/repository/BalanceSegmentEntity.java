@@ -46,6 +46,13 @@ public class BalanceSegmentEntity {
   public BalanceSegmentEntity() {
   }
 
+  public BalanceSegmentEntity(ProductEntity product, String segmentSetIdentifier, String segmentIdentifier, BigDecimal lowerBound) {
+    this.product = product;
+    this.segmentSetIdentifier = segmentSetIdentifier;
+    this.segmentIdentifier = segmentIdentifier;
+    this.lowerBound = lowerBound;
+  }
+
   public Long getId() {
     return id;
   }

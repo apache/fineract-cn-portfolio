@@ -54,10 +54,10 @@ import static io.mifos.portfolio.Fixture.MINOR_CURRENCY_UNIT_DIGITS;
  * @author Myrle Krantz
  */
 public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTest {
-  private static final BigDecimal PROCESSING_FEE_AMOUNT = BigDecimal.valueOf(10_0000, MINOR_CURRENCY_UNIT_DIGITS);
-  private static final BigDecimal LOAN_ORIGINATION_FEE_AMOUNT = BigDecimal.valueOf(100_0000, MINOR_CURRENCY_UNIT_DIGITS);
-  private static final BigDecimal DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT = BigDecimal.valueOf(10_0000, MINOR_CURRENCY_UNIT_DIGITS);
-  private static final BigDecimal DISBURSEMENT_FEE_UPPER_RANGE_AMOUNT = BigDecimal.valueOf(1_0000, MINOR_CURRENCY_UNIT_DIGITS);
+  private static final BigDecimal PROCESSING_FEE_AMOUNT = BigDecimal.valueOf(100_00, MINOR_CURRENCY_UNIT_DIGITS);
+  private static final BigDecimal LOAN_ORIGINATION_FEE_AMOUNT = BigDecimal.valueOf(100_00, MINOR_CURRENCY_UNIT_DIGITS);
+  private static final BigDecimal DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT = BigDecimal.valueOf(10_00, MINOR_CURRENCY_UNIT_DIGITS);
+  private static final BigDecimal DISBURSEMENT_FEE_UPPER_RANGE_AMOUNT = BigDecimal.valueOf(1_00, MINOR_CURRENCY_UNIT_DIGITS);
   private static final String DISBURSEMENT_RANGES = "disbursement_ranges";
   private static final String DISBURSEMENT_LOWER_RANGE = "smaller";
   private static final String DISBURSEMENT_UPPER_RANGE = "larger";
@@ -95,7 +95,26 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step2CreateCase();
     step3OpenCase();
     step4ApproveCase();
-    step5Disburse(BigDecimal.valueOf(2000L).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
+    step5Disburse(
+        BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS),
+        UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS));
+    step6CalculateInterestAccrual();
+    step7PaybackPartialAmount(expectedCurrentBalance);
+    step8Close();
+  }
+
+  @Test
+  public void workflowWithTwoUnequalDisbursals() throws InterruptedException {
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase();
+    step4ApproveCase();
+    step5Disburse(
+        BigDecimal.valueOf(500_00, MINOR_CURRENCY_UNIT_DIGITS),
+        ChargeIdentifiers.DISBURSEMENT_FEE_ID, BigDecimal.valueOf(10_00, MINOR_CURRENCY_UNIT_DIGITS));
+    step5Disburse(
+        BigDecimal.valueOf(1_500_00, MINOR_CURRENCY_UNIT_DIGITS),
+        UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.valueOf(15_00, MINOR_CURRENCY_UNIT_DIGITS));
     step6CalculateInterestAccrual();
     step7PaybackPartialAmount(expectedCurrentBalance);
     step8Close();
@@ -107,7 +126,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step2CreateCase();
     step3OpenCase();
     step4ApproveCase();
-    step5Disburse(BigDecimal.valueOf(2000L).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
+    step5Disburse(
+        BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS),
+        UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS));
     step6CalculateInterestAccrual();
     final BigDecimal repayment1 = expectedCurrentBalance.divide(BigDecimal.valueOf(2), BigDecimal.ROUND_HALF_EVEN);
     step7PaybackPartialAmount(repayment1.setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
@@ -122,7 +143,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step3OpenCase();
     step4ApproveCase();
     try {
-      step5Disburse(BigDecimal.valueOf(-2).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
+      step5Disburse(BigDecimal.valueOf(-2).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN),
+          UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
       Assert.fail("Expected an IllegalArgumentException.");
     }
     catch (IllegalArgumentException ignored) { }
@@ -147,7 +169,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.DISBURSEMENT_FEE_ID);
     lowerRangeDisbursementFeeChargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
     lowerRangeDisbursementFeeChargeDefinition.setAmount(DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT);
-    lowerRangeDisbursementFeeChargeDefinition.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.name());
+    lowerRangeDisbursementFeeChargeDefinition.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.getValue());
     lowerRangeDisbursementFeeChargeDefinition.setForSegmentSet(DISBURSEMENT_RANGES);
     lowerRangeDisbursementFeeChargeDefinition.setFromSegment(DISBURSEMENT_LOWER_RANGE);
     lowerRangeDisbursementFeeChargeDefinition.setToSegment(DISBURSEMENT_LOWER_RANGE);
@@ -167,7 +189,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     upperRangeDisbursementFeeChargeDefinition.setChargeAction(lowerRangeDisbursementFeeChargeDefinition.getChargeAction());
     upperRangeDisbursementFeeChargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
     upperRangeDisbursementFeeChargeDefinition.setAmount(DISBURSEMENT_FEE_UPPER_RANGE_AMOUNT);
-    upperRangeDisbursementFeeChargeDefinition.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.name());
+    upperRangeDisbursementFeeChargeDefinition.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.getValue());
     upperRangeDisbursementFeeChargeDefinition.setForSegmentSet(DISBURSEMENT_RANGES);
     upperRangeDisbursementFeeChargeDefinition.setFromSegment(DISBURSEMENT_UPPER_RANGE);
     upperRangeDisbursementFeeChargeDefinition.setToSegment(DISBURSEMENT_UPPER_RANGE);
@@ -278,15 +300,17 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
-  private void step5Disburse(final BigDecimal amount) throws InterruptedException {
+  private void step5Disburse(
+      final BigDecimal amount,
+      final String whichDisbursementFee,
+      final BigDecimal disbursementFeeAmount) throws InterruptedException {
     logger.info("step5Disburse");
     checkCostComponentForActionCorrect(
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DISBURSE,
         Collections.singleton(AccountDesignators.ENTRY),
-        amount, new CostComponent(ChargeIdentifiers.DISBURSEMENT_FEE_ID, DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT),
-        new CostComponent(UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN)),
+        amount, new CostComponent(whichDisbursementFee, disbursementFeeAmount),
         new CostComponent(ChargeIdentifiers.DISBURSE_PAYMENT_ID, amount));
     checkStateTransfer(
         product.getIdentifier(),
@@ -303,12 +327,12 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(pendingDisbursalAccountIdentifier, amount.toPlainString()));
     debtors.add(new Debtor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, disbursementFeeAmount.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(customerLoanAccountIdentifier, amount.toPlainString()));
     creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
-    creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, disbursementFeeAmount.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE);
 
     expectedCurrentBalance = expectedCurrentBalance.add(amount);

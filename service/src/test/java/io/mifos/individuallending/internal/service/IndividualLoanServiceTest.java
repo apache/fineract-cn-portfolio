@@ -24,6 +24,7 @@ import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
@@ -31,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 import java.math.BigDecimal;
@@ -47,6 +49,7 @@ import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers
  */
 @RunWith(Parameterized.class)
 public class IndividualLoanServiceTest {
+
   private static class ActionDatePair {
     final Action action;
     final LocalDate localDate;
@@ -171,6 +174,7 @@ public class IndividualLoanServiceTest {
 
   private final TestCase testCase;
   private final IndividualLoanService testSubject;
+  private final ScheduledChargesService scheduledChargesService;
   private final Map<String, List<ChargeDefinition>> chargeDefinitionsByChargeAction;
   private final Map<String, List<ChargeDefinition>> chargeDefinitionsByAccrueAction;
 
@@ -282,7 +286,12 @@ public class IndividualLoanServiceTest {
     Mockito.doReturn(chargeDefinitionsByChargeAction).when(chargeDefinitionServiceMock).getChargeDefinitionsMappedByChargeAction(testCase.productIdentifier);
     Mockito.doReturn(chargeDefinitionsByAccrueAction).when(chargeDefinitionServiceMock).getChargeDefinitionsMappedByAccrueAction(testCase.productIdentifier);
 
-    testSubject = new IndividualLoanService(chargeDefinitionServiceMock);
+    final BalanceSegmentRepository balanceSegmentRepositoryMock = Mockito.mock(BalanceSegmentRepository.class);
+    Mockito.doReturn(Stream.empty()).when(balanceSegmentRepositoryMock).findByProductIdentifierAndSegmentSetIdentifier(Matchers.anyString(), Matchers.anyString());
+
+    scheduledChargesService = new ScheduledChargesService(chargeDefinitionServiceMock, balanceSegmentRepositoryMock);
+
+    testSubject = new IndividualLoanService(scheduledChargesService);
   }
 
   @Test
@@ -376,7 +385,7 @@ public class IndividualLoanServiceTest {
   @Test
   public void getScheduledCharges() {
     final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(testCase.initialDisbursementDate, testCase.caseParameters);
-    final List<ScheduledCharge> scheduledCharges = testSubject.getScheduledCharges(testCase.productIdentifier,
+    final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(testCase.productIdentifier,
         scheduledActions);
 
     final List<LocalDate> interestCalculationDates = scheduledCharges.stream()

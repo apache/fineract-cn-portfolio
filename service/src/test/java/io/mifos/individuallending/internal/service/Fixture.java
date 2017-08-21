@@ -28,6 +28,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 import static java.math.BigDecimal.ROUND_HALF_EVEN;
@@ -107,7 +108,7 @@ class Fixture {
     chargeDefinition.setFromAccountDesignator(AccountDesignators.CUSTOMER_LOAN);
     chargeDefinition.setAccrualAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
     chargeDefinition.setToAccountDesignator(AccountDesignators.INTEREST_INCOME);
-    return new ScheduledCharge(scheduledAction, chargeDefinition);
+    return new ScheduledCharge(scheduledAction, chargeDefinition, Optional.empty());
   }
 
   static Period getPeriod(final LocalDate initialDate, final int periodBeginDelta, final int periodLength) {

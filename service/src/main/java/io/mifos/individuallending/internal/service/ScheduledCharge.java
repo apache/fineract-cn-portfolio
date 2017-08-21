@@ -18,6 +18,7 @@ package io.mifos.individuallending.internal.service;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 
 import javax.annotation.Nonnull;
+import java.util.Optional;
 
 /**
  * @author Myrle Krantz
@@ -25,10 +26,16 @@ import javax.annotation.Nonnull;
 public class ScheduledCharge {
   private final ScheduledAction scheduledAction;
   private final ChargeDefinition chargeDefinition;
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  private final Optional<ChargeRange> chargeRange;
 
-  ScheduledCharge(@Nonnull final ScheduledAction scheduledAction, @Nonnull final ChargeDefinition chargeDefinition) {
+  ScheduledCharge(
+      @Nonnull final ScheduledAction scheduledAction,
+      @Nonnull final ChargeDefinition chargeDefinition,
+      @SuppressWarnings("OptionalUsedAsFieldOrParameterType") @Nonnull final Optional<ChargeRange> chargeRange) {
     this.scheduledAction = scheduledAction;
     this.chargeDefinition = chargeDefinition;
+    this.chargeRange = chargeRange;
   }
 
   ScheduledAction getScheduledAction() {
@@ -39,11 +46,16 @@ public class ScheduledCharge {
     return chargeDefinition;
   }
 
+  Optional<ChargeRange> getChargeRange() {
+    return chargeRange;
+  }
+
   @Override
   public String toString() {
     return "ScheduledCharge{" +
-            "scheduledAction=" + scheduledAction +
-            ", chargeDefinition=" + chargeDefinition +
-            '}';
+        "scheduledAction=" + scheduledAction +
+        ", chargeDefinition=" + chargeDefinition +
+        ", chargeRange=" + chargeRange +
+        '}';
   }
 }

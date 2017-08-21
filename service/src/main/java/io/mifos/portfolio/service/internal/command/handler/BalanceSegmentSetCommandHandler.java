@@ -26,8 +26,8 @@ import io.mifos.portfolio.service.internal.command.ChangeBalanceSegmentSetComman
 import io.mifos.portfolio.service.internal.command.CreateBalanceSegmentSetCommand;
 import io.mifos.portfolio.service.internal.command.DeleteBalanceSegmentSetCommand;
 import io.mifos.portfolio.service.internal.mapper.BalanceSegmentSetMapper;
-import io.mifos.portfolio.service.internal.repository.BalanceSegmentSetEntity;
-import io.mifos.portfolio.service.internal.repository.BalanceSegmentSetRepository;
+import io.mifos.portfolio.service.internal.repository.BalanceSegmentEntity;
+import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,14 +41,14 @@ import java.util.stream.Collectors;
  */
 @Aggregate
 public class BalanceSegmentSetCommandHandler {
-  private final BalanceSegmentSetRepository balanceSegmentSetRepository;
+  private final BalanceSegmentRepository balanceSegmentRepository;
   private final ProductRepository productRepository;
 
   @Autowired
   public BalanceSegmentSetCommandHandler(
-      final BalanceSegmentSetRepository balanceSegmentSetRepository,
+      final BalanceSegmentRepository balanceSegmentRepository,
       final ProductRepository productRepository) {
-    this.balanceSegmentSetRepository = balanceSegmentSetRepository;
+    this.balanceSegmentRepository = balanceSegmentRepository;
     this.productRepository = productRepository;
   }
 
@@ -59,10 +59,10 @@ public class BalanceSegmentSetCommandHandler {
     final ProductEntity product = productRepository.findByIdentifier(createBalanceSegmentSetCommand.getProductIdentifier())
         .orElseThrow(() -> ServiceException.notFound("Product with identifier ''{0}'' doesn''t exist.", createBalanceSegmentSetCommand.getProductIdentifier()));
 
-    final List<BalanceSegmentSetEntity> balanceSegmentSetEntities = BalanceSegmentSetMapper.map(
+    final List<BalanceSegmentEntity> balanceSegmentSetEntities = BalanceSegmentSetMapper.map(
         createBalanceSegmentSetCommand.getInstance(), product);
 
-    balanceSegmentSetRepository.save(balanceSegmentSetEntities);
+    balanceSegmentRepository.save(balanceSegmentSetEntities);
 
     return new BalanceSegmentSetEvent(
         createBalanceSegmentSetCommand.getProductIdentifier(),
@@ -76,7 +76,7 @@ public class BalanceSegmentSetCommandHandler {
     final ProductEntity product = productRepository.findByIdentifier(changeBalanceSegmentSetCommand.getProductIdentifier())
         .orElseThrow(() -> ServiceException.notFound("Product with identifier ''{0}'' doesn''t exist.", changeBalanceSegmentSetCommand.getProductIdentifier()));
 
-    final List<BalanceSegmentSetEntity> balanceSegmentSets = balanceSegmentSetRepository.findByProductIdentifierAndSegmentSetIdentifier(
+    final List<BalanceSegmentEntity> balanceSegmentSets = balanceSegmentRepository.findByProductIdentifierAndSegmentSetIdentifier(
         changeBalanceSegmentSetCommand.getProductIdentifier(),
         changeBalanceSegmentSetCommand.getInstance().getIdentifier())
         .collect(Collectors.toList());
@@ -85,12 +85,12 @@ public class BalanceSegmentSetCommandHandler {
           changeBalanceSegmentSetCommand.getProductIdentifier(),
           changeBalanceSegmentSetCommand.getInstance().getIdentifier());
 
-    balanceSegmentSetRepository.deleteInBatch(balanceSegmentSets);
+    balanceSegmentRepository.deleteInBatch(balanceSegmentSets);
 
-    final List<BalanceSegmentSetEntity> balanceSegmentSetEntities = BalanceSegmentSetMapper.map(
+    final List<BalanceSegmentEntity> balanceSegmentSetEntities = BalanceSegmentSetMapper.map(
         changeBalanceSegmentSetCommand.getInstance(), product);
 
-    balanceSegmentSetRepository.save(balanceSegmentSetEntities);
+    balanceSegmentRepository.save(balanceSegmentSetEntities);
 
     return new BalanceSegmentSetEvent(
         changeBalanceSegmentSetCommand.getProductIdentifier(),
@@ -101,7 +101,7 @@ public class BalanceSegmentSetCommandHandler {
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = EventConstants.DELETE_BALANCE_SEGMENT_SET)
   public BalanceSegmentSetEvent process(final DeleteBalanceSegmentSetCommand deleteBalanceSegmentSetCommand) {
-    final List<BalanceSegmentSetEntity> balanceSegmentSets = balanceSegmentSetRepository.findByProductIdentifierAndSegmentSetIdentifier(
+    final List<BalanceSegmentEntity> balanceSegmentSets = balanceSegmentRepository.findByProductIdentifierAndSegmentSetIdentifier(
         deleteBalanceSegmentSetCommand.getProductIdentifier(),
         deleteBalanceSegmentSetCommand.getBalanceSegmentSetIdentifier())
         .collect(Collectors.toList());
@@ -110,7 +110,7 @@ public class BalanceSegmentSetCommandHandler {
           deleteBalanceSegmentSetCommand.getProductIdentifier(),
           deleteBalanceSegmentSetCommand.getBalanceSegmentSetIdentifier());
 
-    balanceSegmentSetRepository.deleteInBatch(balanceSegmentSets);
+    balanceSegmentRepository.deleteInBatch(balanceSegmentSets);
 
     return new BalanceSegmentSetEvent(
         deleteBalanceSegmentSetCommand.getProductIdentifier(),

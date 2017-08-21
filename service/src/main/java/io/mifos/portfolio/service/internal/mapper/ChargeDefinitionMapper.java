@@ -17,9 +17,11 @@ package io.mifos.portfolio.service.internal.mapper;
 
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.service.internal.repository.BalanceSegmentEntity;
 import io.mifos.portfolio.service.internal.repository.ChargeDefinitionEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 
+import javax.annotation.Nullable;
 import java.util.Optional;
 
 import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.*;
@@ -28,7 +30,11 @@ import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers
  * @author Myrle Krantz
  */
 public class ChargeDefinitionMapper {
-  public static ChargeDefinitionEntity map(final ProductEntity productEntity, final ChargeDefinition chargeDefinition) {
+  public static ChargeDefinitionEntity map(
+      final ProductEntity productEntity,
+      final ChargeDefinition chargeDefinition,
+      @Nullable final BalanceSegmentEntity fromSegment,
+      @Nullable final BalanceSegmentEntity toSegment) {
 
     final ChargeDefinitionEntity ret = new ChargeDefinitionEntity();
 
@@ -46,6 +52,11 @@ public class ChargeDefinitionMapper {
     ret.setAccrualAccountDesignator(chargeDefinition.getAccrualAccountDesignator());
     ret.setToAccountDesignator(chargeDefinition.getToAccountDesignator());
     ret.setReadOnly(chargeDefinition.isReadOnly());
+    if (fromSegment != null && toSegment != null) {
+      ret.setSegmentSet(fromSegment.getSegmentSetIdentifier());
+      ret.setFromSegment(fromSegment.getSegmentIdentifier());
+      ret.setToSegment(toSegment.getSegmentIdentifier());
+    }
 
     return ret;
   }
@@ -66,6 +77,11 @@ public class ChargeDefinitionMapper {
     ret.setAccrualAccountDesignator(from.getAccrualAccountDesignator());
     ret.setToAccountDesignator(from.getToAccountDesignator());
     ret.setReadOnly(Optional.ofNullable(from.getReadOnly()).orElseGet(() -> readOnlyLegacyMapper(from.getIdentifier())));
+    if (from.getSegmentSet() != null && from.getFromSegment() != null && from.getToSegment() != null) {
+      ret.setForSegmentSet(from.getSegmentSet());
+      ret.setFromSegment(from.getFromSegment());
+      ret.setToSegment(from.getToSegment());
+    }
 
     return ret;
   }

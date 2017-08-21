@@ -24,13 +24,13 @@ import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
+import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
-import io.mifos.portfolio.api.v1.domain.Case;
-import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.api.v1.domain.Product;
-import io.mifos.portfolio.api.v1.domain.TaskDefinition;
+import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.api.v1.events.BalanceSegmentSetEvent;
+import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.rhythm.spi.v1.client.BeatListener;
 import io.mifos.rhythm.spi.v1.domain.BeatPublish;
@@ -56,7 +56,12 @@ import static io.mifos.portfolio.Fixture.MINOR_CURRENCY_UNIT_DIGITS;
 public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTest {
   private static final BigDecimal PROCESSING_FEE_AMOUNT = BigDecimal.valueOf(10_0000, MINOR_CURRENCY_UNIT_DIGITS);
   private static final BigDecimal LOAN_ORIGINATION_FEE_AMOUNT = BigDecimal.valueOf(100_0000, MINOR_CURRENCY_UNIT_DIGITS);
-  private static final BigDecimal DISBURSEMENT_FEE_AMOUNT = BigDecimal.valueOf(1_0000, MINOR_CURRENCY_UNIT_DIGITS);
+  private static final BigDecimal DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT = BigDecimal.valueOf(10_0000, MINOR_CURRENCY_UNIT_DIGITS);
+  private static final BigDecimal DISBURSEMENT_FEE_UPPER_RANGE_AMOUNT = BigDecimal.valueOf(1_0000, MINOR_CURRENCY_UNIT_DIGITS);
+  private static final String DISBURSEMENT_RANGES = "disbursement_ranges";
+  private static final String DISBURSEMENT_LOWER_RANGE = "smaller";
+  private static final String DISBURSEMENT_UPPER_RANGE = "larger";
+  private static final String UPPER_RANGE_DISBURSEMENT_FEE_ID = ChargeIdentifiers.DISBURSEMENT_FEE_ID + "2";
 
   private BeatListener portfolioBeatListener;
 
@@ -110,13 +115,17 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step8Close();
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void workflowWithNegativePaymentSize() throws InterruptedException {
     step1CreateProduct();
     step2CreateCase();
     step3OpenCase();
     step4ApproveCase();
-    step5Disburse(BigDecimal.valueOf(-2).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
+    try {
+      step5Disburse(BigDecimal.valueOf(-2).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
+      Assert.fail("Expected an IllegalArgumentException.");
+    }
+    catch (IllegalArgumentException ignored) { }
   }
 
   //Create product and set charges to fixed fees.
@@ -124,9 +133,48 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     logger.info("step1CreateProduct");
     product = createProduct();
 
+    final BalanceSegmentSet balanceSegmentSet = new BalanceSegmentSet();
+    balanceSegmentSet.setIdentifier(DISBURSEMENT_RANGES);
+    balanceSegmentSet.setSegmentIdentifiers(Arrays.asList(DISBURSEMENT_LOWER_RANGE, DISBURSEMENT_UPPER_RANGE));
+    balanceSegmentSet.setSegments(Arrays.asList(BigDecimal.ZERO, BigDecimal.valueOf(1_000_0000, 4)));
+    portfolioManager.createBalanceSegmentSet(product.getIdentifier(), balanceSegmentSet);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_BALANCE_SEGMENT_SET, new BalanceSegmentSetEvent(product.getIdentifier(), balanceSegmentSet.getIdentifier())));
+
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.PROCESSING_FEE_ID, PROCESSING_FEE_AMOUNT);
     setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID, LOAN_ORIGINATION_FEE_AMOUNT);
-    setFeeToFixedValue(product.getIdentifier(), ChargeIdentifiers.DISBURSEMENT_FEE_ID, DISBURSEMENT_FEE_AMOUNT);
+
+    final ChargeDefinition lowerRangeDisbursementFeeChargeDefinition
+        = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.DISBURSEMENT_FEE_ID);
+    lowerRangeDisbursementFeeChargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+    lowerRangeDisbursementFeeChargeDefinition.setAmount(DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT);
+    lowerRangeDisbursementFeeChargeDefinition.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.name());
+    lowerRangeDisbursementFeeChargeDefinition.setForSegmentSet(DISBURSEMENT_RANGES);
+    lowerRangeDisbursementFeeChargeDefinition.setFromSegment(DISBURSEMENT_LOWER_RANGE);
+    lowerRangeDisbursementFeeChargeDefinition.setToSegment(DISBURSEMENT_LOWER_RANGE);
+
+    portfolioManager.changeChargeDefinition(product.getIdentifier(), ChargeIdentifiers.DISBURSEMENT_FEE_ID, lowerRangeDisbursementFeeChargeDefinition);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_CHARGE_DEFINITION,
+        new ChargeDefinitionEvent(product.getIdentifier(), ChargeIdentifiers.DISBURSEMENT_FEE_ID)));
+
+    final ChargeDefinition upperRangeDisbursementFeeChargeDefinition = new ChargeDefinition();
+    upperRangeDisbursementFeeChargeDefinition.setIdentifier(UPPER_RANGE_DISBURSEMENT_FEE_ID);
+    upperRangeDisbursementFeeChargeDefinition.setName(UPPER_RANGE_DISBURSEMENT_FEE_ID);
+    upperRangeDisbursementFeeChargeDefinition.setDescription(lowerRangeDisbursementFeeChargeDefinition.getDescription());
+    upperRangeDisbursementFeeChargeDefinition.setFromAccountDesignator(lowerRangeDisbursementFeeChargeDefinition.getFromAccountDesignator());
+    upperRangeDisbursementFeeChargeDefinition.setToAccountDesignator(lowerRangeDisbursementFeeChargeDefinition.getToAccountDesignator());
+    upperRangeDisbursementFeeChargeDefinition.setAccrualAccountDesignator(lowerRangeDisbursementFeeChargeDefinition.getAccrualAccountDesignator());
+    upperRangeDisbursementFeeChargeDefinition.setAccrueAction(lowerRangeDisbursementFeeChargeDefinition.getAccrueAction());
+    upperRangeDisbursementFeeChargeDefinition.setChargeAction(lowerRangeDisbursementFeeChargeDefinition.getChargeAction());
+    upperRangeDisbursementFeeChargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
+    upperRangeDisbursementFeeChargeDefinition.setAmount(DISBURSEMENT_FEE_UPPER_RANGE_AMOUNT);
+    upperRangeDisbursementFeeChargeDefinition.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.name());
+    upperRangeDisbursementFeeChargeDefinition.setForSegmentSet(DISBURSEMENT_RANGES);
+    upperRangeDisbursementFeeChargeDefinition.setFromSegment(DISBURSEMENT_UPPER_RANGE);
+    upperRangeDisbursementFeeChargeDefinition.setToSegment(DISBURSEMENT_UPPER_RANGE);
+
+    portfolioManager.createChargeDefinition(product.getIdentifier(), upperRangeDisbursementFeeChargeDefinition);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CHARGE_DEFINITION,
+        new ChargeDefinitionEvent(product.getIdentifier(), UPPER_RANGE_DISBURSEMENT_FEE_ID)));
 
     taskDefinition = createTaskDefinition(product);
 
@@ -237,7 +285,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         customerCase.getIdentifier(),
         Action.DISBURSE,
         Collections.singleton(AccountDesignators.ENTRY),
-        amount, new CostComponent(ChargeIdentifiers.DISBURSEMENT_FEE_ID, DISBURSEMENT_FEE_AMOUNT),
+        amount, new CostComponent(ChargeIdentifiers.DISBURSEMENT_FEE_ID, DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT),
+        new CostComponent(UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN)),
         new CostComponent(ChargeIdentifiers.DISBURSE_PAYMENT_ID, amount));
     checkStateTransfer(
         product.getIdentifier(),
@@ -254,12 +303,12 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(pendingDisbursalAccountIdentifier, amount.toPlainString()));
     debtors.add(new Debtor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(customerLoanAccountIdentifier, amount.toPlainString()));
     creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
-    creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_AMOUNT.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE);
 
     expectedCurrentBalance = expectedCurrentBalance.add(amount);

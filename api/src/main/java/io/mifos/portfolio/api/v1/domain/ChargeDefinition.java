@@ -16,7 +16,6 @@
 package io.mifos.portfolio.api.v1.domain;
 
 import io.mifos.core.lang.validation.constraints.ValidIdentifier;
-import io.mifos.core.lang.validation.constraints.ValidIdentifiers;
 import io.mifos.portfolio.api.v1.validation.ValidChargeDefinition;
 import io.mifos.portfolio.api.v1.validation.ValidChargeReference;
 import io.mifos.portfolio.api.v1.validation.ValidPaymentCycleUnit;
@@ -26,7 +25,6 @@ import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -84,8 +82,11 @@ public class ChargeDefinition {
   @ValidIdentifier(optional = true)
   private String forSegmentSet;
 
-  @ValidIdentifiers(optional = true)
-  private List<String> forSegments;
+  @ValidIdentifier(optional = true)
+  private String fromSegment;
+
+  @ValidIdentifier(optional = true)
+  private String toSegment;
 
   public ChargeDefinition() {
   }
@@ -203,12 +204,20 @@ public class ChargeDefinition {
     this.forSegmentSet = forSegmentSet;
   }
 
-  public List<String> getForSegments() {
-    return forSegments;
+  public String getFromSegment() {
+    return fromSegment;
   }
 
-  public void setForSegments(List<String> forSegments) {
-    this.forSegments = forSegments;
+  public void setFromSegment(String fromSegment) {
+    this.fromSegment = fromSegment;
+  }
+
+  public String getToSegment() {
+    return toSegment;
+  }
+
+  public void setToSegment(String toSegment) {
+    this.toSegment = toSegment;
   }
 
   @Override
@@ -230,12 +239,13 @@ public class ChargeDefinition {
         Objects.equals(toAccountDesignator, that.toAccountDesignator) &&
         forCycleSizeUnit == that.forCycleSizeUnit &&
         Objects.equals(forSegmentSet, that.forSegmentSet) &&
-        Objects.equals(forSegments, that.forSegments);
+        Objects.equals(fromSegment, that.fromSegment) &&
+        Objects.equals(toSegment, that.toSegment);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(identifier, name, description, accrueAction, chargeAction, amount, chargeMethod, proportionalTo, fromAccountDesignator, accrualAccountDesignator, toAccountDesignator, forCycleSizeUnit, readOnly, forSegmentSet, forSegments);
+    return Objects.hash(identifier, name, description, accrueAction, chargeAction, amount, chargeMethod, proportionalTo, fromAccountDesignator, accrualAccountDesignator, toAccountDesignator, forCycleSizeUnit, readOnly, forSegmentSet, fromSegment, toSegment);
   }
 
   @Override
@@ -255,7 +265,8 @@ public class ChargeDefinition {
         ", forCycleSizeUnit=" + forCycleSizeUnit +
         ", readOnly=" + readOnly +
         ", forSegmentSet='" + forSegmentSet + '\'' +
-        ", forSegments=" + forSegments +
+        ", fromSegment='" + fromSegment + '\'' +
+        ", toSegment='" + toSegment + '\'' +
         '}';
   }
 }

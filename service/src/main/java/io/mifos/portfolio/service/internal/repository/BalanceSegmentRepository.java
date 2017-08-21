@@ -18,12 +18,15 @@ package io.mifos.portfolio.service.internal.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
  */
 @Repository
-public interface BalanceSegmentSetRepository extends JpaRepository<BalanceSegmentSetEntity, Long> {
-  Stream<BalanceSegmentSetEntity> findByProductIdentifierAndSegmentSetIdentifier(String productIdentifier, String segmentSetIdentifier);
+public interface BalanceSegmentRepository extends JpaRepository<BalanceSegmentEntity, Long> {
+  Stream<BalanceSegmentEntity> findByProductIdentifierAndSegmentSetIdentifier(String productIdentifier, String segmentSetIdentifier);
+
+  Optional<BalanceSegmentEntity> findByProductIdentifierAndSegmentSetIdentifierAndSegmentIdentifier(String productIdentifier, String segmentSetIdentifier, String segmentIdentifier);
 }

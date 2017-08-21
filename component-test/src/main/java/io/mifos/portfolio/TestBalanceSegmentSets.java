@@ -31,7 +31,7 @@ import java.util.Arrays;
  */
 public class TestBalanceSegmentSets extends AbstractPortfolioTest {
   @Test
-  public void test() throws InterruptedException {
+  public void testBalanceSegmentSetManagement() throws InterruptedException {
     final Product product = createProduct();
 
     final BalanceSegmentSet balanceSegmentSet = new BalanceSegmentSet();

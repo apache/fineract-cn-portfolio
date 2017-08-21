@@ -17,7 +17,7 @@ package io.mifos.portfolio.service.internal.service;
 
 import io.mifos.portfolio.api.v1.domain.BalanceSegmentSet;
 import io.mifos.portfolio.service.internal.mapper.BalanceSegmentSetMapper;
-import io.mifos.portfolio.service.internal.repository.BalanceSegmentSetRepository;
+import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,18 +28,18 @@ import java.util.Optional;
  */
 @Service
 public class BalanceSegmentSetService {
-  private final BalanceSegmentSetRepository balanceSegmentSetRepository;
+  private final BalanceSegmentRepository balanceSegmentRepository;
 
   @Autowired
   public BalanceSegmentSetService(
-      final BalanceSegmentSetRepository balanceSegmentSetRepository) {
-    this.balanceSegmentSetRepository = balanceSegmentSetRepository;
+      final BalanceSegmentRepository balanceSegmentRepository) {
+    this.balanceSegmentRepository = balanceSegmentRepository;
   }
 
   public boolean existsByIdentifier(final String productIdentifier, final String balanceSegmentSetIdentifier)
   {
     //TODO: replace with existsBy once we've upgraded to spring data 1.11 or later.
-    return balanceSegmentSetRepository
+    return balanceSegmentRepository
         .findByProductIdentifierAndSegmentSetIdentifier(productIdentifier, balanceSegmentSetIdentifier)
         .findAny().isPresent();
   }
@@ -47,7 +47,7 @@ public class BalanceSegmentSetService {
   public Optional<BalanceSegmentSet> findByIdentifier(
       final String productIdentifier,
       final String balanceSegmentSetIdentifier) {
-    return BalanceSegmentSetMapper.map(balanceSegmentSetRepository
+    return BalanceSegmentSetMapper.map(balanceSegmentRepository
         .findByProductIdentifierAndSegmentSetIdentifier(productIdentifier, balanceSegmentSetIdentifier));
   }
 }

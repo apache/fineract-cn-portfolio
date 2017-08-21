@@ -24,7 +24,7 @@ import java.util.Objects;
  */
 @Entity
 @Table(name = "bastet_p_balance_segs")
-public class BalanceSegmentSetEntity {
+public class BalanceSegmentEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "id")
@@ -43,7 +43,7 @@ public class BalanceSegmentSetEntity {
   @Column(name = "lower_bound")
   private BigDecimal lowerBound;
 
-  public BalanceSegmentSetEntity() {
+  public BalanceSegmentEntity() {
   }
 
   public Long getId() {
@@ -90,7 +90,7 @@ public class BalanceSegmentSetEntity {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    BalanceSegmentSetEntity that = (BalanceSegmentSetEntity) o;
+    BalanceSegmentEntity that = (BalanceSegmentEntity) o;
     return Objects.equals(product, that.product) &&
         Objects.equals(segmentSetIdentifier, that.segmentSetIdentifier) &&
         Objects.equals(segmentIdentifier, that.segmentIdentifier);

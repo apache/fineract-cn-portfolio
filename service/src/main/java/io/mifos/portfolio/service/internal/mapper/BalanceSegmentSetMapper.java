@@ -16,7 +16,7 @@
 package io.mifos.portfolio.service.internal.mapper;
 
 import io.mifos.portfolio.api.v1.domain.BalanceSegmentSet;
-import io.mifos.portfolio.service.internal.repository.BalanceSegmentSetEntity;
+import io.mifos.portfolio.service.internal.repository.BalanceSegmentEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 
 import java.util.ArrayList;
@@ -30,11 +30,11 @@ import java.util.stream.Stream;
  * @author Myrle Krantz
  */
 public class BalanceSegmentSetMapper {
-  public static List<BalanceSegmentSetEntity> map(final BalanceSegmentSet instance, final ProductEntity product) {
+  public static List<BalanceSegmentEntity> map(final BalanceSegmentSet instance, final ProductEntity product) {
     return
         Stream.iterate(0, i -> i+1).limit(instance.getSegmentIdentifiers().size())
             .map(i -> {
-              final BalanceSegmentSetEntity ret = new BalanceSegmentSetEntity();
+              final BalanceSegmentEntity ret = new BalanceSegmentEntity();
               ret.setProduct(product);
               ret.setSegmentSetIdentifier(instance.getIdentifier());
               ret.setSegmentIdentifier(instance.getSegmentIdentifiers().get(i));
@@ -44,11 +44,11 @@ public class BalanceSegmentSetMapper {
             .collect(Collectors.toList());
   }
 
-  public static Optional<BalanceSegmentSet> map(final Stream<BalanceSegmentSetEntity> instances) {
+  public static Optional<BalanceSegmentSet> map(final Stream<BalanceSegmentEntity> instances) {
     final BalanceSegmentSet ret = new BalanceSegmentSet();
     ret.setSegments(new ArrayList<>());
     ret.setSegmentIdentifiers(new ArrayList<>());
-    instances.sorted(Comparator.comparing(BalanceSegmentSetEntity::getLowerBound))
+    instances.sorted(Comparator.comparing(BalanceSegmentEntity::getLowerBound))
         .forEach(seg -> {
           ret.setIdentifier(seg.getSegmentSetIdentifier());
           ret.getSegments().add(seg.getLowerBound());

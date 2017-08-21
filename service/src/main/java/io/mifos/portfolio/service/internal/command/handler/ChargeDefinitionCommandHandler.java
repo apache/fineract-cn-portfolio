@@ -15,7 +15,11 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
+import io.mifos.core.command.annotation.Aggregate;
+import io.mifos.core.command.annotation.CommandHandler;
 import io.mifos.core.command.annotation.CommandLogLevel;
+import io.mifos.core.command.annotation.EventEmitter;
+import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
@@ -23,16 +27,11 @@ import io.mifos.portfolio.service.internal.command.ChangeChargeDefinitionCommand
 import io.mifos.portfolio.service.internal.command.CreateChargeDefinitionCommand;
 import io.mifos.portfolio.service.internal.command.DeleteProductChargeDefinitionCommand;
 import io.mifos.portfolio.service.internal.mapper.ChargeDefinitionMapper;
-import io.mifos.portfolio.service.internal.repository.ChargeDefinitionEntity;
-import io.mifos.portfolio.service.internal.repository.ChargeDefinitionRepository;
-import io.mifos.portfolio.service.internal.repository.ProductEntity;
-import io.mifos.portfolio.service.internal.repository.ProductRepository;
-import io.mifos.core.command.annotation.Aggregate;
-import io.mifos.core.command.annotation.CommandHandler;
-import io.mifos.core.command.annotation.EventEmitter;
-import io.mifos.core.lang.ServiceException;
+import io.mifos.portfolio.service.internal.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 /**
  * @author Myrle Krantz
@@ -41,13 +40,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class ChargeDefinitionCommandHandler {
   private final ProductRepository productRepository;
   private final ChargeDefinitionRepository chargeDefinitionRepository;
+  private final BalanceSegmentRepository balanceSegmentRepository;
 
   @Autowired
   public ChargeDefinitionCommandHandler(
-          final ProductRepository productRepository,
-          final ChargeDefinitionRepository chargeDefinitionRepository) {
+      final ProductRepository productRepository,
+      final ChargeDefinitionRepository chargeDefinitionRepository,
+      final BalanceSegmentRepository balanceSegmentRepository) {
     this.productRepository = productRepository;
     this.chargeDefinitionRepository = chargeDefinitionRepository;
+    this.balanceSegmentRepository = balanceSegmentRepository;
   }
 
   @SuppressWarnings("unused")
@@ -62,8 +64,10 @@ public class ChargeDefinitionCommandHandler {
             = productRepository.findByIdentifier(productIdentifier)
             .orElseThrow(() -> ServiceException.badRequest("The given product identifier does not refer to a product {0}", productIdentifier));
 
+    final SegmentRange segmentRange = getSegmentRange(chargeDefinition, productIdentifier);
+
     final ChargeDefinitionEntity chargeDefinitionEntity =
-            ChargeDefinitionMapper.map(productEntity, chargeDefinition);
+            ChargeDefinitionMapper.map(productEntity, chargeDefinition, segmentRange.fromSegment, segmentRange.toSegment);
     chargeDefinitionRepository.save(chargeDefinitionEntity);
 
     return new ChargeDefinitionEvent(
@@ -83,8 +87,10 @@ public class ChargeDefinitionCommandHandler {
             = chargeDefinitionRepository.findByProductIdAndChargeDefinitionIdentifier(productIdentifier, chargeDefinition.getIdentifier())
             .orElseThrow(() -> ServiceException.internalError("task definition not found."));
 
+    final SegmentRange segmentRange = getSegmentRange(chargeDefinition, productIdentifier);
+
     final ChargeDefinitionEntity chargeDefinitionEntity =
-            ChargeDefinitionMapper.map(existingChargeDefinition.getProduct(), chargeDefinition);
+            ChargeDefinitionMapper.map(existingChargeDefinition.getProduct(), chargeDefinition, segmentRange.fromSegment, segmentRange.toSegment);
     chargeDefinitionEntity.setId(existingChargeDefinition.getId());
     chargeDefinitionEntity.setId(existingChargeDefinition.getId());
     chargeDefinitionRepository.save(chargeDefinitionEntity);
@@ -112,4 +118,34 @@ public class ChargeDefinitionCommandHandler {
             command.getChargeDefinitionIdentifier());
   }
 
+  static class SegmentRange {
+    final BalanceSegmentEntity fromSegment;
+    final BalanceSegmentEntity toSegment;
+
+    SegmentRange(final BalanceSegmentEntity fromSegment, final BalanceSegmentEntity toSegment) {
+      this.fromSegment = fromSegment;
+      this.toSegment = toSegment;
+    }
+  }
+
+  private SegmentRange getSegmentRange(final ChargeDefinition chargeDefinition, final String productIdentifier) {
+    if (chargeDefinition.getForSegmentSet() != null) {
+      final Optional<BalanceSegmentEntity> fromSegmentOptional =
+          balanceSegmentRepository.findByProductIdentifierAndSegmentSetIdentifierAndSegmentIdentifier(
+              productIdentifier,
+              chargeDefinition.getForSegmentSet(),
+              chargeDefinition.getFromSegment());
+      final Optional<BalanceSegmentEntity> toSegmentOptional =
+          balanceSegmentRepository.findByProductIdentifierAndSegmentSetIdentifierAndSegmentIdentifier(
+              productIdentifier,
+              chargeDefinition.getForSegmentSet(),
+              chargeDefinition.getFromSegment());
+
+      if (fromSegmentOptional.isPresent() && toSegmentOptional.isPresent()) {
+        return new SegmentRange(fromSegmentOptional.get(), toSegmentOptional.get());
+      }
+    }
+
+    return new SegmentRange(null, null);
+  }
 }

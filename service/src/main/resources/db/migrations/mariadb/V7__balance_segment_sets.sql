@@ -24,3 +24,7 @@ CREATE TABLE bastet_p_balance_segs (
   CONSTRAINT bastet_p_balance_segs_uq UNIQUE (product_id, seg_set_identifier, segment_identifier),
   CONSTRAINT bastet_p_balance_segs_fk FOREIGN KEY (product_id) REFERENCES bastet_products (id)
 );
+
+ALTER TABLE bastet_p_chrg_defs ADD COLUMN segment_set VARCHAR(32) NULL DEFAULT NULL;
+ALTER TABLE bastet_p_chrg_defs ADD COLUMN from_segment VARCHAR(32) NULL DEFAULT NULL;
+ALTER TABLE bastet_p_chrg_defs ADD COLUMN to_segment VARCHAR(32) NULL DEFAULT NULL;

@@ -43,17 +43,14 @@ public class CheckValidChargeDefinition implements ConstraintValidator<ValidChar
         value.getProportionalTo() == null)
       return false;
     if (value.getChargeMethod() == ChargeDefinition.ChargeMethod.FIXED &&
-        value.getProportionalTo() != null)
-      return false;
+        value.getProportionalTo() != null &&
+        value.getForSegmentSet() == null) //Even if the charge is a fixed charge, we need a proportional to for segment sets.
+       return false;
     if (value.getForSegmentSet() == null &&
-        value.getForSegments() != null)
+        (value.getFromSegment() != null || value.getToSegment() != null))
       return false;
     if (value.getForSegmentSet() != null &&
-        value.getForSegments() == null)
-      return false;
-    if (value.getForSegmentSet() != null &&
-        value.getForSegments() != null &&
-        value.getForSegments().size() == 0)
+        (value.getFromSegment() == null || value.getToSegment() == null))
       return false;
 
     return true;

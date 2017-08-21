@@ -98,17 +98,47 @@ public class ChargeDefinitionTest extends ValidationTest<ChargeDefinition> {
             .adjustment(x -> x.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED))
             .valid(false));
     ret.add(new ValidationTestCase<ChargeDefinition>("missingProportionalToIdentifierOnFixedCharge")
-            .adjustment(x -> {
-              x.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
-              x.setProportionalTo(null);
-            })
-            .valid(true));
+        .adjustment(x -> {
+          x.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+          x.setProportionalTo(null);
+        })
+        .valid(true));
+    ret.add(new ValidationTestCase<ChargeDefinition>("fixed charge proportional so that segment set can be set.")
+        .adjustment(x -> {
+          x.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+          x.setProportionalTo("something");
+          x.setForSegmentSet("xyz");
+          x.setFromSegment("abc");
+          x.setToSegment("def");
+        })
+        .valid(true));
     ret.add(new ValidationTestCase<ChargeDefinition>("proportionalToRunningBalance")
         .adjustment(x -> x.setProportionalTo("{runningbalance}"))
         .valid(true));
     ret.add(new ValidationTestCase<ChargeDefinition>("proportionalToMaximumBalance")
         .adjustment(x -> x.setProportionalTo("{maximumbalance}"))
         .valid(true));
+    ret.add(new ValidationTestCase<ChargeDefinition>("segment set set but not list")
+        .adjustment(x -> x.setForSegmentSet("xyz"))
+        .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("from segment set but not set")
+        .adjustment(x -> x.setFromSegment("abc"))
+        .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("to segment set but not set")
+        .adjustment(x -> x.setFromSegment("def"))
+        .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("valid segment references")
+        .adjustment(x -> { x.setForSegmentSet("xyz"); x.setFromSegment("abc"); x.setToSegment("def");})
+        .valid(true));
+    ret.add(new ValidationTestCase<ChargeDefinition>("invalid segment set identifier")
+        .adjustment(x -> { x.setForSegmentSet("//"); x.setFromSegment("abc"); x.setToSegment("def");})
+        .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("invalid from segment identifier")
+        .adjustment(x -> { x.setForSegmentSet("xyz"); x.setFromSegment("//"); x.setToSegment("def");})
+        .valid(false));
+    ret.add(new ValidationTestCase<ChargeDefinition>("invalid to segment identifier")
+        .adjustment(x -> { x.setForSegmentSet("xyz"); x.setFromSegment("abc"); x.setToSegment("//");})
+        .valid(false));
     return ret;
   }
 }

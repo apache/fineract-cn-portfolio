@@ -52,7 +52,7 @@ public class Fixture {
     product.setName("Agricultural Loan");
     product.setDescription("Loan for seeds or agricultural equipment");
     product.setTermRange(new TermRange(ChronoUnit.MONTHS, 12));
-    product.setBalanceRange(new BalanceRange(fixScale(BigDecimal.ZERO), fixScale(new BigDecimal(10000))));
+    product.setBalanceRange(new BalanceRange(fixScale(BigDecimal.ZERO), fixScale(new BigDecimal(10_000))));
     product.setInterestRange(new InterestRange(BigDecimal.valueOf(3_00, 2), BigDecimal.valueOf(12_00, 2)));
     product.setInterestBasis(InterestBasis.CURRENT_BALANCE);
 

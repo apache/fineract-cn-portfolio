@@ -15,11 +15,11 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import io.mifos.core.lang.validation.constraints.ValidIdentifier;
+import io.mifos.portfolio.api.v1.validation.ValidChargeDefinition;
 import io.mifos.portfolio.api.v1.validation.ValidChargeReference;
 import io.mifos.portfolio.api.v1.validation.ValidPaymentCycleUnit;
-import io.mifos.core.lang.validation.constraints.ValidIdentifier;
 import org.hibernate.validator.constraints.NotBlank;
-import org.hibernate.validator.constraints.ScriptAssert;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
@@ -31,10 +31,7 @@ import java.util.Objects;
  * @author Myrle Krantz
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
-@ScriptAssert(lang = "javascript", script = "_this.amount !== null " +
-        "&& _this.amount.scale() <= 4 " +
-        "&& ((_this.accrueAction === null && _this.accrualAccountDesignator === null) || (_this.accrueAction !== null && _this.accrualAccountDesignator !== null))" +
-        "&& ((_this.chargeMethod == 'PROPORTIONAL' && _this.proportionalTo !== null) || (_this.chargeMethod == 'FIXED' && _this.proportionalTo === null))")
+@ValidChargeDefinition
 public class ChargeDefinition {
   @SuppressWarnings("WeakerAccess")
   public enum ChargeMethod {
@@ -81,6 +78,15 @@ public class ChargeDefinition {
   private ChronoUnit forCycleSizeUnit;
 
   private boolean readOnly;
+
+  @ValidIdentifier(optional = true)
+  private String forSegmentSet;
+
+  @ValidIdentifier(optional = true)
+  private String fromSegment;
+
+  @ValidIdentifier(optional = true)
+  private String toSegment;
 
   public ChargeDefinition() {
   }
@@ -190,6 +196,30 @@ public class ChargeDefinition {
     this.readOnly = readOnly;
   }
 
+  public String getForSegmentSet() {
+    return forSegmentSet;
+  }
+
+  public void setForSegmentSet(String forSegmentSet) {
+    this.forSegmentSet = forSegmentSet;
+  }
+
+  public String getFromSegment() {
+    return fromSegment;
+  }
+
+  public void setFromSegment(String fromSegment) {
+    this.fromSegment = fromSegment;
+  }
+
+  public String getToSegment() {
+    return toSegment;
+  }
+
+  public void setToSegment(String toSegment) {
+    this.toSegment = toSegment;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -207,12 +237,15 @@ public class ChargeDefinition {
         Objects.equals(fromAccountDesignator, that.fromAccountDesignator) &&
         Objects.equals(accrualAccountDesignator, that.accrualAccountDesignator) &&
         Objects.equals(toAccountDesignator, that.toAccountDesignator) &&
-        forCycleSizeUnit == that.forCycleSizeUnit;
+        forCycleSizeUnit == that.forCycleSizeUnit &&
+        Objects.equals(forSegmentSet, that.forSegmentSet) &&
+        Objects.equals(fromSegment, that.fromSegment) &&
+        Objects.equals(toSegment, that.toSegment);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(identifier, name, description, accrueAction, chargeAction, amount, chargeMethod, proportionalTo, fromAccountDesignator, accrualAccountDesignator, toAccountDesignator, forCycleSizeUnit, readOnly);
+    return Objects.hash(identifier, name, description, accrueAction, chargeAction, amount, chargeMethod, proportionalTo, fromAccountDesignator, accrualAccountDesignator, toAccountDesignator, forCycleSizeUnit, readOnly, forSegmentSet, fromSegment, toSegment);
   }
 
   @Override
@@ -231,6 +264,9 @@ public class ChargeDefinition {
         ", toAccountDesignator='" + toAccountDesignator + '\'' +
         ", forCycleSizeUnit=" + forCycleSizeUnit +
         ", readOnly=" + readOnly +
+        ", forSegmentSet='" + forSegmentSet + '\'' +
+        ", fromSegment='" + fromSegment + '\'' +
+        ", toSegment='" + toSegment + '\'' +
         '}';
   }
 }

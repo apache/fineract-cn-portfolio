@@ -18,9 +18,6 @@ package io.mifos.individuallending.internal.service;
 import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
-import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -30,18 +27,17 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
  */
 @Service
 public class IndividualLoanService {
-  private final ChargeDefinitionService chargeDefinitionService;
+  private final ScheduledChargesService scheduledChargesService;
 
   @Autowired
-  public IndividualLoanService(final ChargeDefinitionService chargeDefinitionService) {
-    this.chargeDefinitionService = chargeDefinitionService;
+  public IndividualLoanService(final ScheduledChargesService scheduledChargesService) {
+    this.scheduledChargesService = scheduledChargesService;
   }
 
   public PlannedPaymentPage getPlannedPaymentsPage(
@@ -53,7 +49,7 @@ public class IndividualLoanService {
 
     final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(initialDisbursalDate, dataContextOfAction.getCaseParameters());
 
-    final List<ScheduledCharge> scheduledCharges = getScheduledCharges(dataContextOfAction.getProduct().getIdentifier(), scheduledActions);
+    final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(dataContextOfAction.getProduct().getIdentifier(), scheduledActions);
 
     final BigDecimal loanPaymentSize = CostComponentService.getLoanPaymentSize(
         dataContextOfAction.getCaseParameters().getMaximumBalance(),
@@ -98,21 +94,6 @@ public class IndividualLoanService {
     return new ChargeName(scheduledCharge.getChargeDefinition().getIdentifier(), scheduledCharge.getChargeDefinition().getName());
   }
 
-  List<ScheduledCharge> getScheduledCharges(
-      final String productIdentifier,
-      final @Nonnull List<ScheduledAction> scheduledActions) {
-    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction
-            = chargeDefinitionService.getChargeDefinitionsMappedByChargeAction(productIdentifier);
-
-    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction
-            = chargeDefinitionService.getChargeDefinitionsMappedByAccrueAction(productIdentifier);
-
-    return getScheduledCharges(
-            scheduledActions,
-            chargeDefinitionsMappedByChargeAction,
-            chargeDefinitionsMappedByAccrueAction);
-  }
-
   static private List<PlannedPayment> getPlannedPaymentsElements(
       final BigDecimal initialBalance,
       final int minorCurrencyUnitDigits,
@@ -124,7 +105,7 @@ public class IndividualLoanService {
         .collect(Collectors.groupingBy(IndividualLoanService::getPeriodFromScheduledCharge,
             Collectors.mapping(x -> x,
                 Collector.of(
-                    () -> new TreeSet<>(new ScheduledChargeComparator()),
+                    () -> new TreeSet<>(new ScheduledChargesService.ScheduledChargeComparator()),
                     SortedSet::add,
                     (left, right) -> { left.addAll(right); return left; }))));
 
@@ -178,73 +159,5 @@ public class IndividualLoanService {
       return new Period(null, null);
     else
       return scheduledAction.repaymentPeriod;
-  }
-
-  static List<ScheduledCharge> getScheduledCharges(final List<ScheduledAction> scheduledActions,
-                                                    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction,
-                                                    final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction) {
-    return scheduledActions.stream()
-        .flatMap(scheduledAction ->
-            getChargeDefinitionStream(
-                chargeDefinitionsMappedByChargeAction,
-                chargeDefinitionsMappedByAccrueAction,
-                scheduledAction)
-                .map(chargeDefinition -> new ScheduledCharge(scheduledAction, chargeDefinition)))
-        .collect(Collectors.toList());
-  }
-
-  private static Stream<ChargeDefinition> getChargeDefinitionStream(
-          final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction,
-          final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
-          final ScheduledAction scheduledAction) {
-    final List<ChargeDefinition> chargeMappingList = chargeDefinitionsMappedByChargeAction
-        .get(scheduledAction.action.name());
-    Stream<ChargeDefinition> chargeMapping = chargeMappingList == null ? Stream.empty() : chargeMappingList.stream();
-    if (chargeMapping == null)
-      chargeMapping = Stream.empty();
-
-    final List<ChargeDefinition> accrueMappingList = chargeDefinitionsMappedByAccrueAction
-        .get(scheduledAction.action.name());
-    Stream<ChargeDefinition> accrueMapping = accrueMappingList == null ? Stream.empty() : accrueMappingList.stream();
-    if (accrueMapping == null)
-      accrueMapping = Stream.empty();
-
-    return Stream.concat(
-        accrueMapping.sorted(IndividualLoanService::proportionalityApplicationOrder),
-        chargeMapping.sorted(IndividualLoanService::proportionalityApplicationOrder));
-  }
-
-  private static class ScheduledChargeComparator implements Comparator<ScheduledCharge>
-  {
-    @Override
-    public int compare(ScheduledCharge o1, ScheduledCharge o2) {
-      int ret = o1.getScheduledAction().when.compareTo(o2.getScheduledAction().when);
-      if (ret == 0)
-        ret = o1.getScheduledAction().action.compareTo(o2.getScheduledAction().action);
-      if (ret == 0)
-        ret = proportionalityApplicationOrder(o1.getChargeDefinition(), o2.getChargeDefinition());
-      if (ret == 0)
-        return o1.getChargeDefinition().getIdentifier().compareTo(o2.getChargeDefinition().getIdentifier());
-      else
-        return ret;
-    }
-  }
-
-  private static int proportionalityApplicationOrder(final ChargeDefinition o1, final ChargeDefinition o2) {
-    final Optional<ChargeProportionalDesignator> aProportionalToDesignator
-        = ChargeProportionalDesignator.fromString(o1.getProportionalTo());
-    final Optional<ChargeProportionalDesignator> bProportionalToDesignator
-        = ChargeProportionalDesignator.fromString(o2.getProportionalTo());
-
-    if (aProportionalToDesignator.isPresent() && bProportionalToDesignator.isPresent())
-      return Integer.compare(
-          aProportionalToDesignator.get().getOrderOfApplication(),
-          bProportionalToDesignator.get().getOrderOfApplication());
-    else if (aProportionalToDesignator.isPresent())
-      return 1;
-    else if (bProportionalToDesignator.isPresent())
-      return -1;
-    else
-      return 0;
   }
 }

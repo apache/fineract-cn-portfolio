@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Mifos Initiative.
+ * Copyright 2017 Kuelap, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,26 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio;
+package io.mifos.portfolio.api.v1.validation;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import javax.validation.Constraint;
+import javax.validation.Payload;
+import java.lang.annotation.*;
 
 /**
  * @author Myrle Krantz
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    TestAccountingInteractionInLoanWorkflow.class,
-    TestBalanceSegmentSets.class,
-    TestCases.class,
-    TestChargeDefinitions.class,
-    TestCommands.class,
-    TestIndividualLoans.class,
-    TestPatterns.class,
-    TestProducts.class,
-    TestTaskDefinitions.class,
-    TestTaskInstances.class
-})
-public class TestSuite extends SuiteTestEnvironment {
+@SuppressWarnings("unused")
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Constraint(
+    validatedBy = {CheckValidSegmentList.class}
+)
+public @interface ValidSegmentList {
+  String message() default "Segments should be greater than 0 and should number the same as the identifiers.";
+
+  Class<?>[] groups() default {};
+
+  Class<? extends Payload>[] payload() default {};
 }

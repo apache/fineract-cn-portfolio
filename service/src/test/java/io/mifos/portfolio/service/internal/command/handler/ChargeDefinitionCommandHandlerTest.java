@@ -16,6 +16,7 @@
 package io.mifos.portfolio.service.internal.command.handler;
 
 import io.mifos.portfolio.service.internal.command.DeleteProductChargeDefinitionCommand;
+import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
 import io.mifos.portfolio.service.internal.repository.ChargeDefinitionRepository;
 import io.mifos.core.lang.ServiceException;
 import org.junit.Assert;
@@ -37,7 +38,9 @@ public class ChargeDefinitionCommandHandlerTest {
             .when(chargeDefinitionRepositoryMock)
             .findByProductIdAndChargeDefinitionIdentifier(productIdentifier, chargeDefinitionIdentifier);
 
-    final ChargeDefinitionCommandHandler testSubject = new ChargeDefinitionCommandHandler(null, chargeDefinitionRepositoryMock);
+    final BalanceSegmentRepository balanceSegmentRepository = Mockito.mock(BalanceSegmentRepository.class);
+
+    final ChargeDefinitionCommandHandler testSubject = new ChargeDefinitionCommandHandler(null, chargeDefinitionRepositoryMock, balanceSegmentRepository);
 
     try {
       testSubject.process(new DeleteProductChargeDefinitionCommand(productIdentifier, chargeDefinitionIdentifier));

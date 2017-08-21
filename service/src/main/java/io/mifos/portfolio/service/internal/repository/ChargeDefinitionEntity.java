@@ -79,6 +79,15 @@ public class ChargeDefinitionEntity {
   @Column(name = "read_only")
   private Boolean readOnly;
 
+  @Column(name = "segment_set")
+  private String segmentSet;
+
+  @Column(name = "from_segment")
+  private String fromSegment;
+
+  @Column(name = "to_segment")
+  private String toSegment;
+
   public ChargeDefinitionEntity() {
   }
 
@@ -200,6 +209,30 @@ public class ChargeDefinitionEntity {
 
   public void setReadOnly(Boolean readOnly) {
     this.readOnly = readOnly;
+  }
+
+  public String getSegmentSet() {
+    return segmentSet;
+  }
+
+  public void setSegmentSet(String segmentSet) {
+    this.segmentSet = segmentSet;
+  }
+
+  public String getFromSegment() {
+    return fromSegment;
+  }
+
+  public void setFromSegment(String fromSegment) {
+    this.fromSegment = fromSegment;
+  }
+
+  public String getToSegment() {
+    return toSegment;
+  }
+
+  public void setToSegment(String toSegment) {
+    this.toSegment = toSegment;
   }
 
   @Override

@@ -85,7 +85,7 @@ public class ProductCommandHandler {
 
   private void createChargeDefinition(final ProductEntity productEntity, final ChargeDefinition chargeDefinition) {
     final ChargeDefinitionEntity chargeDefinitionEntity =
-            ChargeDefinitionMapper.map(productEntity, chargeDefinition);
+            ChargeDefinitionMapper.map(productEntity, chargeDefinition, null, null);
     chargeDefinitionRepository.save(chargeDefinitionEntity);
   }
 

@@ -23,6 +23,7 @@ import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
@@ -152,7 +153,7 @@ public class IndividualLoanServiceTest {
       final CaseEntity customerCase = new CaseEntity();
       customerCase.setInterest(interest);
 
-      return new DataContextOfAction(product, customerCase, caseParameters, Collections.emptyList());
+      return new DataContextOfAction(product, customerCase, CaseParametersMapper.map(1L, caseParameters), Collections.emptyList());
     }
 
     @Override

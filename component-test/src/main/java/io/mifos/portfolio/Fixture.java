@@ -141,6 +141,7 @@ public class Fixture {
     ret.setMaximumBalance(fixScale(BigDecimal.valueOf(2000L)));
     ret.setTermRange(new TermRange(ChronoUnit.MONTHS, 18));
     ret.setPaymentCycle(new PaymentCycle(ChronoUnit.MONTHS, 1, 1, null, null));
+    ret.setPaymentSize(BigDecimal.ONE.negate().setScale(4, RoundingMode.HALF_EVEN));
 
     final CreditWorthinessSnapshot customerCreditWorthinessSnapshot = new CreditWorthinessSnapshot();
     customerCreditWorthinessSnapshot.setForCustomer("alice");

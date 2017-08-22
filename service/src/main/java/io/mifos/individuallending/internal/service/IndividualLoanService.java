@@ -45,20 +45,20 @@ public class IndividualLoanService {
       final int pageIndex,
       final int size,
       final @Nonnull LocalDate initialDisbursalDate) {
-    final int minorCurrencyUnitDigits = dataContextOfAction.getProduct().getMinorCurrencyUnitDigits();
+    final int minorCurrencyUnitDigits = dataContextOfAction.getProductEntity().getMinorCurrencyUnitDigits();
 
     final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(initialDisbursalDate, dataContextOfAction.getCaseParameters());
 
-    final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(dataContextOfAction.getProduct().getIdentifier(), scheduledActions);
+    final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(dataContextOfAction.getProductEntity().getIdentifier(), scheduledActions);
 
     final BigDecimal loanPaymentSize = CostComponentService.getLoanPaymentSize(
-        dataContextOfAction.getCaseParameters().getMaximumBalance(),
+        dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum(),
         dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         scheduledCharges);
 
     final List<PlannedPayment> plannedPaymentsElements = getPlannedPaymentsElements(
-        dataContextOfAction.getCaseParameters().getMaximumBalance(),
+        dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum(),
         minorCurrencyUnitDigits,
         scheduledCharges,
         loanPaymentSize,

@@ -351,7 +351,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
       final BigDecimal forPaymentSize) {
     final Action action = Action.valueOf(actionIdentifier);
     final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(productIdentifier, caseIdentifier, Collections.emptyList());
-    final Case.State caseState = Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState());
+    final Case.State caseState = Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState());
     checkActionCanBeExecuted(caseState, action);
 
     return costComponentService.getCostComponentsForAction(action, dataContextOfAction, forPaymentSize)

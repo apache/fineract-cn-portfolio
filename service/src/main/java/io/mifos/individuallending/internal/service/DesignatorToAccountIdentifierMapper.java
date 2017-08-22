@@ -37,8 +37,8 @@ public class DesignatorToAccountIdentifierMapper {
   private final @Nonnull List<AccountAssignment> oneTimeAccountAssignments;
 
   public DesignatorToAccountIdentifierMapper(final @Nonnull DataContextOfAction dataContextOfAction) {
-    this.productAccountAssignments = dataContextOfAction.getProduct().getAccountAssignments();
-    this.caseAccountAssignments = dataContextOfAction.getCustomerCase().getAccountAssignments();
+    this.productAccountAssignments = dataContextOfAction.getProductEntity().getAccountAssignments();
+    this.caseAccountAssignments = dataContextOfAction.getCustomerCaseEntity().getAccountAssignments();
     this.oneTimeAccountAssignments = dataContextOfAction.getOneTimeAccountAssignments();
   }
 

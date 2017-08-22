@@ -22,7 +22,12 @@ import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.command.internal.CommandBus;
 import io.mifos.core.lang.ApplicationName;
 import io.mifos.core.lang.DateConverter;
+import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
+import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.individuallending.internal.command.ApplyInterestCommand;
+import io.mifos.individuallending.internal.command.CheckLateCommand;
+import io.mifos.individuallending.internal.service.DataContextOfAction;
+import io.mifos.individuallending.internal.service.DataContextService;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.service.config.PortfolioProperties;
 import io.mifos.portfolio.service.internal.command.CreateBeatPublishCommand;
@@ -46,6 +51,7 @@ import java.util.stream.Stream;
 public class BeatPublishCommandHandler {
   private final CaseRepository caseRepository;
   private final PortfolioProperties portfolioProperties;
+  private final DataContextService dataContextService;
   private final ApplicationName applicationName;
   private final CommandBus commandBus;
 
@@ -53,10 +59,12 @@ public class BeatPublishCommandHandler {
   public BeatPublishCommandHandler(
       final CaseRepository caseRepository,
       final PortfolioProperties portfolioProperties,
+      final DataContextService dataContextService,
       final ApplicationName applicationName,
       final CommandBus commandBus) {
     this.caseRepository = caseRepository;
     this.portfolioProperties = portfolioProperties;
+    this.dataContextService = dataContextService;
     this.applicationName = applicationName;
     this.commandBus = commandBus;
   }
@@ -71,11 +79,42 @@ public class BeatPublishCommandHandler {
     {
       final Stream<CaseEntity> activeCases = caseRepository.findByCurrentStateIn(Collections.singleton(Case.State.ACTIVE.name()));
       activeCases.forEach(activeCase -> {
-        final ApplyInterestCommand applyInterestCommand = new ApplyInterestCommand(activeCase.getProductIdentifier(), activeCase.getIdentifier());
+        final ApplyInterestCommand applyInterestCommand = new ApplyInterestCommand(
+            activeCase.getProductIdentifier(),
+            activeCase.getIdentifier(),
+            instance.getForTime());
         commandBus.dispatch(applyInterestCommand);
       });
     }
 
+    if (portfolioProperties.getCheckForLatenessInTimeSlot() == forTime.getHour())
+    {
+      final Stream<CaseEntity> activeCases = caseRepository.findByCurrentStateIn(Collections.singleton(Case.State.ACTIVE.name()));
+      activeCases.forEach(activeCase -> {
+        final CheckLateCommand checkLateCommand = new CheckLateCommand(
+            activeCase.getProductIdentifier(),
+            activeCase.getIdentifier(),
+            instance.getForTime());
+        commandBus.dispatch(checkLateCommand);
+      });
+    }
+
     return new BeatPublishEvent(applicationName.toString(), instance.getIdentifier(), instance.getForTime());
+  }
+
+  @Transactional
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
+  @EventEmitter(
+      selectorName = io.mifos.portfolio.api.v1.events.EventConstants.SELECTOR_NAME,
+      selectorValue = IndividualLoanEventConstants.SELECTOR_CHECK_LATE_INDIVIDUALLOAN_CASE)
+  public IndividualLoanCommandEvent process(final CheckLateCommand command) {
+    final String productIdentifier = command.getProductIdentifier();
+    final String caseIdentifier = command.getCaseIdentifier();
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
+        productIdentifier, caseIdentifier, Collections.emptyList());
+
+//TODO:
+
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
   }
 }

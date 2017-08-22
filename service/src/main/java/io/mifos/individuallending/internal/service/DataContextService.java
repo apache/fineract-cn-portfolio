@@ -16,8 +16,7 @@
 package io.mifos.individuallending.internal.service;
 
 import io.mifos.core.lang.ServiceException;
-import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
-import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
+import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
@@ -61,9 +60,8 @@ public class DataContextService {
         caseRepository.findByProductIdentifierAndIdentifier(productIdentifier, caseIdentifier)
             .orElseThrow(() -> ServiceException.notFound("Case not found ''{0}.{1}''.", productIdentifier, caseIdentifier));
 
-    final CaseParameters caseParameters =
+    final CaseParametersEntity caseParameters =
         caseParametersRepository.findByCaseId(customerCase.getId())
-            .map(x -> CaseParametersMapper.mapEntity(x, product.getMinorCurrencyUnitDigits()))
             .orElseThrow(() -> ServiceException.notFound(
                 "Individual loan not found ''{0}.{1}''.",
                 productIdentifier, caseIdentifier));

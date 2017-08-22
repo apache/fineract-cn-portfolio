@@ -41,8 +41,6 @@ import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -319,6 +317,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Collections.singletonList(assignEntryToTeller()),
         amount,
         IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE,
+        midnightToday(),
         Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
@@ -342,7 +341,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private void step6CalculateInterestAccrual() throws InterruptedException {
     logger.info("step6CalculateInterestAccrual");
     final String beatIdentifier = "alignment0";
-    final String midnightTimeStamp = DateConverter.toIsoString(LocalDateTime.now().truncatedTo(ChronoUnit.DAYS));
+    final String midnightTimeStamp = DateConverter.toIsoString(midnightToday());
 
     AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
 
@@ -362,7 +361,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         new BeatPublishEvent(EventConstants.DESTINATION, beatIdentifier, midnightTimeStamp)));
 
     Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.APPLY_INTEREST_INDIVIDUALLOAN_CASE,
-        new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier())));
+        new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), midnightTimeStamp)));
 
 
     final Case customerCaseAfterStateChange = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
@@ -408,6 +407,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Collections.singletonList(assignEntryToTeller()),
         amount,
         IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE,
+        midnightToday(),
         Case.State.ACTIVE); //Close has to be done explicitly.
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);

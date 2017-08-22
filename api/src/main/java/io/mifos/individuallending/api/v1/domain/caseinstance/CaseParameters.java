@@ -50,6 +50,9 @@ public final class CaseParameters {
   @Valid
   private PaymentCycle paymentCycle;
 
+  @Range(min = 0)
+  private BigDecimal paymentSize;
+
   public CaseParameters() {
   }
 
@@ -97,31 +100,41 @@ public final class CaseParameters {
     this.paymentCycle = paymentCycle;
   }
 
+  public BigDecimal getPaymentSize() {
+    return paymentSize;
+  }
+
+  public void setPaymentSize(BigDecimal paymentSize) {
+    this.paymentSize = paymentSize;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     CaseParameters that = (CaseParameters) o;
     return Objects.equals(customerIdentifier, that.customerIdentifier) &&
-            Objects.equals(creditWorthinessSnapshots, that.creditWorthinessSnapshots) &&
-            Objects.equals(maximumBalance, that.maximumBalance) &&
-            Objects.equals(termRange, that.termRange) &&
-            Objects.equals(paymentCycle, that.paymentCycle);
+        Objects.equals(creditWorthinessSnapshots, that.creditWorthinessSnapshots) &&
+        Objects.equals(maximumBalance, that.maximumBalance) &&
+        Objects.equals(termRange, that.termRange) &&
+        Objects.equals(paymentCycle, that.paymentCycle) &&
+        Objects.equals(paymentSize, that.paymentSize);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(customerIdentifier, creditWorthinessSnapshots, maximumBalance, termRange, paymentCycle);
+    return Objects.hash(customerIdentifier, creditWorthinessSnapshots, maximumBalance, termRange, paymentCycle, paymentSize);
   }
 
   @Override
   public String toString() {
     return "CaseParameters{" +
-            "customerIdentifier='" + customerIdentifier + '\'' +
-            ", creditWorthinessSnapshots=" + creditWorthinessSnapshots +
-            ", maximumBalance=" + maximumBalance +
-            ", termRange=" + termRange +
-            ", paymentCycle=" + paymentCycle +
-            '}';
+        "customerIdentifier='" + customerIdentifier + '\'' +
+        ", creditWorthinessSnapshots=" + creditWorthinessSnapshots +
+        ", maximumBalance=" + maximumBalance +
+        ", termRange=" + termRange +
+        ", paymentCycle=" + paymentCycle +
+        ", paymentSize=" + paymentSize +
+        '}';
   }
 }

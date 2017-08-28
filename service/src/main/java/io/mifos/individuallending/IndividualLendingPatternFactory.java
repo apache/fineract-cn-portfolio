@@ -20,7 +20,6 @@ import com.google.gson.Gson;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.customer.api.v1.client.CustomerManager;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
-import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
@@ -44,9 +43,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.*;
 import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.*;
@@ -165,16 +166,16 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     trackPrincipalDisbursePayment.setAmount(BigDecimal.valueOf(100));
     trackPrincipalDisbursePayment.setReadOnly(true);
 
-    //TODO: Make payable at time of ACCEPT_PAYMENT but accrued at MARK_LATE
     final ChargeDefinition lateFee = charge(
             LATE_FEE_NAME,
-            Action.MARK_LATE,
-            BigDecimal.ONE,
+            Action.ACCEPT_PAYMENT,
+            BigDecimal.TEN,
             CUSTOMER_LOAN,
             LATE_FEE_INCOME);
     lateFee.setAccrueAction(Action.MARK_LATE.name());
     lateFee.setAccrualAccountDesignator(LATE_FEE_ACCRUAL);
-    lateFee.setProportionalTo(ChargeIdentifiers.REPAYMENT_ID);
+    lateFee.setProportionalTo(ChargeProportionalDesignator.REPAYMENT_DESIGNATOR.getValue());
+    lateFee.setChargeOnTop(true);
     lateFee.setReadOnly(false);
 
     //TODO: Make multiple write off allowance charges.
@@ -347,21 +348,29 @@ public class IndividualLendingPatternFactory implements PatternFactory {
       final String productIdentifier,
       final String caseIdentifier,
       final String actionIdentifier,
+      final LocalDateTime forDateTime,
       final Set<String> forAccountDesignators,
       final BigDecimal forPaymentSize) {
     final Action action = Action.valueOf(actionIdentifier);
     final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(productIdentifier, caseIdentifier, Collections.emptyList());
-    final Case.State caseState = Case.State.valueOf(dataContextOfAction.getCustomerCase().getCurrentState());
+    final Case.State caseState = Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState());
     checkActionCanBeExecuted(caseState, action);
 
-    return costComponentService.getCostComponentsForAction(action, dataContextOfAction, forPaymentSize)
-        .stream()
-        .filter(costComponentEntry -> chargeReferencesAccountDesignators(costComponentEntry.getKey(), action, forAccountDesignators))
+    Stream<Map.Entry<ChargeDefinition, CostComponent>> costComponentStream = costComponentService.getCostComponentsForAction(
+        action,
+        dataContextOfAction,
+        forPaymentSize,
+        forDateTime.toLocalDate())
+        .stream();
+
+    if (!forAccountDesignators.isEmpty()) {
+      costComponentStream = costComponentStream
+          .filter(costComponentEntry -> chargeReferencesAccountDesignators(costComponentEntry.getKey(), action, forAccountDesignators));
+    }
+
+    return costComponentStream
         .map(costComponentEntry -> new CostComponent(costComponentEntry.getKey().getIdentifier(), costComponentEntry.getValue().getAmount()))
-        .collect(Collectors.toList())
-            .stream()
-            .map(x -> new CostComponent(x.getChargeIdentifier(), x.getAmount()))
-            .collect(Collectors.toList());
+        .collect(Collectors.toList());
   }
 
   private boolean chargeReferencesAccountDesignators(

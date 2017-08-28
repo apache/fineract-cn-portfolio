@@ -15,7 +15,6 @@
  */
 package io.mifos.individuallending.internal.service;
 
-import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentEntity;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
@@ -103,6 +102,15 @@ public class ScheduledChargesService {
     Optional<BigDecimal> getUpperBound() {
       return upperBound;
     }
+
+    @Override
+    public String toString() {
+      return "Segment{" +
+          "identifier='" + identifier + '\'' +
+          ", lowerBound=" + lowerBound +
+          ", upperBound=" + upperBound +
+          '}';
+    }
   }
 
   Optional<ChargeRange> findChargeRange(final String productIdentifier, final ChargeDefinition chargeDefinition) {
@@ -151,41 +159,7 @@ public class ScheduledChargesService {
       accrueMapping = Stream.empty();
 
     return Stream.concat(
-        accrueMapping.sorted(ScheduledChargesService::proportionalityApplicationOrder),
-        chargeMapping.sorted(ScheduledChargesService::proportionalityApplicationOrder));
-  }
-
-  static class ScheduledChargeComparator implements Comparator<ScheduledCharge>
-  {
-    @Override
-    public int compare(ScheduledCharge o1, ScheduledCharge o2) {
-      int ret = o1.getScheduledAction().when.compareTo(o2.getScheduledAction().when);
-      if (ret == 0)
-        ret = o1.getScheduledAction().action.compareTo(o2.getScheduledAction().action);
-      if (ret == 0)
-        ret = proportionalityApplicationOrder(o1.getChargeDefinition(), o2.getChargeDefinition());
-      if (ret == 0)
-        return o1.getChargeDefinition().getIdentifier().compareTo(o2.getChargeDefinition().getIdentifier());
-      else
-        return ret;
-    }
-  }
-
-  private static int proportionalityApplicationOrder(final ChargeDefinition o1, final ChargeDefinition o2) {
-    final Optional<ChargeProportionalDesignator> aProportionalToDesignator
-        = ChargeProportionalDesignator.fromString(o1.getProportionalTo());
-    final Optional<ChargeProportionalDesignator> bProportionalToDesignator
-        = ChargeProportionalDesignator.fromString(o2.getProportionalTo());
-
-    if (aProportionalToDesignator.isPresent() && bProportionalToDesignator.isPresent())
-      return Integer.compare(
-          aProportionalToDesignator.get().getOrderOfApplication(),
-          bProportionalToDesignator.get().getOrderOfApplication());
-    else if (aProportionalToDesignator.isPresent())
-      return 1;
-    else if (bProportionalToDesignator.isPresent())
-      return -1;
-    else
-      return 0;
+        accrueMapping.sorted(ScheduledChargeComparator::proportionalityApplicationOrder),
+        chargeMapping.sorted(ScheduledChargeComparator::proportionalityApplicationOrder));
   }
 }

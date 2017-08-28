@@ -23,6 +23,7 @@ import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
@@ -101,7 +102,8 @@ public class IndividualLoanServiceTest {
         REPAYMENT_ID,
         TRACK_DISBURSAL_PAYMENT_ID,
         TRACK_RETURN_PRINCIPAL_ID,
-        DISBURSE_PAYMENT_ID
+        DISBURSE_PAYMENT_ID,
+        LATE_FEE_ID
         ));
     private Map<ActionDatePair, List<ChargeDefinition>> chargeDefinitionsForActions = new HashMap<>();
     //This is an abuse of the ChargeInstance since everywhere else it's intended to contain account identifiers and not
@@ -152,7 +154,7 @@ public class IndividualLoanServiceTest {
       final CaseEntity customerCase = new CaseEntity();
       customerCase.setInterest(interest);
 
-      return new DataContextOfAction(product, customerCase, caseParameters, Collections.emptyList());
+      return new DataContextOfAction(product, customerCase, CaseParametersMapper.map(1L, caseParameters), Collections.emptyList());
     }
 
     @Override
@@ -313,7 +315,8 @@ public class IndividualLoanServiceTest {
             .collect(Collectors.toList());
 
     //Remaining principal should correspond with the other cost components.
-    final Set<BigDecimal> customerRepayments = Stream.iterate(1, x -> x + 1).limit(allPlannedPayments.size() - 1).map(x ->
+    final Set<BigDecimal> customerRepayments = Stream.iterate(1, x -> x + 1).limit(allPlannedPayments.size() - 1)
+        .map(x ->
         {
           final BigDecimal costComponentSum = allPlannedPayments.get(x).getCostComponents().stream()
               .filter(this::includeCostComponentsInSumCheck)
@@ -329,6 +332,8 @@ public class IndividualLoanServiceTest {
           Assert.assertEquals(valueOfPrincipleTrackingCostComponent, principalDifference);
           Assert.assertNotEquals("Remaining principle should always be positive or zero.",
               allPlannedPayments.get(x).getRemainingPrincipal().signum(), -1);
+          final boolean containsLateFee = allPlannedPayments.get(x).getCostComponents().stream().anyMatch(y -> y.getChargeIdentifier().equals(LATE_FEE_ID));
+          Assert.assertFalse("Late fee should not be included in planned payments", containsLateFee);
           return costComponentSum;
         }
     ).collect(Collectors.toSet());

@@ -99,9 +99,19 @@ public class IndividualLoanCaseCommandEventListener {
   }
 
   @JmsListener(
-          subscription = IndividualLoanEventConstants.DESTINATION,
-          destination = IndividualLoanEventConstants.DESTINATION,
-          selector = IndividualLoanEventConstants.SELECTOR_MARK_LATE_INDIVIDUALLOAN_CASE
+      subscription = IndividualLoanEventConstants.DESTINATION,
+      destination = IndividualLoanEventConstants.DESTINATION,
+      selector = IndividualLoanEventConstants.SELECTOR_CHECK_LATE_INDIVIDUALLOAN_CASE
+  )
+  public void onCheckLate(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,
+                          final String payload) {
+    this.eventRecorder.event(tenant, IndividualLoanEventConstants.CHECK_LATE_INDIVIDUALLOAN_CASE, payload, IndividualLoanCommandEvent.class);
+  }
+
+  @JmsListener(
+      subscription = IndividualLoanEventConstants.DESTINATION,
+      destination = IndividualLoanEventConstants.DESTINATION,
+      selector = IndividualLoanEventConstants.SELECTOR_MARK_LATE_INDIVIDUALLOAN_CASE
   )
   public void onMarkLate(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,
                          final String payload) {

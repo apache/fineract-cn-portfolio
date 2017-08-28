@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Mifos Initiative.
+ * Copyright 2017 Kuelap, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@ package io.mifos.individuallending.internal.command;
 /**
  * @author Myrle Krantz
  */
-public class ApplyInterestCommand {
+public class MarkLateCommand {
   private final String productIdentifier;
   private final String caseIdentifier;
   private final String forTime;
 
-  public ApplyInterestCommand(String productIdentifier, String caseIdentifier, String forTime) {
+  public MarkLateCommand(String productIdentifier, String caseIdentifier, String forTime) {
     this.productIdentifier = productIdentifier;
     this.caseIdentifier = caseIdentifier;
     this.forTime = forTime;
@@ -43,7 +43,7 @@ public class ApplyInterestCommand {
 
   @Override
   public String toString() {
-    return "ApplyInterestCommand{" +
+    return "MarkLateCommand{" +
         "productIdentifier='" + productIdentifier + '\'' +
         ", caseIdentifier='" + caseIdentifier + '\'' +
         ", forTime='" + forTime + '\'' +

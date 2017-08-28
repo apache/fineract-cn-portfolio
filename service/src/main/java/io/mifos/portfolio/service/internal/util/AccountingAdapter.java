@@ -63,6 +63,7 @@ public class AccountingAdapter {
 
   public void bookCharges(final List<ChargeInstance> costComponents,
                           final String note,
+                          final String transactionDate,
                           final String message,
                           final String transactionType) {
     final Set<Creditor> creditors = costComponents.stream()
@@ -80,7 +81,7 @@ public class AccountingAdapter {
     journalEntry.setCreditors(creditors);
     journalEntry.setDebtors(debtors);
     journalEntry.setClerk(UserContextHolder.checkedGetUser());
-    journalEntry.setTransactionDate(DateConverter.toIsoString(LocalDateTime.now()));
+    journalEntry.setTransactionDate(transactionDate);
     journalEntry.setMessage(message);
     journalEntry.setTransactionType(transactionType);
     journalEntry.setNote(note);
@@ -101,18 +102,18 @@ public class AccountingAdapter {
         .map(DateConverter::fromIsoString);
   }
 
-  public List<LocalDateTime> getDatesOfMostRecentTwoEntriesContainingMessage(final String accountIdentifier,
-                                                                             final String message) {
+  public Optional<LocalDateTime> getDateOfMostRecentEntryContainingMessage(
+      final String accountIdentifier,
+      final String message) {
 
     final Account account = ledgerManager.findAccount(accountIdentifier);
     final LocalDateTime accountCreatedOn = DateConverter.fromIsoString(account.getCreatedOn());
     final DateRange fromAccountCreationUntilNow = oneSidedDateRange(accountCreatedOn.toLocalDate());
 
     return ledgerManager.fetchAccountEntriesStream(accountIdentifier, fromAccountCreationUntilNow.toString(), message, "DESC")
-        .limit(2)
+        .findFirst()
         .map(AccountEntry::getTransactionDate)
-        .map(DateConverter::fromIsoString)
-        .collect(Collectors.toList());
+        .map(DateConverter::fromIsoString);
   }
 
   public BigDecimal sumMatchingEntriesSinceDate(final String accountIdentifier, final LocalDate startDate, final String message)

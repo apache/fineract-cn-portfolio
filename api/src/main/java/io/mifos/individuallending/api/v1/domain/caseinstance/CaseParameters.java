@@ -103,10 +103,10 @@ public final class CaseParameters {
     if (o == null || getClass() != o.getClass()) return false;
     CaseParameters that = (CaseParameters) o;
     return Objects.equals(customerIdentifier, that.customerIdentifier) &&
-            Objects.equals(creditWorthinessSnapshots, that.creditWorthinessSnapshots) &&
-            Objects.equals(maximumBalance, that.maximumBalance) &&
-            Objects.equals(termRange, that.termRange) &&
-            Objects.equals(paymentCycle, that.paymentCycle);
+        Objects.equals(creditWorthinessSnapshots, that.creditWorthinessSnapshots) &&
+        Objects.equals(maximumBalance, that.maximumBalance) &&
+        Objects.equals(termRange, that.termRange) &&
+        Objects.equals(paymentCycle, that.paymentCycle);
   }
 
   @Override
@@ -117,11 +117,11 @@ public final class CaseParameters {
   @Override
   public String toString() {
     return "CaseParameters{" +
-            "customerIdentifier='" + customerIdentifier + '\'' +
-            ", creditWorthinessSnapshots=" + creditWorthinessSnapshots +
-            ", maximumBalance=" + maximumBalance +
-            ", termRange=" + termRange +
-            ", paymentCycle=" + paymentCycle +
-            '}';
+        "customerIdentifier='" + customerIdentifier + '\'' +
+        ", creditWorthinessSnapshots=" + creditWorthinessSnapshots +
+        ", maximumBalance=" + maximumBalance +
+        ", termRange=" + termRange +
+        ", paymentCycle=" + paymentCycle +
+        '}';
   }
 }

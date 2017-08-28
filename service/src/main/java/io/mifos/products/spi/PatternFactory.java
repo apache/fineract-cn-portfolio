@@ -22,6 +22,7 @@ import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -41,6 +42,7 @@ public interface PatternFactory {
       String productIdentifier,
       String caseIdentifier,
       String actionIdentifier,
+      LocalDateTime forDateTime,
       Set<String> forAccountDesignators,
       BigDecimal forPaymentSize);
   ProductCommandDispatcher getIndividualLendingCommandDispatcher();

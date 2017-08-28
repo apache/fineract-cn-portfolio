@@ -17,7 +17,6 @@ package io.mifos.individuallending.internal.service;
 
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -31,13 +30,7 @@ import java.util.stream.Stream;
 /**
  * @author Myrle Krantz
  */
-@SuppressWarnings("WeakerAccess")
-@Service
-public class PeriodChargeCalculator {
-  public PeriodChargeCalculator()
-  {
-  }
-
+class PeriodChargeCalculator {
   static Map<Period, BigDecimal> getPeriodAccrualInterestRate(
       final BigDecimal interest,
       final List<ScheduledCharge> scheduledCharges,

@@ -139,7 +139,7 @@ public class Fixture {
 
     ret.setCustomerIdentifier(CUSTOMER_IDENTIFIER);
     ret.setMaximumBalance(fixScale(BigDecimal.valueOf(2000L)));
-    ret.setTermRange(new TermRange(ChronoUnit.MONTHS, 18));
+    ret.setTermRange(new TermRange(ChronoUnit.MONTHS, 3));
     ret.setPaymentCycle(new PaymentCycle(ChronoUnit.MONTHS, 1, 1, null, null));
 
     final CreditWorthinessSnapshot customerCreditWorthinessSnapshot = new CreditWorthinessSnapshot();

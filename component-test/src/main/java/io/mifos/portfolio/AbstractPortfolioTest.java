@@ -18,6 +18,7 @@ package io.mifos.portfolio;
 import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.anubis.test.v1.TenantApplicationSecurityEnvironmentTestRule;
 import io.mifos.core.api.context.AutoUserContext;
+import io.mifos.core.lang.DateConverter;
 import io.mifos.core.test.fixture.TenantDataStoreContextTestRule;
 import io.mifos.core.test.listener.EnableEventRecording;
 import io.mifos.core.test.listener.EventRecorder;
@@ -53,9 +54,13 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -63,7 +68,7 @@ import java.util.stream.Collectors;
 @RunWith(SpringRunner.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT,
         classes = {AbstractPortfolioTest.TestConfiguration.class},
-    properties = {"portfolio.bookInterestAsUser=interest_user", "portfolio.bookInterestInTimeSlot=0"}
+    properties = {"portfolio.bookLateFeesAndInterestAsUser=interest_user", "portfolio.bookInterestInTimeSlot=0", "portfolio.checkForLatenessInTimeSlot=0"}
 )
 public class AbstractPortfolioTest extends SuiteTestEnvironment {
   private static final String LOGGER_NAME = "test-logger";
@@ -188,22 +193,34 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
                           final List<AccountAssignment> oneTimeAccountAssignments,
                           final String event,
                           final Case.State nextState) throws InterruptedException {
-    checkStateTransfer(productIdentifier, caseIdentifier, action, oneTimeAccountAssignments, BigDecimal.ZERO, event, nextState);
+    checkStateTransfer(
+        productIdentifier,
+        caseIdentifier,
+        action,
+        LocalDateTime.now(Clock.systemUTC()),
+        oneTimeAccountAssignments,
+        BigDecimal.ZERO,
+        event,
+        midnightToday(),
+        nextState);
   }
 
   void checkStateTransfer(final String productIdentifier,
                           final String caseIdentifier,
                           final Action action,
+                          final LocalDateTime actionDateTime,
                           final List<AccountAssignment> oneTimeAccountAssignments,
                           final BigDecimal paymentSize,
                           final String event,
+                          final LocalDateTime eventDateTime,
                           final Case.State nextState) throws InterruptedException {
     final Command command = new Command();
     command.setOneTimeAccountAssignments(oneTimeAccountAssignments);
     command.setPaymentSize(paymentSize);
+    command.setCreatedOn(DateConverter.toIsoString(actionDateTime));
     portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, action.name(), command);
 
-    Assert.assertTrue(eventRecorder.wait(event, new IndividualLoanCommandEvent(productIdentifier, caseIdentifier)));
+    Assert.assertTrue(eventRecorder.wait(event, new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(eventDateTime))));
 
     final Case customerCase = portfolioManager.getCase(productIdentifier, caseIdentifier);
     Assert.assertEquals(nextState.name(), customerCase.getCurrentState());
@@ -259,7 +276,9 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
         amount
     );
     final Set<CostComponent> setOfCostComponents = new HashSet<>(costComponents);
-    final Set<CostComponent> setOfExpectedCostComponents = new HashSet<>(Arrays.asList(expectedCostComponents));
+    final Set<CostComponent> setOfExpectedCostComponents = Stream.of(expectedCostComponents)
+        .filter(x -> x.getAmount().compareTo(BigDecimal.ZERO) != 0)
+        .collect(Collectors.toSet());
     Assert.assertEquals(setOfExpectedCostComponents, setOfCostComponents);
   }
 
@@ -313,4 +332,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     Assert.assertTrue(eventRecorder.wait(EventConstants.PUT_TASK_INSTANCE_EXECUTION, new TaskInstanceEvent(product.getIdentifier(), customerCase.getIdentifier(), taskDefinition.getIdentifier())));
   }
 
+  LocalDateTime midnightToday() {
+    return LocalDateTime.now().truncatedTo(ChronoUnit.DAYS);
+  }
 }

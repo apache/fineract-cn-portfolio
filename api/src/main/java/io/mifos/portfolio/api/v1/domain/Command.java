@@ -15,8 +15,11 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import io.mifos.core.lang.validation.constraints.ValidLocalDateTimeString;
+
 import javax.annotation.Nullable;
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
@@ -34,7 +37,11 @@ public final class Command {
   private BigDecimal paymentSize;
 
   private String note;
+
+  @ValidLocalDateTimeString
+  @NotNull
   private String createdOn;
+
   private String createdBy;
 
   public Command() {

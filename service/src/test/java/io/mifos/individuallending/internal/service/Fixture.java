@@ -74,15 +74,15 @@ class Fixture {
   {
     final List<ScheduledAction> ret = new ArrayList<>();
     LocalDate begin = initial;
-    for (final LocalDate paymentDate : paymentDates) {
-      ret.add(scheduledRepaymentAction(begin, paymentDate));
-      begin = paymentDate;
+    for (int i = 0; i < paymentDates.length; i++) {
+      ret.add(scheduledRepaymentAction(begin, paymentDates[i], (i == paymentDates.length -1)));
+      begin = paymentDates[i];
     }
     return ret;
   }
 
-  private static ScheduledAction scheduledRepaymentAction(final LocalDate from, final LocalDate to) {
-    final Period repaymentPeriod = new Period(from, to);
+  private static ScheduledAction scheduledRepaymentAction(final LocalDate from, final LocalDate to, boolean isLast) {
+    final Period repaymentPeriod = new Period(from, to, isLast);
     return new ScheduledAction(Action.ACCEPT_PAYMENT, to, repaymentPeriod, repaymentPeriod);
   }
 

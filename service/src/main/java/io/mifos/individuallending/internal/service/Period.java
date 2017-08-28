@@ -26,31 +26,45 @@ import java.util.Objects;
 /**
  * @author Myrle Krantz
  */
-class Period implements Comparable<Period> {
+public class Period implements Comparable<Period> {
   final private LocalDate beginDate;
   final private LocalDate endDate;
+  final private boolean lastPeriod;
 
   Period(final LocalDate beginDate, final LocalDate endDateExclusive) {
     this.beginDate = beginDate;
     this.endDate = endDateExclusive;
+    this.lastPeriod = false;
+  }
+
+  Period(final LocalDate beginDate, final LocalDate endDateExclusive, final boolean lastPeriod) {
+    this.beginDate = beginDate;
+    this.endDate = endDateExclusive;
+    this.lastPeriod = lastPeriod;
   }
 
   Period(final LocalDate beginDate, final int periodLength) {
     this.beginDate = beginDate;
     this.endDate = beginDate.plusDays(periodLength);
+    this.lastPeriod = false;
   }
 
   Period(final int periodLength, final LocalDate endDate) {
     this.beginDate = endDate.minusDays(periodLength);
     this.endDate = endDate;
+    this.lastPeriod = false;
   }
 
-  LocalDate getBeginDate() {
+  public LocalDate getBeginDate() {
     return beginDate;
   }
 
   LocalDate getEndDate() {
     return endDate;
+  }
+
+  boolean isLastPeriod() {
+    return lastPeriod;
   }
 
   String getEndDateAsString() {
@@ -74,24 +88,33 @@ class Period implements Comparable<Period> {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    Period that = (Period) o;
-    return Objects.equals(beginDate, that.beginDate) &&
-            Objects.equals(endDate, that.endDate);
+    Period period = (Period) o;
+    return lastPeriod == period.lastPeriod &&
+        Objects.equals(beginDate, period.beginDate) &&
+        Objects.equals(endDate, period.endDate);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(beginDate, endDate);
+    return Objects.hash(beginDate, endDate, lastPeriod);
   }
 
   @Override
   public int compareTo(@Nonnull Period o) {
-    final int comparison = compareNullableDates(endDate, o.endDate);
-
-    if (comparison == 0)
-      return compareNullableDates(beginDate, o.beginDate);
-    else
+    int comparison = compareNullableDates(endDate, o.endDate);
+    if (comparison != 0)
       return comparison;
+
+    comparison = compareNullableDates(beginDate, o.beginDate);
+    if (comparison != 0)
+      return comparison;
+
+    if (lastPeriod == o.lastPeriod)
+      return 0;
+    else if (lastPeriod)
+      return -1;
+    else
+      return 1;
   }
 
   @SuppressWarnings("ConstantConditions")
@@ -109,8 +132,9 @@ class Period implements Comparable<Period> {
   @Override
   public String toString() {
     return "Period{" +
-            "beginDate=" + beginDate +
-            ", endDate=" + endDate +
-            '}';
+        "beginDate=" + beginDate +
+        ", endDate=" + endDate +
+        ", lastPeriod=" + lastPeriod +
+        '}';
   }
 }

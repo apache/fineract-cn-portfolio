@@ -15,11 +15,14 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import io.mifos.core.lang.DateConverter;
 import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -39,6 +42,7 @@ public class CommandTest extends ValidationTest<Command> {
   protected Command createValidTestSubject() {
     final Command ret = new Command();
     ret.setOneTimeAccountAssignments(Collections.emptyList());
+    ret.setCreatedOn(DateConverter.toIsoString(LocalDateTime.now(Clock.systemUTC())));
     return ret;
   }
 

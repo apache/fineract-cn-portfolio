@@ -70,6 +70,9 @@ public class CaseParametersEntity {
   @OneToMany(targetEntity = CaseCreditWorthinessFactorEntity.class, cascade = CascadeType.ALL, orphanRemoval = true, mappedBy = "caseId")
   private Set<CaseCreditWorthinessFactorEntity> creditWorthinessFactors;
 
+  @Column(name = "payment_size")
+  private BigDecimal paymentSize;
+
   public CaseParametersEntity() {
   }
 
@@ -175,6 +178,14 @@ public class CaseParametersEntity {
 
   public void setCreditWorthinessFactors(Set<CaseCreditWorthinessFactorEntity> creditWorthinessFactors) {
     this.creditWorthinessFactors = creditWorthinessFactors;
+  }
+
+  public BigDecimal getPaymentSize() {
+    return paymentSize;
+  }
+
+  public void setPaymentSize(BigDecimal paymentSize) {
+    this.paymentSize = paymentSize;
   }
 
   @Override

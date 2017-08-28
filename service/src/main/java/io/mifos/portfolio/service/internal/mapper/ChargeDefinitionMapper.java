@@ -57,6 +57,7 @@ public class ChargeDefinitionMapper {
       ret.setFromSegment(fromSegment.getSegmentIdentifier());
       ret.setToSegment(toSegment.getSegmentIdentifier());
     }
+    ret.setOnTop(chargeDefinition.getChargeOnTop());
 
     return ret;
   }
@@ -82,6 +83,7 @@ public class ChargeDefinitionMapper {
       ret.setFromSegment(from.getFromSegment());
       ret.setToSegment(from.getToSegment());
     }
+    ret.setChargeOnTop(from.getOnTop());
 
     return ret;
   }

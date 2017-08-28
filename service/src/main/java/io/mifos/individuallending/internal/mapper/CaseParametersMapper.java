@@ -34,7 +34,9 @@ import java.util.stream.Stream;
  */
 public class CaseParametersMapper {
 
-  public static CaseParametersEntity map(final Long caseId, final CaseParameters instance) {
+  public static CaseParametersEntity map(
+      final Long caseId,
+      final CaseParameters instance) {
     final CaseParametersEntity ret = new CaseParametersEntity();
 
     ret.setCaseId(caseId);
@@ -49,6 +51,7 @@ public class CaseParametersMapper {
     ret.setPaymentCycleAlignmentWeek(instance.getPaymentCycle().getAlignmentWeek());
     ret.setPaymentCycleAlignmentMonth(instance.getPaymentCycle().getAlignmentMonth());
     ret.setCreditWorthinessFactors(mapSnapshotsToFactors(instance.getCreditWorthinessSnapshots(), ret));
+    ret.setPaymentSize(BigDecimal.ONE.negate()); //semaphore for not yet set.
 
     return ret;
   }
@@ -56,6 +59,8 @@ public class CaseParametersMapper {
   public static Set<CaseCreditWorthinessFactorEntity> mapSnapshotsToFactors(
           final List<CreditWorthinessSnapshot> creditWorthinessSnapshots,
           final CaseParametersEntity caseParametersEntity) {
+    if (creditWorthinessSnapshots == null)
+      return Collections.emptySet();
     return Stream.iterate(0, i -> i+1).limit(creditWorthinessSnapshots.size())
             .flatMap(i -> mapSnapshotToFactors(
                     creditWorthinessSnapshots.get(i), i, caseParametersEntity)).collect(Collectors.toSet());

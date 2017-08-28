@@ -30,20 +30,23 @@ import org.springframework.validation.annotation.Validated;
 @Validated
 public class PortfolioProperties {
   @ValidIdentifier
-  private String bookInterestAsUser;
+  private String bookLateFeesAndInterestAsUser;
 
   @Range(min=0, max=23)
   private int bookInterestInTimeSlot = 0;
 
+  @Range(min=0, max=23)
+  private int checkForLatenessInTimeSlot = 0;
+
   public PortfolioProperties() {
   }
 
-  public String getBookInterestAsUser() {
-    return bookInterestAsUser;
+  public String getBookLateFeesAndInterestAsUser() {
+    return bookLateFeesAndInterestAsUser;
   }
 
-  public void setBookInterestAsUser(String bookInterestAsUser) {
-    this.bookInterestAsUser = bookInterestAsUser;
+  public void setBookLateFeesAndInterestAsUser(String bookLateFeesAndInterestAsUser) {
+    this.bookLateFeesAndInterestAsUser = bookLateFeesAndInterestAsUser;
   }
 
   public int getBookInterestInTimeSlot() {
@@ -52,5 +55,13 @@ public class PortfolioProperties {
 
   public void setBookInterestInTimeSlot(int bookInterestInTimeSlot) {
     this.bookInterestInTimeSlot = bookInterestInTimeSlot;
+  }
+
+  public int getCheckForLatenessInTimeSlot() {
+    return checkForLatenessInTimeSlot;
+  }
+
+  public void setCheckForLatenessInTimeSlot(int checkForLatenessInTimeSlot) {
+    this.checkForLatenessInTimeSlot = checkForLatenessInTimeSlot;
   }
 }

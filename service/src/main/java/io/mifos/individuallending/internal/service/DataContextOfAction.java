@@ -17,6 +17,8 @@ package io.mifos.individuallending.internal.service;
 
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
+import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
@@ -33,12 +35,12 @@ import java.util.List;
 public class DataContextOfAction {
   private final ProductEntity product;
   private final CaseEntity customerCase;
-  private final CaseParameters caseParameters;
+  private final CaseParametersEntity caseParameters;
   private final List<AccountAssignment> oneTimeAccountAssignments;
 
   DataContextOfAction(final @Nonnull ProductEntity product,
                       final @Nonnull CaseEntity customerCase,
-                      final @Nonnull CaseParameters caseParameters,
+                      final @Nonnull CaseParametersEntity caseParameters,
                       final @Nullable List<AccountAssignment> oneTimeAccountAssignments) {
     this.product = product;
     this.customerCase = customerCase;
@@ -46,16 +48,20 @@ public class DataContextOfAction {
     this.oneTimeAccountAssignments = oneTimeAccountAssignments == null ? Collections.emptyList() : oneTimeAccountAssignments;
   }
 
-  public @Nonnull ProductEntity getProduct() {
+  public @Nonnull ProductEntity getProductEntity() {
     return product;
   }
 
-  public @Nonnull CaseEntity getCustomerCase() {
+  public @Nonnull CaseEntity getCustomerCaseEntity() {
     return customerCase;
   }
 
-  public @Nonnull CaseParameters getCaseParameters() {
+  public @Nonnull CaseParametersEntity getCaseParametersEntity() {
     return caseParameters;
+  }
+
+  public @Nonnull CaseParameters getCaseParameters() {
+    return CaseParametersMapper.mapEntity(caseParameters, product.getMinorCurrencyUnitDigits());
   }
 
   @Nonnull List<AccountAssignment> getOneTimeAccountAssignments() {

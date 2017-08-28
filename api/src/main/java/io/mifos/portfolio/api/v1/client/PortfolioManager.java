@@ -344,6 +344,22 @@ public interface PortfolioManager {
       @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize);
 
 
+
+  @RequestMapping(
+      value = "/products/{productidentifier}/cases/{caseidentifier}/actions/{actionidentifier}/costcomponents",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  List<CostComponent> getCostComponentsForAction(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @PathVariable("actionidentifier") final String actionIdentifier,
+      @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators,
+      @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize,
+      @RequestParam(value="fordatetime", required = false, defaultValue = "") final String forDateTime);
+
+
   @RequestMapping(
       value = "/products/{productidentifier}/cases/{caseidentifier}/actions/{actionidentifier}/costcomponents",
       method = RequestMethod.GET,

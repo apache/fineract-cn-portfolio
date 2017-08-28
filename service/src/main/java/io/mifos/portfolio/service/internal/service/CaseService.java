@@ -35,6 +35,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -135,12 +136,14 @@ public class CaseService {
   public List<CostComponent> getActionCostComponentsForCase(final String productIdentifier,
                                                             final String caseIdentifier,
                                                             final String actionIdentifier,
+                                                            final LocalDateTime localDateTime,
                                                             final Set<String> forAccountDesignatorsList,
                                                             final BigDecimal forPaymentSize) {
     return getPatternFactoryOrThrow(productIdentifier).getCostComponentsForAction(
         productIdentifier,
         caseIdentifier,
         actionIdentifier,
+        localDateTime,
         forAccountDesignatorsList,
         forPaymentSize);
   }

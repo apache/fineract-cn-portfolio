@@ -26,7 +26,7 @@ import java.util.Objects;
 /**
  * @author Myrle Krantz
  */
-class Period implements Comparable<Period> {
+public class Period implements Comparable<Period> {
   final private LocalDate beginDate;
   final private LocalDate endDate;
   final private boolean lastPeriod;
@@ -55,7 +55,7 @@ class Period implements Comparable<Period> {
     this.lastPeriod = false;
   }
 
-  LocalDate getBeginDate() {
+  public LocalDate getBeginDate() {
     return beginDate;
   }
 

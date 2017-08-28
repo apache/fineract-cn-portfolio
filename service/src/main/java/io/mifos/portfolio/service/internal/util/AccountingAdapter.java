@@ -63,6 +63,7 @@ public class AccountingAdapter {
 
   public void bookCharges(final List<ChargeInstance> costComponents,
                           final String note,
+                          final String transactionDate,
                           final String message,
                           final String transactionType) {
     final Set<Creditor> creditors = costComponents.stream()
@@ -80,7 +81,7 @@ public class AccountingAdapter {
     journalEntry.setCreditors(creditors);
     journalEntry.setDebtors(debtors);
     journalEntry.setClerk(UserContextHolder.checkedGetUser());
-    journalEntry.setTransactionDate(DateConverter.toIsoString(LocalDateTime.now()));
+    journalEntry.setTransactionDate(transactionDate);
     journalEntry.setMessage(message);
     journalEntry.setTransactionType(transactionType);
     journalEntry.setNote(note);

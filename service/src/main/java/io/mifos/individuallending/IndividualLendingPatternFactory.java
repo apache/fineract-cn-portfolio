@@ -166,7 +166,6 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     trackPrincipalDisbursePayment.setAmount(BigDecimal.valueOf(100));
     trackPrincipalDisbursePayment.setReadOnly(true);
 
-    //TODO: Make payable at time of ACCEPT_PAYMENT but accrued at MARK_LATE
     final ChargeDefinition lateFee = charge(
             LATE_FEE_NAME,
             Action.ACCEPT_PAYMENT,
@@ -176,6 +175,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     lateFee.setAccrueAction(Action.MARK_LATE.name());
     lateFee.setAccrualAccountDesignator(LATE_FEE_ACCRUAL);
     lateFee.setProportionalTo(ChargeProportionalDesignator.REPAYMENT_DESIGNATOR.getValue());
+    lateFee.setChargeOnTop(true);
     lateFee.setReadOnly(false);
 
     //TODO: Make multiple write off allowance charges.

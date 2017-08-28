@@ -88,6 +88,9 @@ public class ChargeDefinitionEntity {
   @Column(name = "to_segment")
   private String toSegment;
 
+  @Column(name = "on_top")
+  private Boolean onTop;
+
   public ChargeDefinitionEntity() {
   }
 
@@ -233,6 +236,14 @@ public class ChargeDefinitionEntity {
 
   public void setToSegment(String toSegment) {
     this.toSegment = toSegment;
+  }
+
+  public Boolean getOnTop() {
+    return onTop;
+  }
+
+  public void setOnTop(Boolean onTop) {
+    this.onTop = onTop;
   }
 
   @Override

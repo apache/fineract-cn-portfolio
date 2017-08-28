@@ -267,20 +267,6 @@ public class CostComponentService {
         dataContextOfAction.getCaseParameters()
     );
 
-    final BigDecimal loanPaymentSize;
-
-    if (requestedLoanPaymentSize != null) {
-      loanPaymentSize = requestedLoanPaymentSize;
-    }
-    else {
-      if (scheduledAction.actionPeriod != null && scheduledAction.actionPeriod.isLastPeriod()) {
-        loanPaymentSize = currentBalance;
-      }
-      else {
-        loanPaymentSize = currentBalance.min(dataContextOfAction.getCaseParametersEntity().getPaymentSize());
-      }
-    }
-
     final List<ScheduledCharge> scheduledChargesForThisAction = scheduledChargesService.getScheduledCharges(
         productIdentifier,
         Collections.singletonList(scheduledAction));
@@ -294,6 +280,28 @@ public class CostComponentService {
         .collect(Collectors.toMap(chargeDefinition -> chargeDefinition,
             chargeDefinition -> getAccruedCostComponentToApply(dataContextOfAction, designatorToAccountIdentifierMapper, startOfTerm, chargeDefinition)));
 
+
+    final BigDecimal loanPaymentSize;
+
+    if (requestedLoanPaymentSize != null) {
+      loanPaymentSize = requestedLoanPaymentSize;
+    }
+    else {
+      if (scheduledAction.actionPeriod != null && scheduledAction.actionPeriod.isLastPeriod()) {
+        loanPaymentSize = currentBalance;
+      }
+      else {
+        final BigDecimal paymentSizeBeforeOnTopCharges = currentBalance.min(dataContextOfAction.getCaseParametersEntity().getPaymentSize());
+
+        @SuppressWarnings("UnnecessaryLocalVariable")
+        final BigDecimal paymentSizeIncludingOnTopCharges = accruedCostComponents.entrySet().stream()
+            .filter(entry -> entry.getKey().getChargeOnTop() != null && entry.getKey().getChargeOnTop())
+            .map(entry -> entry.getValue().getAmount())
+            .reduce(paymentSizeBeforeOnTopCharges, BigDecimal::add);
+
+        loanPaymentSize = paymentSizeIncludingOnTopCharges;
+      }
+    }
 
 
     return getCostComponentsForScheduledCharges(

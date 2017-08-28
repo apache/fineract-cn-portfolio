@@ -118,6 +118,7 @@ public class IndividualLoanCommandHandler {
 
     accountingAdapter.bookCharges(charges,
         command.getCommand().getNote(),
+        command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.OPEN),
         Action.OPEN.getTransactionType());
     //Only move to new state if book charges command was accepted.
@@ -210,6 +211,7 @@ public class IndividualLoanCommandHandler {
 
     accountingAdapter.bookCharges(charges,
         command.getCommand().getNote(),
+        command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.APPROVE),
         Action.APPROVE.getTransactionType());
 
@@ -254,6 +256,7 @@ public class IndividualLoanCommandHandler {
 
     accountingAdapter.bookCharges(charges,
         command.getCommand().getNote(),
+        command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.DISBURSE),
         Action.DISBURSE.getTransactionType());
     //Only move to new state if book charges command was accepted.
@@ -311,7 +314,8 @@ public class IndividualLoanCommandHandler {
         .collect(Collectors.toList());
 
     accountingAdapter.bookCharges(charges,
-        "",
+        "Applied interest on " + command.getForTime(),
+        command.getForTime(),
         dataContextOfAction.getMessageForCharge(Action.APPLY_INTEREST),
         Action.APPLY_INTEREST.getTransactionType());
 
@@ -358,6 +362,7 @@ public class IndividualLoanCommandHandler {
 
     accountingAdapter.bookCharges(charges,
         command.getCommand().getNote(),
+        command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT),
         Action.ACCEPT_PAYMENT.getTransactionType());
 
@@ -401,6 +406,7 @@ public class IndividualLoanCommandHandler {
 
     accountingAdapter.bookCharges(charges,
         "Marked late on " + command.getForTime(),
+        command.getForTime(),
         dataContextOfAction.getMessageForCharge(Action.MARK_LATE),
         Action.MARK_LATE.getTransactionType());
 
@@ -460,6 +466,7 @@ public class IndividualLoanCommandHandler {
 
     accountingAdapter.bookCharges(charges,
         command.getCommand().getNote(),
+        command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.DISBURSE),
         Action.DISBURSE.getTransactionType());
 

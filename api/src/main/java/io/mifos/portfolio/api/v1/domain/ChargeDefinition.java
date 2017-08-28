@@ -88,6 +88,8 @@ public class ChargeDefinition {
   @ValidIdentifier(optional = true)
   private String toSegment;
 
+  private Boolean chargeOnTop;
+
   public ChargeDefinition() {
   }
 
@@ -220,6 +222,14 @@ public class ChargeDefinition {
     this.toSegment = toSegment;
   }
 
+  public Boolean getChargeOnTop() {
+    return chargeOnTop;
+  }
+
+  public void setChargeOnTop(Boolean chargeOnTop) {
+    this.chargeOnTop = chargeOnTop;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -240,12 +250,13 @@ public class ChargeDefinition {
         forCycleSizeUnit == that.forCycleSizeUnit &&
         Objects.equals(forSegmentSet, that.forSegmentSet) &&
         Objects.equals(fromSegment, that.fromSegment) &&
-        Objects.equals(toSegment, that.toSegment);
+        Objects.equals(toSegment, that.toSegment) &&
+        Objects.equals(chargeOnTop, that.chargeOnTop);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(identifier, name, description, accrueAction, chargeAction, amount, chargeMethod, proportionalTo, fromAccountDesignator, accrualAccountDesignator, toAccountDesignator, forCycleSizeUnit, readOnly, forSegmentSet, fromSegment, toSegment);
+    return Objects.hash(identifier, name, description, accrueAction, chargeAction, amount, chargeMethod, proportionalTo, fromAccountDesignator, accrualAccountDesignator, toAccountDesignator, forCycleSizeUnit, readOnly, forSegmentSet, fromSegment, toSegment, chargeOnTop);
   }
 
   @Override
@@ -267,6 +278,7 @@ public class ChargeDefinition {
         ", forSegmentSet='" + forSegmentSet + '\'' +
         ", fromSegment='" + fromSegment + '\'' +
         ", toSegment='" + toSegment + '\'' +
+        ", chargeOnTop='" + chargeOnTop + '\'' +
         '}';
   }
 }

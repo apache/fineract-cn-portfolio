@@ -15,3 +15,5 @@
 --
 
 ALTER TABLE bastet_il_cases ADD COLUMN payment_size DECIMAL(19,4) NULL DEFAULT NULL;
+
+ALTER TABLE bastet_p_chrg_defs ADD COLUMN on_top BOOLEAN NULL DEFAULT NULL;

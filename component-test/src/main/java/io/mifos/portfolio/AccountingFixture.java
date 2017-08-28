@@ -31,7 +31,6 @@ import org.mockito.stubbing.Answer;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -81,11 +80,11 @@ class AccountingFixture {
       this.account.setBalance(balance);
     }
 
-    synchronized void addAccountEntry(final String message, final double amount) {
+    synchronized void addAccountEntry(final String message, final String date, final double amount) {
       final AccountEntry accountEntry = new AccountEntry();
       accountEntry.setAmount(amount);
       accountEntry.setMessage(message);
-      accountEntry.setTransactionDate(DateConverter.toIsoString(LocalDateTime.now(Clock.systemUTC())));
+      accountEntry.setTransactionDate(date);
       accountEntries.add(accountEntry);
     }
 
@@ -391,10 +390,12 @@ class AccountingFixture {
       journalEntry.getCreditors().forEach(creditor ->
           accountMap.get(creditor.getAccountNumber()).addAccountEntry(
               journalEntry.getMessage(),
+              journalEntry.getTransactionDate(),
               Double.valueOf(creditor.getAmount())));
       journalEntry.getDebtors().forEach(debtor ->
           accountMap.get(debtor.getAccountNumber()).addAccountEntry(
               journalEntry.getMessage(),
+              journalEntry.getTransactionDate(),
               Double.valueOf(debtor.getAmount())));
       return null;
     }

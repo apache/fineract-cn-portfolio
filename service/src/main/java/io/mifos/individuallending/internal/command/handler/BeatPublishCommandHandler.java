@@ -30,10 +30,7 @@ import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.individuallending.internal.command.ApplyInterestCommand;
 import io.mifos.individuallending.internal.command.CheckLateCommand;
 import io.mifos.individuallending.internal.command.MarkLateCommand;
-import io.mifos.individuallending.internal.service.DataContextOfAction;
-import io.mifos.individuallending.internal.service.DataContextService;
-import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
-import io.mifos.individuallending.internal.service.ScheduledActionHelpers;
+import io.mifos.individuallending.internal.service.*;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.service.config.PortfolioProperties;
 import io.mifos.portfolio.service.internal.command.CreateBeatPublishCommand;
@@ -49,6 +46,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -141,11 +141,13 @@ public class BeatPublishCommandHandler {
                 ServiceException.badRequest("No last disbursal date for ''{0}.{1}'' could be determined.  " +
                     "Therefore it cannot be checked for lateness.", productIdentifier, caseIdentifier));
 
-    final long repaymentPeriodsBetweenBeginningAndToday = ScheduledActionHelpers.generateRepaymentPeriods(
+    final List<Period> repaymentPeriods = ScheduledActionHelpers.generateRepaymentPeriods(
         dateOfMostRecentDisbursement.toLocalDate(),
         forTime.toLocalDate(),
         dataContextOfAction.getCaseParameters())
-        .count() - 1;
+        .collect(Collectors.toList());
+
+    final long repaymentPeriodsBetweenBeginningAndToday = repaymentPeriods.size() - 1;
 
     final BigDecimal expectedPaymentSum = dataContextOfAction
         .getCaseParametersEntity()
@@ -162,9 +164,21 @@ public class BeatPublishCommandHandler {
         dateOfMostRecentDisbursement.toLocalDate(),
         dataContextOfAction.getMessageForCharge(Action.MARK_LATE));
 
-    if (paymentsSum.compareTo(expectedPaymentSum.add(lateFeesAccrued)) < 0)
-      commandBus.dispatch(new MarkLateCommand(productIdentifier, caseIdentifier, command.getForTime()));
+    if (paymentsSum.compareTo(expectedPaymentSum.add(lateFeesAccrued)) < 0) {
+      final Optional<LocalDateTime> dateOfMostRecentLateFee = accountingAdapter.getDateOfMostRecentEntryContainingMessage(customerLoanAccountIdentifier, dataContextOfAction.getMessageForCharge(Action.MARK_LATE));
+      if (!dateOfMostRecentLateFee.isPresent() ||
+          mostRecentLateFeeIsBeforeMostRecentRepaymentPeriod(repaymentPeriods, dateOfMostRecentLateFee.get())) {
+        commandBus.dispatch(new MarkLateCommand(productIdentifier, caseIdentifier, command.getForTime()));
+      }
+    }
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
+  }
+
+  private boolean mostRecentLateFeeIsBeforeMostRecentRepaymentPeriod(
+      final List<Period> repaymentPeriods,
+      final LocalDateTime dateOfMostRecentLateFee) {
+    return repaymentPeriods.stream()
+        .anyMatch(x -> x.getBeginDate().isAfter(dateOfMostRecentLateFee.toLocalDate()));
   }
 }

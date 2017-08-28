@@ -25,6 +25,7 @@ import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Myrle Krantz
@@ -60,8 +61,29 @@ public class TestBalanceSegmentSets extends AbstractPortfolioTest {
     final BalanceSegmentSet changedBalanceSegmentSet = portfolioManager.getBalanceSegmentSet(product.getIdentifier(), balanceSegmentSet.getIdentifier());
     Assert.assertEquals(balanceSegmentSet, changedBalanceSegmentSet);
 
+
+    final BalanceSegmentSet balanceSegmentSet2 = new BalanceSegmentSet();
+    balanceSegmentSet2.setIdentifier(testEnvironment.generateUniqueIdentifer("bss"));
+    balanceSegmentSet2.setSegments(Arrays.asList(
+        BigDecimal.ZERO.setScale(4, BigDecimal.ROUND_HALF_EVEN),
+        BigDecimal.TEN.setScale(4, BigDecimal.ROUND_HALF_EVEN),
+        BigDecimal.valueOf(10_000_0000, 4)));
+    balanceSegmentSet2.setSegmentIdentifiers(Arrays.asList("abc", "def", "ghi"));
+
+    portfolioManager.createBalanceSegmentSet(product.getIdentifier(), balanceSegmentSet2);
+    Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_BALANCE_SEGMENT_SET, new BalanceSegmentSetEvent(product.getIdentifier(), balanceSegmentSet2.getIdentifier())));
+
+    final List<BalanceSegmentSet> balanceSegmentSets = portfolioManager.getAllBalanceSegmentSets(product.getIdentifier());
+    Assert.assertTrue(balanceSegmentSets.contains(balanceSegmentSet));
+    Assert.assertTrue(balanceSegmentSets.contains(balanceSegmentSet2));
+    Assert.assertTrue(balanceSegmentSets.size() == 2);
+
     portfolioManager.deleteBalanceSegmentSet(product.getIdentifier(), balanceSegmentSet.getIdentifier());
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.DELETE_BALANCE_SEGMENT_SET, new BalanceSegmentSetEvent(product.getIdentifier(), balanceSegmentSet.getIdentifier())));
+
+    final List<BalanceSegmentSet> balanceSegmentSetsAfterDelete = portfolioManager.getAllBalanceSegmentSets(product.getIdentifier());
+    Assert.assertTrue(balanceSegmentSets.contains(balanceSegmentSet2));
+    Assert.assertTrue(balanceSegmentSetsAfterDelete.size() == 1);
 
     enableProduct(product);
 

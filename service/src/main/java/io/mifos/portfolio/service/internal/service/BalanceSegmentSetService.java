@@ -17,11 +17,15 @@ package io.mifos.portfolio.service.internal.service;
 
 import io.mifos.portfolio.api.v1.domain.BalanceSegmentSet;
 import io.mifos.portfolio.service.internal.mapper.BalanceSegmentSetMapper;
+import io.mifos.portfolio.service.internal.repository.BalanceSegmentEntity;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * @author Myrle Krantz
@@ -49,5 +53,16 @@ public class BalanceSegmentSetService {
       final String balanceSegmentSetIdentifier) {
     return BalanceSegmentSetMapper.map(balanceSegmentRepository
         .findByProductIdentifierAndSegmentSetIdentifier(productIdentifier, balanceSegmentSetIdentifier));
+  }
+
+  public List<BalanceSegmentSet> findByIdentifier(final String productIdentifier) {
+    final Map<String, List<BalanceSegmentEntity>> listsOfEntitiesDividedBySet = balanceSegmentRepository
+        .findByProductIdentifier(productIdentifier)
+        .collect(Collectors.groupingBy(BalanceSegmentEntity::getSegmentSetIdentifier, Collectors.toList()));
+    return listsOfEntitiesDividedBySet.values().stream()
+        .map(x -> BalanceSegmentSetMapper.map(x.stream()))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .collect(Collectors.toList());
   }
 }

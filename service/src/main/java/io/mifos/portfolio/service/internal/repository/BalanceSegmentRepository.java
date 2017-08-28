@@ -29,4 +29,6 @@ public interface BalanceSegmentRepository extends JpaRepository<BalanceSegmentEn
   Stream<BalanceSegmentEntity> findByProductIdentifierAndSegmentSetIdentifier(String productIdentifier, String segmentSetIdentifier);
 
   Optional<BalanceSegmentEntity> findByProductIdentifierAndSegmentSetIdentifierAndSegmentIdentifier(String productIdentifier, String segmentSetIdentifier, String segmentIdentifier);
+
+  Stream<BalanceSegmentEntity> findByProductIdentifier(String productIdentifier);
 }

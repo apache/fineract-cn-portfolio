@@ -22,23 +22,31 @@ import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.command.internal.CommandBus;
 import io.mifos.core.lang.ApplicationName;
 import io.mifos.core.lang.DateConverter;
+import io.mifos.core.lang.ServiceException;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.individuallending.internal.command.ApplyInterestCommand;
 import io.mifos.individuallending.internal.command.CheckLateCommand;
+import io.mifos.individuallending.internal.command.MarkLateCommand;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.DataContextService;
+import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
+import io.mifos.individuallending.internal.service.ScheduledActionHelpers;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.service.config.PortfolioProperties;
 import io.mifos.portfolio.service.internal.command.CreateBeatPublishCommand;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.CaseRepository;
+import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.rhythm.spi.v1.domain.BeatPublish;
 import io.mifos.rhythm.spi.v1.events.BeatPublishEvent;
 import io.mifos.rhythm.spi.v1.events.EventConstants;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.stream.Stream;
@@ -54,6 +62,7 @@ public class BeatPublishCommandHandler {
   private final DataContextService dataContextService;
   private final ApplicationName applicationName;
   private final CommandBus commandBus;
+  private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public BeatPublishCommandHandler(
@@ -61,12 +70,14 @@ public class BeatPublishCommandHandler {
       final PortfolioProperties portfolioProperties,
       final DataContextService dataContextService,
       final ApplicationName applicationName,
-      final CommandBus commandBus) {
+      final CommandBus commandBus,
+      final AccountingAdapter accountingAdapter) {
     this.caseRepository = caseRepository;
     this.portfolioProperties = portfolioProperties;
     this.dataContextService = dataContextService;
     this.applicationName = applicationName;
     this.commandBus = commandBus;
+    this.accountingAdapter = accountingAdapter;
   }
 
   @Transactional
@@ -106,14 +117,53 @@ public class BeatPublishCommandHandler {
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(
       selectorName = io.mifos.portfolio.api.v1.events.EventConstants.SELECTOR_NAME,
-      selectorValue = IndividualLoanEventConstants.SELECTOR_CHECK_LATE_INDIVIDUALLOAN_CASE)
+      selectorValue = IndividualLoanEventConstants.CHECK_LATE_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final CheckLateCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
+    final LocalDateTime forTime = DateConverter.fromIsoString(command.getForTime());
     final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, Collections.emptyList());
 
-//TODO:
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
+    final String lateFeeAccrualAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.LATE_FEE_ACCRUAL);
+
+    final BigDecimal currentBalance = accountingAdapter.getCurrentBalance(customerLoanAccountIdentifier);
+    if (currentBalance.compareTo(BigDecimal.ZERO) == 0) //No late fees if the current balance is zilch.
+      return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
+
+
+    final LocalDateTime dateOfMostRecentDisbursement =
+        accountingAdapter.getDateOfMostRecentEntryContainingMessage(customerLoanAccountIdentifier, dataContextOfAction.getMessageForCharge(Action.DISBURSE))
+            .orElseThrow(() ->
+                ServiceException.badRequest("No last disbursal date for ''{0}.{1}'' could be determined.  " +
+                    "Therefore it cannot be checked for lateness.", productIdentifier, caseIdentifier));
+
+    final long repaymentPeriodsBetweenBeginningAndToday = ScheduledActionHelpers.generateRepaymentPeriods(
+        dateOfMostRecentDisbursement.toLocalDate(),
+        forTime.toLocalDate(),
+        dataContextOfAction.getCaseParameters())
+        .count() - 1;
+
+    final BigDecimal expectedPaymentSum = dataContextOfAction
+        .getCaseParametersEntity()
+        .getPaymentSize()
+        .multiply(BigDecimal.valueOf(repaymentPeriodsBetweenBeginningAndToday));
+
+    final BigDecimal paymentsSum = accountingAdapter.sumMatchingEntriesSinceDate(
+        customerLoanAccountIdentifier,
+        dateOfMostRecentDisbursement.toLocalDate(),
+        dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT));
+
+    final BigDecimal lateFeesAccrued = accountingAdapter.sumMatchingEntriesSinceDate(
+        lateFeeAccrualAccountIdentifier,
+        dateOfMostRecentDisbursement.toLocalDate(),
+        dataContextOfAction.getMessageForCharge(Action.MARK_LATE));
+
+    if (paymentsSum.compareTo(expectedPaymentSum.add(lateFeesAccrued)) < 0)
+      commandBus.dispatch(new MarkLateCommand(productIdentifier, caseIdentifier, command.getForTime()));
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
   }

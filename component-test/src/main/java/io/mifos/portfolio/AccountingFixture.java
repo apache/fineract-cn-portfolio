@@ -34,6 +34,8 @@ import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static org.mockito.Matchers.argThat;
@@ -60,7 +62,7 @@ class AccountingFixture {
   static final String TELLER_ONE_ACCOUNT_IDENTIFIER = "7352";
   static final String LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER = "7810";
   static final String CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER = "1103";
-  static final String LOANS_PAYABLE_ACCOUNT_IDENTIFIER ="8530";
+  static final String LOANS_PAYABLE_ACCOUNT_IDENTIFIER ="8690";
   static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "1311";
   static final String LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER = "7840";
   static final String ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER = "3010";
@@ -79,12 +81,16 @@ class AccountingFixture {
       this.account.setBalance(balance);
     }
 
-    void addAccountEntry(final String message, final double amount) {
+    synchronized void addAccountEntry(final String message, final double amount) {
       final AccountEntry accountEntry = new AccountEntry();
       accountEntry.setAmount(amount);
       accountEntry.setMessage(message);
       accountEntry.setTransactionDate(DateConverter.toIsoString(LocalDateTime.now(Clock.systemUTC())));
       accountEntries.add(accountEntry);
+    }
+
+    synchronized List<AccountEntry> copyAccountEntries() {
+      return new ArrayList<>(accountEntries);
     }
   }
 
@@ -94,7 +100,7 @@ class AccountingFixture {
     accountMap.put(account.getIdentifier(), accountData);
     Mockito.doAnswer(new AccountEntriesStreamAnswer(accountData))
         .when(ledgerManagerMock)
-        .fetchAccountEntriesStream(Mockito.eq(account.getIdentifier()), Matchers.anyString(), Matchers.anyString(), Matchers.eq("ASC"));
+        .fetchAccountEntriesStream(Mockito.eq(account.getIdentifier()), Matchers.anyString(), Matchers.anyString(), AdditionalMatchers.or(Matchers.eq("DESC"), Matchers.eq("ASC")));
   }
 
 
@@ -425,10 +431,20 @@ class AccountingFixture {
     @Override
     public Stream<AccountEntry> answer(final InvocationOnMock invocation) throws Throwable {
       final String message = invocation.getArgumentAt(2, String.class);
-      if (message != null)
-        return accountData.accountEntries.stream().filter(x -> x.getMessage().equals(message));
-      else
-        return accountData.accountEntries.stream();
+      final String direction = invocation.getArgumentAt(3, String.class);
+      final boolean asc = direction == null || direction.equals("ASC");
+      final List<AccountEntry> accountEntries = accountData.copyAccountEntries();
+      final int entryCount = accountEntries.size();
+      final Stream<AccountEntry> orderedCorrectly = asc ?
+          IntStream.rangeClosed(1, entryCount).mapToObj(i -> accountEntries.get(entryCount - i)) :
+          accountEntries.stream();
+
+      if (message != null) {
+        return orderedCorrectly.filter(x -> x.getMessage().equals(message));
+      }
+      else {
+        return orderedCorrectly;
+      }
     }
   }
 
@@ -494,8 +510,10 @@ class AccountingFixture {
                              final String productIdentifier,
                              final String caseIdentifier,
                              final Action action) {
-    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(debtors, creditors, productIdentifier, caseIdentifier, action);
-    Mockito.verify(ledgerManager).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
+    final Set<Debtor> filteredDebtors = debtors.stream().filter(x -> BigDecimal.valueOf(Double.valueOf(x.getAmount())).compareTo(BigDecimal.ZERO) != 0).collect(Collectors.toSet());
+    final Set<Creditor> filteredCreditors = creditors.stream().filter(x -> BigDecimal.valueOf(Double.valueOf(x.getAmount())).compareTo(BigDecimal.ZERO) != 0).collect(Collectors.toSet());
+    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(filteredDebtors, filteredCreditors, productIdentifier, caseIdentifier, action);
+    Mockito.verify(ledgerManager, Mockito.atLeastOnce()).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
 
   }
 }

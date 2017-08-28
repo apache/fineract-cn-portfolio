@@ -15,9 +15,11 @@
  */
 package io.mifos.individuallending.internal.service;
 
+import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -49,6 +51,8 @@ public class IndividualLoanService {
 
     final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(initialDisbursalDate, dataContextOfAction.getCaseParameters());
 
+    final Set<Action> actionsScheduled = scheduledActions.stream().map(x -> x.action).collect(Collectors.toSet());
+
     final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(dataContextOfAction.getProductEntity().getIdentifier(), scheduledActions);
 
     final BigDecimal loanPaymentSize = CostComponentService.getLoanPaymentSize(
@@ -60,6 +64,7 @@ public class IndividualLoanService {
     final List<PlannedPayment> plannedPaymentsElements = getPlannedPaymentsElements(
         dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum(),
         minorCurrencyUnitDigits,
+        actionsScheduled,
         scheduledCharges,
         loanPaymentSize,
         dataContextOfAction.getInterest());
@@ -78,6 +83,8 @@ public class IndividualLoanService {
           final Set<ChargeName> chargeNames) {
     final int fromIndex = size*pageIndex;
     final int toIndex = Math.min(size*(pageIndex+1), plannedPaymentsElements.size());
+    if (toIndex < fromIndex)
+      throw ServiceException.badRequest("Page number ''{0}'' out of range.", pageIndex);
     final List<PlannedPayment> elements = plannedPaymentsElements.subList(fromIndex, toIndex);
 
     final PlannedPaymentPage ret = new PlannedPaymentPage();
@@ -97,15 +104,17 @@ public class IndividualLoanService {
   static private List<PlannedPayment> getPlannedPaymentsElements(
       final BigDecimal initialBalance,
       final int minorCurrencyUnitDigits,
+      final Set<Action> actionsScheduled,
       final List<ScheduledCharge> scheduledCharges,
       final BigDecimal loanPaymentSize,
       final BigDecimal interest) {
     final Map<Period, SortedSet<ScheduledCharge>> orderedScheduledChargesGroupedByPeriod
         = scheduledCharges.stream()
+        .filter(scheduledCharge -> chargeIsNotAccruedOrAccruesAtActionScheduled(actionsScheduled, scheduledCharge))
         .collect(Collectors.groupingBy(IndividualLoanService::getPeriodFromScheduledCharge,
             Collectors.mapping(x -> x,
                 Collector.of(
-                    () -> new TreeSet<>(new ScheduledChargesService.ScheduledChargeComparator()),
+                    () -> new TreeSet<>(new ScheduledChargeComparator()),
                     SortedSet::add,
                     (left, right) -> { left.addAll(right); return left; }))));
 
@@ -151,6 +160,14 @@ public class IndividualLoanService {
       plannedPayments.add(plannedPayment);
     }
     return plannedPayments;
+  }
+
+  private static boolean chargeIsNotAccruedOrAccruesAtActionScheduled(
+      final Set<Action> actionsScheduled,
+      final ScheduledCharge scheduledCharge) {
+    // For example to prevent late charges from showing up on planned payments.
+    return scheduledCharge.getChargeDefinition().getAccrueAction() == null ||
+        actionsScheduled.contains(Action.valueOf(scheduledCharge.getChargeDefinition().getAccrueAction()));
   }
 
   private static Period getPeriodFromScheduledCharge(final ScheduledCharge scheduledCharge) {

@@ -35,7 +35,7 @@ import static io.mifos.individuallending.internal.service.Fixture.*;
  * @author Myrle Krantz
  */
 @RunWith(Parameterized.class)
-public class ScheduledActionHelperTest {
+public class ScheduledActionHelpersTest {
   private static class TestCase
   {
     final String description;
@@ -355,7 +355,7 @@ public class ScheduledActionHelperTest {
 
   private final TestCase testCase;
 
-  public ScheduledActionHelperTest(final TestCase testCase)
+  public ScheduledActionHelpersTest(final TestCase testCase)
   {
     this.testCase = testCase;
   }
@@ -364,8 +364,12 @@ public class ScheduledActionHelperTest {
   public void getScheduledActions() throws Exception {
     final List<ScheduledAction> result = ScheduledActionHelpers.getHypotheticalScheduledActions(testCase.initialDisbursementDate, testCase.caseParameters);
 
-    Assert.assertTrue("Case " + testCase.description + " should contain " + testCase.expectedResultContents,
-        result.containsAll(testCase.expectedResultContents));
+    final List<ScheduledAction> missingExpectedResults = testCase.expectedResultContents.stream()
+        .filter(expectedResult -> !result.contains(expectedResult))
+        .collect(Collectors.toList());
+
+    Assert.assertTrue("Case " + testCase.description + " missing these expected results " + missingExpectedResults,
+        missingExpectedResults.isEmpty());
     result.forEach(x -> {
       Assert.assertTrue(x.toString(), testCase.earliestActionDate.isBefore(x.when) || testCase.earliestActionDate.isEqual(x.when));
       Assert.assertTrue(x.toString(), testCase.latestActionDate.isAfter(x.when) || testCase.latestActionDate.isEqual(x.when));
@@ -383,6 +387,31 @@ public class ScheduledActionHelperTest {
         });
     Assert.assertTrue(noDuplicatesInResult(result));
     Assert.assertTrue(maximumOneInterestPerDay(result));
+  }
+
+  @Test
+  public void getNextScheduledPayment() throws Exception {
+    final LocalDate roughEndDate = ScheduledActionHelpers.getRoughEndDate(testCase.initialDisbursementDate, testCase.caseParameters);
+
+    testCase.expectedResultContents.stream()
+        .filter(x -> x.action == Action.ACCEPT_PAYMENT)
+        .forEach(expectedResultContents -> {
+      final ScheduledAction nextScheduledPayment = ScheduledActionHelpers.getNextScheduledPayment(
+          testCase.initialDisbursementDate,
+          expectedResultContents.when.minusDays(1),
+          roughEndDate,
+          testCase.caseParameters);
+      Assert.assertEquals(expectedResultContents, nextScheduledPayment);
+    });
+
+    final ScheduledAction afterAction = ScheduledActionHelpers.getNextScheduledPayment(
+        testCase.initialDisbursementDate,
+        roughEndDate.plusDays(1),
+        roughEndDate,
+        testCase.caseParameters);
+
+    Assert.assertNotNull(afterAction.actionPeriod);
+    Assert.assertTrue(afterAction.actionPeriod.isLastPeriod());
   }
 
   private long countActionsByType(final List<ScheduledAction> scheduledActions, final Action actionToCount) {

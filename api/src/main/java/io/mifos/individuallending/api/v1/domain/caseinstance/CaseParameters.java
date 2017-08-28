@@ -50,9 +50,6 @@ public final class CaseParameters {
   @Valid
   private PaymentCycle paymentCycle;
 
-  @Range(min = 0)
-  private BigDecimal paymentSize;
-
   public CaseParameters() {
   }
 
@@ -100,14 +97,6 @@ public final class CaseParameters {
     this.paymentCycle = paymentCycle;
   }
 
-  public BigDecimal getPaymentSize() {
-    return paymentSize;
-  }
-
-  public void setPaymentSize(BigDecimal paymentSize) {
-    this.paymentSize = paymentSize;
-  }
-
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -117,13 +106,12 @@ public final class CaseParameters {
         Objects.equals(creditWorthinessSnapshots, that.creditWorthinessSnapshots) &&
         Objects.equals(maximumBalance, that.maximumBalance) &&
         Objects.equals(termRange, that.termRange) &&
-        Objects.equals(paymentCycle, that.paymentCycle) &&
-        Objects.equals(paymentSize, that.paymentSize);
+        Objects.equals(paymentCycle, that.paymentCycle);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(customerIdentifier, creditWorthinessSnapshots, maximumBalance, termRange, paymentCycle, paymentSize);
+    return Objects.hash(customerIdentifier, creditWorthinessSnapshots, maximumBalance, termRange, paymentCycle);
   }
 
   @Override
@@ -134,7 +122,6 @@ public final class CaseParameters {
         ", maximumBalance=" + maximumBalance +
         ", termRange=" + termRange +
         ", paymentCycle=" + paymentCycle +
-        ", paymentSize=" + paymentSize +
         '}';
   }
 }

@@ -55,16 +55,16 @@ public class ScheduledActionHelpers {
   }
 
   public static ScheduledAction getNextScheduledPayment(final @Nonnull LocalDate startOfTerm,
+                                                        final @Nonnull LocalDate fromDate,
                                                         final @Nonnull LocalDate endOfTerm,
                                                         final @Nonnull CaseParameters caseParameters) {
-    final LocalDate now = LocalDate.now(Clock.systemUTC());
-    final LocalDate effectiveEndOfTerm = now.isAfter(endOfTerm) ? now : endOfTerm;
+    final LocalDate effectiveEndOfTerm = fromDate.isAfter(endOfTerm) ? fromDate : endOfTerm;
 
     return getHypotheticalScheduledActionsForDisbursedLoan(startOfTerm, effectiveEndOfTerm, caseParameters)
         .filter(x -> x.action.equals(Action.ACCEPT_PAYMENT))
-        .filter(x -> x.actionIsOnOrAfter(now))
+        .filter(x -> x.actionIsOnOrAfter(fromDate))
         .findFirst()
-        .orElseGet(() -> new ScheduledAction(Action.ACCEPT_PAYMENT, now));
+        .orElseGet(() -> new ScheduledAction(Action.ACCEPT_PAYMENT, fromDate));
   }
 
   private static Stream<ScheduledAction> getHypotheticalScheduledActionsForDisbursedLoan(
@@ -104,10 +104,10 @@ public class ScheduledActionHelpers {
             .limit(ChronoUnit.DAYS.between(repaymentPeriod.getBeginDate(), repaymentPeriod.getEndDate()));
   }
 
-  private static Stream<Period> generateRepaymentPeriods(
-          final LocalDate startOfTerm,
-          final LocalDate endOfTerm,
-          final CaseParameters caseParameters) {
+  public static Stream<Period> generateRepaymentPeriods(
+      final LocalDate startOfTerm,
+      final LocalDate endOfTerm,
+      final CaseParameters caseParameters) {
 
     final List<Period> ret = new ArrayList<>();
     LocalDate lastPaymentDate = startOfTerm;
@@ -119,7 +119,7 @@ public class ScheduledActionHelpers {
       lastPaymentDate = nextPaymentDate;
       nextPaymentDate = generateNextPaymentDate(caseParameters, lastPaymentDate);
     }
-    ret.add(new Period(lastPaymentDate, nextPaymentDate));
+    ret.add(new Period(lastPaymentDate, nextPaymentDate, true));
 
     return ret.stream();
   }

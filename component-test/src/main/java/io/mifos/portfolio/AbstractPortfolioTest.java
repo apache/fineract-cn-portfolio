@@ -54,11 +54,13 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -195,6 +197,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
         productIdentifier,
         caseIdentifier,
         action,
+        LocalDateTime.now(Clock.systemUTC()),
         oneTimeAccountAssignments,
         BigDecimal.ZERO,
         event,
@@ -205,6 +208,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   void checkStateTransfer(final String productIdentifier,
                           final String caseIdentifier,
                           final Action action,
+                          final LocalDateTime actionDateTime,
                           final List<AccountAssignment> oneTimeAccountAssignments,
                           final BigDecimal paymentSize,
                           final String event,
@@ -213,6 +217,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     final Command command = new Command();
     command.setOneTimeAccountAssignments(oneTimeAccountAssignments);
     command.setPaymentSize(paymentSize);
+    command.setCreatedOn(DateConverter.toIsoString(actionDateTime));
     portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, action.name(), command);
 
     Assert.assertTrue(eventRecorder.wait(event, new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(eventDateTime))));
@@ -271,7 +276,9 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
         amount
     );
     final Set<CostComponent> setOfCostComponents = new HashSet<>(costComponents);
-    final Set<CostComponent> setOfExpectedCostComponents = new HashSet<>(Arrays.asList(expectedCostComponents));
+    final Set<CostComponent> setOfExpectedCostComponents = Stream.of(expectedCostComponents)
+        .filter(x -> x.getAmount().compareTo(BigDecimal.ZERO) != 0)
+        .collect(Collectors.toSet());
     Assert.assertEquals(setOfExpectedCostComponents, setOfCostComponents);
   }
 

@@ -149,7 +149,6 @@ public class CaseParametersMapper {
     ret.setTermRange(getTermRange(caseParametersEntity));
     ret.setMaximumBalance(caseParametersEntity.getBalanceRangeMaximum().setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN));
     ret.setPaymentCycle(getPaymentCycle(caseParametersEntity));
-    ret.setPaymentSize(caseParametersEntity.getPaymentSize());
     return ret;
   }
 

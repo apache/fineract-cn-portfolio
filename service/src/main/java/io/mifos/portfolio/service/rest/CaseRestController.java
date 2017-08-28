@@ -19,7 +19,9 @@ import io.mifos.anubis.annotation.AcceptedTokenType;
 import io.mifos.anubis.annotation.Permittable;
 import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.command.gateway.CommandGateway;
+import io.mifos.core.lang.DateConverter;
 import io.mifos.core.lang.ServiceException;
+import io.mifos.core.lang.validation.constraints.ValidLocalDateTimeString;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
@@ -36,10 +38,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -192,6 +197,7 @@ public class CaseRestController {
   List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
                                                  @PathVariable("caseidentifier") final String caseIdentifier,
                                                  @PathVariable("actionidentifier") final String actionIdentifier,
+                                                 @RequestParam(value="fordatetime", required = false, defaultValue = "") final @ValidLocalDateTimeString String forDateTimeString,
                                                  @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators,
                                                  @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize)
   {
@@ -200,8 +206,15 @@ public class CaseRestController {
     if (forPaymentSize != null && forPaymentSize.compareTo(BigDecimal.ZERO) < 0)
       throw ServiceException.badRequest("forpaymentsize can''t be negative.");
 
+    final LocalDateTime forDateTime = StringUtils.isEmpty(forDateTimeString) ? LocalDateTime.now(Clock.systemUTC()) : DateConverter.fromIsoString(forDateTimeString);
 
-    return caseService.getActionCostComponentsForCase(productIdentifier, caseIdentifier, actionIdentifier, forAccountDesignators, forPaymentSize);
+    return caseService.getActionCostComponentsForCase(
+        productIdentifier,
+        caseIdentifier,
+        actionIdentifier,
+        forDateTime,
+        forAccountDesignators,
+        forPaymentSize);
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)

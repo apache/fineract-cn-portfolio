@@ -24,7 +24,6 @@ import io.mifos.core.lang.DateConverter;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
-import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
@@ -338,12 +337,10 @@ public class IndividualLoanCommandHandler {
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
     final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-        costComponentService.getCostComponentsForAcceptPayment(dataContextOfAction, command.getCommand().getPaymentSize());
-
-    final BigDecimal sumOfAdjustments = costComponentsForRepaymentPeriod.stream()
-        .filter(entry -> entry.getKey().getIdentifier().equals(ChargeIdentifiers.REPAYMENT_ID))
-        .map(entry -> entry.getValue().getAmount())
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
+        costComponentService.getCostComponentsForAcceptPayment(
+            dataContextOfAction,
+            command.getCommand().getPaymentSize(),
+            DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate());
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -363,6 +360,49 @@ public class IndividualLoanCommandHandler {
         command.getCommand().getNote(),
         dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT),
         Action.ACCEPT_PAYMENT.getTransactionType());
+
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
+  }
+
+  @Transactional
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
+  @EventEmitter(
+      selectorName = EventConstants.SELECTOR_NAME,
+      selectorValue = IndividualLoanEventConstants.MARK_LATE_INDIVIDUALLOAN_CASE)
+  public IndividualLoanCommandEvent process(final MarkLateCommand command) {
+    final String productIdentifier = command.getProductIdentifier();
+    final String caseIdentifier = command.getCaseIdentifier();
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
+        productIdentifier, caseIdentifier, Collections.emptyList());
+    IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState()), Action.MARK_LATE);
+
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.MARK_LATE);
+
+    if (dataContextOfAction.getCustomerCaseEntity().getEndOfTerm() == null)
+      throw ServiceException.internalError(
+          "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
+
+    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+        costComponentService.getCostComponentsForMarkLate(dataContextOfAction, DateConverter.fromIsoString(command.getForTime()));
+
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+
+    final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
+        .map(entry -> mapCostComponentEntryToChargeInstance(
+            Action.MARK_LATE,
+            entry,
+            designatorToAccountIdentifierMapper))
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .collect(Collectors.toList());
+
+    final LocalDateTime today = today();
+
+    accountingAdapter.bookCharges(charges,
+        "Marked late on " + command.getForTime(),
+        dataContextOfAction.getMessageForCharge(Action.MARK_LATE),
+        Action.MARK_LATE.getTransactionType());
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
   }
@@ -503,7 +543,7 @@ public class IndividualLoanCommandHandler {
           action.name(), productIdentifier, caseIdentifier);
   }
 
-  private LocalDateTime today() {
+  private static LocalDateTime today() {
     return LocalDate.now(Clock.systemUTC()).atStartOfDay();
   }
 }

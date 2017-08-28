@@ -59,7 +59,7 @@ public class ScheduledAction {
   }
 
   boolean actionIsOnOrAfter(final LocalDate date) {
-    return when.compareTo(date) > 0;
+    return when.compareTo(date) >= 0;
   }
 
   @Override

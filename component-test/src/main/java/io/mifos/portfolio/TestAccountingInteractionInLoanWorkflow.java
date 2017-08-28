@@ -41,10 +41,11 @@ import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.IntStream;
 
 import static io.mifos.portfolio.Fixture.MINOR_CURRENCY_UNIT_DIGITS;
 
@@ -89,6 +90,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
   @Test
   public void workflowTerminatingInEarlyLoanPayoff() throws InterruptedException {
+    final LocalDateTime today = midnightToday();
+
     step1CreateProduct();
     step2CreateCase();
     step3OpenCase();
@@ -96,13 +99,15 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step5Disburse(
         BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS),
         UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS));
-    step6CalculateInterestAccrual();
-    step7PaybackPartialAmount(expectedCurrentBalance);
+    step6CalculateInterestAccrualAndCheckForLateness(midnightToday(), null);
+    step7PaybackPartialAmount(expectedCurrentBalance, today, 0);
     step8Close();
   }
 
   @Test
   public void workflowWithTwoUnequalDisbursals() throws InterruptedException {
+    final LocalDateTime today = midnightToday();
+
     step1CreateProduct();
     step2CreateCase();
     step3OpenCase();
@@ -113,13 +118,15 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step5Disburse(
         BigDecimal.valueOf(1_500_00, MINOR_CURRENCY_UNIT_DIGITS),
         UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.valueOf(15_00, MINOR_CURRENCY_UNIT_DIGITS));
-    step6CalculateInterestAccrual();
-    step7PaybackPartialAmount(expectedCurrentBalance);
+    step6CalculateInterestAccrualAndCheckForLateness(midnightToday(), null);
+    step7PaybackPartialAmount(expectedCurrentBalance, today, 0);
     step8Close();
   }
 
   @Test
   public void workflowWithTwoNearlyEqualRepayments() throws InterruptedException {
+    final LocalDateTime today = midnightToday();
+
     step1CreateProduct();
     step2CreateCase();
     step3OpenCase();
@@ -127,10 +134,13 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step5Disburse(
         BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS),
         UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS));
-    step6CalculateInterestAccrual();
+    step6CalculateInterestAccrualAndCheckForLateness(midnightToday(), null);
     final BigDecimal repayment1 = expectedCurrentBalance.divide(BigDecimal.valueOf(2), BigDecimal.ROUND_HALF_EVEN);
-    step7PaybackPartialAmount(repayment1.setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN));
-    step7PaybackPartialAmount(expectedCurrentBalance);
+    step7PaybackPartialAmount(
+        repayment1.setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN),
+        today,
+        0);
+    step7PaybackPartialAmount(expectedCurrentBalance, today, 0);
     step8Close();
   }
 
@@ -146,6 +156,56 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       Assert.fail("Expected an IllegalArgumentException.");
     }
     catch (IllegalArgumentException ignored) { }
+  }
+
+  @Test
+  public void workflowWithNormalRepayment() throws InterruptedException {
+    final LocalDateTime today = midnightToday();
+
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase();
+    step4ApproveCase();
+    step5Disburse(
+        BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS),
+        UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS));
+
+    int week = 0;
+    final List<BigDecimal> repayments = new ArrayList<>();
+    while (expectedCurrentBalance.compareTo(BigDecimal.ZERO) > 0) {
+      logger.info("Simulating week {}. Expected current balance {}.", week, expectedCurrentBalance);
+      step6CalculateInterestAndCheckForLatenessForWeek(today, week, null);
+      final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today, (week+1)*7);
+      repayments.add(nextRepaymentAmount);
+      step7PaybackPartialAmount(nextRepaymentAmount, today, (week+1)*7);
+      week++;
+    }
+
+    final BigDecimal minPayment = repayments.stream().min(BigDecimal::compareTo).orElseThrow(IllegalStateException::new);
+    final BigDecimal maxPayment = repayments.stream().max(BigDecimal::compareTo).orElseThrow(IllegalStateException::new);
+    final BigDecimal delta = maxPayment.subtract(minPayment).abs();
+    Assert.assertTrue("minPayment is " + minPayment + ", maxPayment is " + maxPayment,
+        delta.divide(maxPayment, BigDecimal.ROUND_HALF_EVEN).compareTo(BigDecimal.valueOf(0.01)) <= 0);
+
+
+    step8Close();
+  }
+
+  private BigDecimal findNextRepaymentAmount(
+      final LocalDateTime referenceDate,
+      final int dayNumber) {
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
+
+    final List<CostComponent> costComponentsForNextPayment = portfolioManager.getCostComponentsForAction(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.ACCEPT_PAYMENT.name(),
+        null,
+        null,
+        DateConverter.toIsoString(referenceDate.plusDays(dayNumber)));
+    return costComponentsForNextPayment.stream().filter(x -> x.getChargeIdentifier().equals(ChargeIdentifiers.REPAYMENT_ID)).findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("return missing repayment charge."))
+        .getAmount();
   }
 
   //Create product and set charges to fixed fees.
@@ -204,8 +264,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
   private void step2CreateCase() throws InterruptedException {
     logger.info("step2CreateCase");
-    caseParameters = Fixture.createAdjustedCaseParameters(x -> {
-    });
+    caseParameters = Fixture.createAdjustedCaseParameters(x ->
+      x.setPaymentCycle(new PaymentCycle(ChronoUnit.WEEKS, 1, null, null, null))
+    );
     final String caseParametersAsString = new Gson().toJson(caseParameters);
     customerCase = createAdjustedCase(product.getIdentifier(), x -> x.setParameters(caseParametersAsString));
 
@@ -314,6 +375,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DISBURSE,
+        LocalDateTime.now(Clock.systemUTC()),
         Collections.singletonList(assignEntryToTeller()),
         amount,
         IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE,
@@ -337,16 +399,43 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     expectedCurrentBalance = expectedCurrentBalance.add(amount);
   }
 
+  private void step6CalculateInterestAndCheckForLatenessForWeek(
+      final LocalDateTime referenceDate,
+      final int weekNumber,
+      final BigDecimal calculatedLateFee) throws InterruptedException {
+    try {
+      IntStream.rangeClosed((weekNumber*7)+1, (weekNumber+1)*7)
+          .mapToObj(referenceDate::plusDays)
+          .forEach(day -> {
+            try {
+              step6CalculateInterestAccrualAndCheckForLateness(day, calculatedLateFee);
+            } catch (InterruptedException e) {
+              throw new RuntimeException(e);
+            }
+          });
+    }
+    catch (RuntimeException e) {
+      final Throwable cause = e.getCause();
+      if (cause != null && cause.getClass().isAssignableFrom(InterruptedException.class))
+        throw (InterruptedException)e.getCause();
+      else
+        throw e;
+    }
+  }
+
   //Perform daily interest calculation.
-  private void step6CalculateInterestAccrual() throws InterruptedException {
-    logger.info("step6CalculateInterestAccrual");
+  private void step6CalculateInterestAccrualAndCheckForLateness(
+      final LocalDateTime forTime,
+      final BigDecimal calculatedLateFee) throws InterruptedException {
+    logger.info("step6CalculateInterestAccrualAndCheckForLateness");
     final String beatIdentifier = "alignment0";
-    final String midnightTimeStamp = DateConverter.toIsoString(midnightToday());
+    final String midnightTimeStamp = DateConverter.toIsoString(forTime);
 
     AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
 
     final BigDecimal calculatedInterest = expectedCurrentBalance.multiply(Fixture.INTEREST_RATE.divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN))
         .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
+
 
     checkCostComponentForActionCorrect(
         product.getIdentifier(),
@@ -355,10 +444,23 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Collections.singleton(AccountDesignators.CUSTOMER_LOAN),
         null,
         new CostComponent(ChargeIdentifiers.INTEREST_ID, calculatedInterest));
+
+    if (calculatedLateFee != null) {
+      checkCostComponentForActionCorrect(
+          product.getIdentifier(),
+          customerCase.getIdentifier(),
+          Action.MARK_LATE,
+          Collections.singleton(AccountDesignators.CUSTOMER_LOAN),
+          null,
+          new CostComponent(ChargeIdentifiers.LATE_FEE_ID, calculatedLateFee));
+    }
     final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
     portfolioBeatListener.publishBeat(interestBeat);
     Assert.assertTrue(this.eventRecorder.wait(io.mifos.rhythm.spi.v1.events.EventConstants.POST_PUBLISHEDBEAT,
         new BeatPublishEvent(EventConstants.DESTINATION, beatIdentifier, midnightTimeStamp)));
+
+    Assert.assertTrue(this.eventRecorder.wait(IndividualLoanEventConstants.CHECK_LATE_INDIVIDUALLOAN_CASE,
+        new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), midnightTimeStamp)));
 
     Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.APPLY_INTEREST_INDIVIDUALLOAN_CASE,
         new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), midnightTimeStamp)));
@@ -384,7 +486,10 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     expectedCurrentBalance = expectedCurrentBalance.add(calculatedInterest);
   }
 
-  private void step7PaybackPartialAmount(final BigDecimal amount) throws InterruptedException {
+  private void step7PaybackPartialAmount(
+      final BigDecimal amount,
+      final LocalDateTime referenceDate,
+      final int dayNumber) throws InterruptedException {
     logger.info("step7PaybackPartialAmount '{}'", amount);
 
     AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
@@ -404,6 +509,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.ACCEPT_PAYMENT,
+        referenceDate.plusDays(dayNumber),
         Collections.singletonList(assignEntryToTeller()),
         amount,
         IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE,

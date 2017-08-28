@@ -61,7 +61,8 @@ public class CostComponentService {
   public CostComponentsForRepaymentPeriod getCostComponentsForAction(
       final Action action,
       final DataContextOfAction dataContextOfAction,
-      final BigDecimal forPaymentSize) {
+      final BigDecimal forPaymentSize,
+      final LocalDate forDate) {
     switch (action) {
       case OPEN:
         return getCostComponentsForOpen(dataContextOfAction);
@@ -74,11 +75,11 @@ public class CostComponentService {
       case APPLY_INTEREST:
         return getCostComponentsForApplyInterest(dataContextOfAction);
       case ACCEPT_PAYMENT:
-        return getCostComponentsForAcceptPayment(dataContextOfAction, forPaymentSize);
+        return getCostComponentsForAcceptPayment(dataContextOfAction, forPaymentSize, forDate);
       case CLOSE:
         return getCostComponentsForClose(dataContextOfAction);
       case MARK_LATE:
-        return getCostComponentsForMarkLate(dataContextOfAction);
+        return getCostComponentsForMarkLate(dataContextOfAction, today().atStartOfDay());
       case WRITE_OFF:
         return getCostComponentsForWriteOff(dataContextOfAction);
       case RECOVER:
@@ -245,7 +246,8 @@ public class CostComponentService {
 
   public CostComponentsForRepaymentPeriod getCostComponentsForAcceptPayment(
       final DataContextOfAction dataContextOfAction,
-      final @Nullable BigDecimal requestedLoanPaymentSize)
+      final @Nullable BigDecimal requestedLoanPaymentSize,
+      final LocalDate forDate)
   {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -260,14 +262,24 @@ public class CostComponentService {
     final ScheduledAction scheduledAction
         = ScheduledActionHelpers.getNextScheduledPayment(
         startOfTerm,
+        forDate,
         dataContextOfAction.getCustomerCaseEntity().getEndOfTerm().toLocalDate(),
         dataContextOfAction.getCaseParameters()
     );
 
-    final BigDecimal loanPaymentSize =
-        (requestedLoanPaymentSize != null) ?
-            requestedLoanPaymentSize :
-            dataContextOfAction.getCaseParametersEntity().getPaymentSize();
+    final BigDecimal loanPaymentSize;
+
+    if (requestedLoanPaymentSize != null) {
+      loanPaymentSize = requestedLoanPaymentSize;
+    }
+    else {
+      if (scheduledAction.actionPeriod != null && scheduledAction.actionPeriod.isLastPeriod()) {
+        loanPaymentSize = currentBalance;
+      }
+      else {
+        loanPaymentSize = currentBalance.min(dataContextOfAction.getCaseParametersEntity().getPaymentSize());
+      }
+    }
 
     final List<ScheduledCharge> scheduledChargesForThisAction = scheduledChargesService.getScheduledCharges(
         productIdentifier,
@@ -293,50 +305,6 @@ public class CostComponentService {
         dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         true);
-  }
-
-  private static boolean isAccruedChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
-    return chargeDefinition.getAccrueAction() != null &&
-        chargeDefinition.getChargeAction().equals(action.name());
-  }
-
-  private static boolean isAccrualChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
-    return chargeDefinition.getAccrueAction() != null &&
-        chargeDefinition.getAccrueAction().equals(action.name());
-  }
-
-  private CostComponent getAccruedCostComponentToApply(final DataContextOfAction dataContextOfAction,
-                                                       final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
-                                                       final LocalDate startOfTerm,
-                                                       final ChargeDefinition chargeDefinition) {
-    final CostComponent ret = new CostComponent();
-
-    final String accrualAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator());
-
-    final BigDecimal amountAccrued = accountingAdapter.sumMatchingEntriesSinceDate(
-        accrualAccountIdentifier,
-        startOfTerm,
-        dataContextOfAction.getMessageForCharge(Action.valueOf(chargeDefinition.getAccrueAction())));
-    final BigDecimal amountApplied = accountingAdapter.sumMatchingEntriesSinceDate(
-        accrualAccountIdentifier,
-        startOfTerm,
-        dataContextOfAction.getMessageForCharge(Action.valueOf(chargeDefinition.getChargeAction())));
-
-    ret.setChargeIdentifier(chargeDefinition.getIdentifier());
-    ret.setAmount(amountAccrued.subtract(amountApplied));
-    return ret;
-  }
-
-  private LocalDate getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction,
-                                          final String customerLoanAccountIdentifier) {
-    final Optional<LocalDateTime> firstDisbursalDateTime = accountingAdapter.getDateOfOldestEntryContainingMessage(
-        customerLoanAccountIdentifier,
-        dataContextOfAction.getMessageForCharge(Action.DISBURSE));
-
-    return firstDisbursalDateTime.map(LocalDateTime::toLocalDate)
-        .orElseThrow(() -> ServiceException.internalError(
-            "Start of term for loan ''{0}'' could not be acquired from accounting.",
-            dataContextOfAction.getCompoundIdentifer()));
   }
 
   public CostComponentsForRepaymentPeriod getCostComponentsForClose(final DataContextOfAction dataContextOfAction) {
@@ -379,8 +347,45 @@ public class CostComponentService {
         true);
   }
 
-  private CostComponentsForRepaymentPeriod getCostComponentsForMarkLate(final DataContextOfAction dataContextOfAction) {
-    return null;
+  public CostComponentsForRepaymentPeriod getCostComponentsForMarkLate(final DataContextOfAction dataContextOfAction,
+                                                                       final LocalDateTime forTime) {
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
+    final BigDecimal currentBalance = accountingAdapter.getCurrentBalance(customerLoanAccountIdentifier).negate();
+
+    final LocalDate startOfTerm = getStartOfTermOrThrow(dataContextOfAction, customerLoanAccountIdentifier);
+
+    final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
+    final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
+    final int minorCurrencyUnitDigits = dataContextOfAction.getProductEntity().getMinorCurrencyUnitDigits();
+    final ScheduledAction scheduledAction = new ScheduledAction(Action.MARK_LATE, forTime.toLocalDate());
+
+    final BigDecimal loanPaymentSize = dataContextOfAction.getCaseParametersEntity().getPaymentSize();
+
+    final List<ScheduledCharge> scheduledChargesForThisAction = scheduledChargesService.getScheduledCharges(
+        productIdentifier,
+        Collections.singletonList(scheduledAction));
+
+    final Map<Boolean, List<ScheduledCharge>> chargesSplitIntoScheduledAndAccrued = scheduledChargesForThisAction.stream()
+        .collect(Collectors.partitioningBy(x -> isAccruedChargeForAction(x.getChargeDefinition(), Action.MARK_LATE)));
+
+    final Map<ChargeDefinition, CostComponent> accruedCostComponents = chargesSplitIntoScheduledAndAccrued.get(true)
+        .stream()
+        .map(ScheduledCharge::getChargeDefinition)
+        .collect(Collectors.toMap(chargeDefinition -> chargeDefinition,
+            chargeDefinition -> getAccruedCostComponentToApply(dataContextOfAction, designatorToAccountIdentifierMapper, startOfTerm, chargeDefinition)));
+
+
+    return getCostComponentsForScheduledCharges(
+        accruedCostComponents,
+        chargesSplitIntoScheduledAndAccrued.get(false),
+        caseParameters.getBalanceRangeMaximum(),
+        currentBalance,
+        loanPaymentSize,
+        dataContextOfAction.getInterest(),
+        minorCurrencyUnitDigits,
+        true);
   }
 
   private CostComponentsForRepaymentPeriod getCostComponentsForWriteOff(final DataContextOfAction dataContextOfAction) {
@@ -482,6 +487,8 @@ public class CostComponentService {
       case REPAYMENT_DESIGNATOR:
         return loanPaymentSize;
       case PRINCIPAL_ADJUSTMENT_DESIGNATOR: {
+        if (loanPaymentSize.compareTo(BigDecimal.ZERO) <= 0)
+          return loanPaymentSize.abs();
         final BigDecimal newRunningBalance
             = runningBalance.subtract(balanceAdjustments.getOrDefault(AccountDesignators.CUSTOMER_LOAN, BigDecimal.ZERO));
         final BigDecimal newLoanPaymentSize = loanPaymentSize.min(newRunningBalance);
@@ -597,6 +604,50 @@ public class CostComponentService {
 
   public static boolean chargeIsAccrued(final ChargeDefinition chargeDefinition) {
     return chargeDefinition.getAccrualAccountDesignator() != null;
+  }
+
+  private static boolean isAccruedChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
+    return chargeDefinition.getAccrueAction() != null &&
+        chargeDefinition.getChargeAction().equals(action.name());
+  }
+
+  private static boolean isAccrualChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
+    return chargeDefinition.getAccrueAction() != null &&
+        chargeDefinition.getAccrueAction().equals(action.name());
+  }
+
+  private CostComponent getAccruedCostComponentToApply(final DataContextOfAction dataContextOfAction,
+                                                       final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
+                                                       final LocalDate startOfTerm,
+                                                       final ChargeDefinition chargeDefinition) {
+    final CostComponent ret = new CostComponent();
+
+    final String accrualAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator());
+
+    final BigDecimal amountAccrued = accountingAdapter.sumMatchingEntriesSinceDate(
+        accrualAccountIdentifier,
+        startOfTerm,
+        dataContextOfAction.getMessageForCharge(Action.valueOf(chargeDefinition.getAccrueAction())));
+    final BigDecimal amountApplied = accountingAdapter.sumMatchingEntriesSinceDate(
+        accrualAccountIdentifier,
+        startOfTerm,
+        dataContextOfAction.getMessageForCharge(Action.valueOf(chargeDefinition.getChargeAction())));
+
+    ret.setChargeIdentifier(chargeDefinition.getIdentifier());
+    ret.setAmount(amountAccrued.subtract(amountApplied));
+    return ret;
+  }
+
+  private LocalDate getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction,
+                                          final String customerLoanAccountIdentifier) {
+    final Optional<LocalDateTime> firstDisbursalDateTime = accountingAdapter.getDateOfOldestEntryContainingMessage(
+        customerLoanAccountIdentifier,
+        dataContextOfAction.getMessageForCharge(Action.DISBURSE));
+
+    return firstDisbursalDateTime.map(LocalDateTime::toLocalDate)
+        .orElseThrow(() -> ServiceException.internalError(
+            "Start of term for loan ''{0}'' could not be acquired from accounting.",
+            dataContextOfAction.getCompoundIdentifer()));
   }
 
   private static LocalDate today() {

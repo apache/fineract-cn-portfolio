@@ -41,7 +41,8 @@ public class CostComponentsForRepaymentPeriod {
   }
 
   public Stream<Map.Entry<ChargeDefinition, CostComponent>> stream() {
-    return costComponents.entrySet().stream();
+    return costComponents.entrySet().stream()
+        .filter(costComponentEntry -> costComponentEntry.getValue().getAmount().compareTo(BigDecimal.ZERO) != 0);
   }
 
   BigDecimal getBalanceAdjustment() {

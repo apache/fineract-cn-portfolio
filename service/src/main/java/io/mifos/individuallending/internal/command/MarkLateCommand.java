@@ -18,12 +18,12 @@ package io.mifos.individuallending.internal.command;
 /**
  * @author Myrle Krantz
  */
-public class CheckLateCommand {
+public class MarkLateCommand {
   private final String productIdentifier;
   private final String caseIdentifier;
   private final String forTime;
 
-  public CheckLateCommand(String productIdentifier, String caseIdentifier, String forTime) {
+  public MarkLateCommand(String productIdentifier, String caseIdentifier, String forTime) {
     this.productIdentifier = productIdentifier;
     this.caseIdentifier = caseIdentifier;
     this.forTime = forTime;
@@ -43,7 +43,7 @@ public class CheckLateCommand {
 
   @Override
   public String toString() {
-    return "CheckLateCommand{" +
+    return "MarkLateCommand{" +
         "productIdentifier='" + productIdentifier + '\'' +
         ", caseIdentifier='" + caseIdentifier + '\'' +
         ", forTime='" + forTime + '\'' +

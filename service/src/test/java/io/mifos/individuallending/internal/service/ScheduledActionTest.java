@@ -28,7 +28,7 @@ public class ScheduledActionTest {
     final LocalDate tomorrow = today.plusDays(1);
     final LocalDate yesterday = today.minusDays(1);
     final ScheduledAction testSubject = new ScheduledAction(Action.APPLY_INTEREST, today);
-    Assert.assertFalse(testSubject.actionIsOnOrAfter(today));
+    Assert.assertTrue(testSubject.actionIsOnOrAfter(today));
     Assert.assertFalse(testSubject.actionIsOnOrAfter(tomorrow));
     Assert.assertTrue(testSubject.actionIsOnOrAfter(yesterday));
   }

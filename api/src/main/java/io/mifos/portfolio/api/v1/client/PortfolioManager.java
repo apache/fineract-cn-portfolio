@@ -135,12 +135,21 @@ public interface PortfolioManager {
       value = "/products/{productidentifier}/balancesegmentsets/",
       method = RequestMethod.POST,
       produces = MediaType.APPLICATION_JSON_VALUE,
-      consumes = MediaType.APPLICATION_JSON_VALUE
-  )
+      consumes = MediaType.APPLICATION_JSON_VALUE)
   @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
   void createBalanceSegmentSet(
       @PathVariable("productidentifier") final String productIdentifier,
       final BalanceSegmentSet balanceSegmentSet);
+
+  @RequestMapping(
+      value = "/products/{productidentifier}/balancesegmentsets/",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = ProductInUseException.class)
+  List<BalanceSegmentSet> getAllBalanceSegmentSets(
+      @PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
       value = "/products/{productidentifier}/balancesegmentsets/{balancesegmentsetidentifier}",

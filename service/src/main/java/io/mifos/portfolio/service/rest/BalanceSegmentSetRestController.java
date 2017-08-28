@@ -33,6 +33,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.util.List;
 
 /**
  * @author Myrle Krantz
@@ -60,8 +61,7 @@ public class BalanceSegmentSetRestController {
   @RequestMapping(
       method = RequestMethod.POST,
       consumes = MediaType.APPLICATION_JSON_VALUE,
-      produces = MediaType.APPLICATION_JSON_VALUE
-  )
+      produces = MediaType.APPLICATION_JSON_VALUE)
   public @ResponseBody
   ResponseEntity<Void> createBalanceSegmentSet(
       @PathVariable("productidentifier") final String productIdentifier,
@@ -73,6 +73,21 @@ public class BalanceSegmentSetRestController {
     this.commandGateway.process(new CreateBalanceSegmentSetCommand(productIdentifier, instance));
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
   }
+
+
+  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
+  @RequestMapping(
+      method = RequestMethod.GET,
+      consumes = MediaType.ALL_VALUE,
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  public @ResponseBody
+  List<BalanceSegmentSet> getAllBalanceSegmentSets(
+      @PathVariable("productidentifier") final String productIdentifier) {
+    checkThatProductExists(productIdentifier);
+
+    return balanceSegmentSetService.findByIdentifier(productIdentifier);
+  }
+
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
   @RequestMapping(
@@ -132,7 +147,7 @@ public class BalanceSegmentSetRestController {
 
   private void checkThatSegmentSetDoesntExist(final String productIdentifier, final String segmentSetIdentifier) {
     if (balanceSegmentSetService.existsByIdentifier(productIdentifier, segmentSetIdentifier))
-      throw ServiceException.notFound("Segment set with identifier ''{0}.{1}'' already exists.", productIdentifier, segmentSetIdentifier);
+      throw ServiceException.conflict("Segment set with identifier ''{0}.{1}'' already exists.", productIdentifier, segmentSetIdentifier);
   }
 
   private void checkThatProductAndBalanceSegmentSetExist(final String productIdentifier, final String segmentSetIdentifier) {

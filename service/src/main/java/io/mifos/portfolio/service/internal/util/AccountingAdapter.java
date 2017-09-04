@@ -77,6 +77,14 @@ public class AccountingAdapter {
             .map(Optional::get)
             .collect(Collectors.toSet());
 
+    if (creditors.isEmpty() && !debtors.isEmpty() ||
+        debtors.isEmpty() && !creditors.isEmpty())
+      throw ServiceException.internalError("either only creditors or only debtors were provided.");
+
+    //noinspection ConstantConditions
+    if (creditors.isEmpty() && debtors.isEmpty())
+      return;
+
     final JournalEntry journalEntry = new JournalEntry();
     journalEntry.setCreditors(creditors);
     journalEntry.setDebtors(debtors);

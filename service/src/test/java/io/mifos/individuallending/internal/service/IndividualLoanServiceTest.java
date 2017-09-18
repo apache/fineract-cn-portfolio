@@ -24,7 +24,10 @@ import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
-import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.api.v1.domain.CostComponent;
+import io.mifos.portfolio.api.v1.domain.PaymentCycle;
+import io.mifos.portfolio.api.v1.domain.TermRange;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
@@ -94,14 +97,10 @@ public class IndividualLoanServiceTest {
     private BigDecimal interest;
     private Set<String> expectedChargeIdentifiers = new HashSet<>(Arrays.asList(
         PROCESSING_FEE_ID,
-        LOAN_FUNDS_ALLOCATION_ID,
-        RETURN_DISBURSEMENT_ID,
         LOAN_ORIGINATION_FEE_ID,
         INTEREST_ID,
         DISBURSEMENT_FEE_ID,
         REPAYMENT_ID,
-        TRACK_DISBURSAL_PAYMENT_ID,
-        TRACK_RETURN_PRINCIPAL_ID,
         DISBURSE_PAYMENT_ID,
         LATE_FEE_ID
         ));
@@ -189,8 +188,8 @@ public class IndividualLoanServiceTest {
     caseParameters.setTermRange(new TermRange(ChronoUnit.WEEKS, 3));
     caseParameters.setPaymentCycle(new PaymentCycle(ChronoUnit.WEEKS, 1, 0, null, null));
 
-    final ChargeDefinition processingFeeCharge = getFixedSingleChargeDefinition(10.0, Action.OPEN, PROCESSING_FEE_ID, AccountDesignators.PROCESSING_FEE_INCOME);
-    final ChargeDefinition loanOriginationFeeCharge = getFixedSingleChargeDefinition(100.0, Action.APPROVE, LOAN_ORIGINATION_FEE_ID, AccountDesignators.ORIGINATION_FEE_INCOME);
+    final ChargeDefinition processingFeeCharge = getFixedSingleChargeDefinition(10.0, Action.DISBURSE, PROCESSING_FEE_ID, AccountDesignators.PROCESSING_FEE_INCOME);
+    final ChargeDefinition loanOriginationFeeCharge = getFixedSingleChargeDefinition(100.0, Action.DISBURSE, LOAN_ORIGINATION_FEE_ID, AccountDesignators.ORIGINATION_FEE_INCOME);
     final List<ChargeDefinition> defaultChargesWithFeesReplaced =
     charges().stream().map(x -> {
       switch (x.getIdentifier()) {
@@ -209,9 +208,7 @@ public class IndividualLoanServiceTest {
         .initialDisbursementDate(initialDisbursementDate)
         .chargeDefinitions(defaultChargesWithFeesReplaced)
         .interest(BigDecimal.valueOf(1))
-        .expectChargeInstancesForActionDatePair(Action.OPEN, initialDisbursementDate, Collections.singletonList(processingFeeCharge))
-        .expectChargeInstancesForActionDatePair(Action.APPROVE, initialDisbursementDate,
-            Collections.singletonList(loanOriginationFeeCharge));
+        .expectChargeInstancesForActionDatePair(Action.DISBURSE, initialDisbursementDate, Arrays.asList(processingFeeCharge, loanOriginationFeeCharge));
   }
 
   private static TestCase yearLoanTestCase()
@@ -267,7 +264,7 @@ public class IndividualLoanServiceTest {
     ret.setChargeAction(action.name());
     ret.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
     ret.setProportionalTo(null);
-    ret.setFromAccountDesignator(AccountDesignators.ENTRY);
+    ret.setFromAccountDesignator(AccountDesignators.CUSTOMER_LOAN);
     ret.setToAccountDesignator(feeAccountDesignator);
     ret.setForCycleSizeUnit(null);
     return ret;
@@ -318,37 +315,41 @@ public class IndividualLoanServiceTest {
     final Set<BigDecimal> customerRepayments = Stream.iterate(1, x -> x + 1).limit(allPlannedPayments.size() - 1)
         .map(x ->
         {
-          final BigDecimal costComponentSum = allPlannedPayments.get(x).getCostComponents().stream()
-              .filter(this::includeCostComponentsInSumCheck)
+          final BigDecimal valueOfRepaymentCostComponent = allPlannedPayments.get(x).getPayment().getCostComponents().stream()
+              .filter(costComponent -> costComponent.getChargeIdentifier().equals(ChargeIdentifiers.REPAYMENT_ID))
               .map(CostComponent::getAmount)
               .reduce(BigDecimal::add)
               .orElse(BigDecimal.ZERO);
-          final BigDecimal valueOfPrincipleTrackingCostComponent = allPlannedPayments.get(x).getCostComponents().stream()
-              .filter(costComponent -> costComponent.getChargeIdentifier().equals(ChargeIdentifiers.TRACK_RETURN_PRINCIPAL_ID))
+          final BigDecimal valueOfInterestCostComponent = allPlannedPayments.get(x).getPayment().getCostComponents().stream()
+              .filter(costComponent -> costComponent.getChargeIdentifier().equals(ChargeIdentifiers.INTEREST_ID))
               .map(CostComponent::getAmount)
               .reduce(BigDecimal::add)
               .orElse(BigDecimal.ZERO);
-          final BigDecimal principalDifference = allPlannedPayments.get(x-1).getRemainingPrincipal().subtract(allPlannedPayments.get(x).getRemainingPrincipal());
-          Assert.assertEquals(valueOfPrincipleTrackingCostComponent, principalDifference);
+          final BigDecimal principalDifference = allPlannedPayments.get(x-1).getBalances().get(AccountDesignators.CUSTOMER_LOAN).subtract(allPlannedPayments.get(x).getBalances().get(AccountDesignators.CUSTOMER_LOAN));
+          Assert.assertEquals("Checking payment " + x, valueOfRepaymentCostComponent.subtract(valueOfInterestCostComponent), principalDifference);
           Assert.assertNotEquals("Remaining principle should always be positive or zero.",
-              allPlannedPayments.get(x).getRemainingPrincipal().signum(), -1);
-          final boolean containsLateFee = allPlannedPayments.get(x).getCostComponents().stream().anyMatch(y -> y.getChargeIdentifier().equals(LATE_FEE_ID));
+              allPlannedPayments.get(x).getBalances().get(AccountDesignators.CUSTOMER_LOAN).signum(), -1);
+          final boolean containsLateFee = allPlannedPayments.get(x).getPayment().getCostComponents().stream().anyMatch(y -> y.getChargeIdentifier().equals(LATE_FEE_ID));
           Assert.assertFalse("Late fee should not be included in planned payments", containsLateFee);
-          return costComponentSum;
+          return valueOfRepaymentCostComponent;
         }
     ).collect(Collectors.toSet());
 
     //All entries should have the correct scale.
     allPlannedPayments.forEach(x -> {
-      x.getCostComponents().forEach(y -> Assert.assertEquals(testCase.minorCurrencyUnitDigits, y.getAmount().scale()));
-      Assert.assertEquals(testCase.minorCurrencyUnitDigits, x.getRemainingPrincipal().scale());
-      final int uniqueChargeIdentifierCount = x.getCostComponents().stream()
+      x.getPayment().getCostComponents().forEach(y -> Assert.assertEquals(testCase.minorCurrencyUnitDigits, y.getAmount().scale()));
+      Assert.assertEquals(testCase.minorCurrencyUnitDigits, x.getBalances().get(AccountDesignators.CUSTOMER_LOAN).scale());
+      final int uniqueChargeIdentifierCount = x.getPayment().getCostComponents().stream()
           .map(CostComponent::getChargeIdentifier)
           .collect(Collectors.toSet())
           .size();
       Assert.assertEquals("There should be only one cost component per charge per planned payment.",
-          x.getCostComponents().size(), uniqueChargeIdentifierCount);
+          x.getPayment().getCostComponents().size(), uniqueChargeIdentifierCount);
     });
+
+    Assert.assertEquals("Final balance should be zero.",
+        BigDecimal.ZERO.setScale(testCase.minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN),
+        allPlannedPayments.get(allPlannedPayments.size()-1).getBalances().get(AccountDesignators.CUSTOMER_LOAN));
 
     //All customer payments should be within one percent of each other.
     final Optional<BigDecimal> maxPayment = customerRepayments.stream().max(BigDecimal::compareTo);
@@ -359,32 +360,12 @@ public class IndividualLoanServiceTest {
     Assert.assertTrue("Percent difference = " + percentDifference + ", max = " + maxPayment.get() + ", min = " + minPayment.get(),
         percentDifference < 0.01);
 
-    //Final balance should be zero.
-    Assert.assertEquals(BigDecimal.ZERO.setScale(testCase.minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN),
-            allPlannedPayments.get(allPlannedPayments.size()-1).getRemainingPrincipal());
-
     //All charge identifiers should be associated with a name on the returned page.
     final Set<String> resultChargeIdentifiers = firstPage.getChargeNames().stream()
             .map(ChargeName::getIdentifier)
             .collect(Collectors.toSet());
 
     Assert.assertEquals(testCase.expectedChargeIdentifiers, resultChargeIdentifiers);
-  }
-
-  private boolean includeCostComponentsInSumCheck(CostComponent costComponent) {
-    switch (costComponent.getChargeIdentifier()) {
-      case ChargeIdentifiers.INTEREST_ID:
-      case ChargeIdentifiers.DISBURSEMENT_FEE_ID:
-      case ChargeIdentifiers.TRACK_DISBURSAL_PAYMENT_ID:
-      case ChargeIdentifiers.LATE_FEE_ID:
-      case ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID:
-      case ChargeIdentifiers.TRACK_RETURN_PRINCIPAL_ID:
-      case ChargeIdentifiers.PROCESSING_FEE_ID:
-        return true;
-      default:
-        return false;
-
-    }
   }
 
   @Test
@@ -423,7 +404,8 @@ public class IndividualLoanServiceTest {
                 new ActionDatePair(scheduledCharge.getScheduledAction().action, scheduledCharge.getScheduledAction().when),
                 Collectors.mapping(ScheduledCharge::getChargeDefinition, Collectors.toSet())));
 
-    testCase.chargeDefinitionsForActions.forEach((key, value) -> value.forEach(x -> Assert.assertTrue(searchableScheduledCharges.get(key).contains(x))));
+    testCase.chargeDefinitionsForActions.forEach((key, value) ->
+        value.forEach(x -> Assert.assertTrue(searchableScheduledCharges.get(key).contains(x))));
   }
 
   private double percentDifference(final BigDecimal maxPayment, final BigDecimal minPayment) {

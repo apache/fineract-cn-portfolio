@@ -16,10 +16,7 @@
 package io.mifos.products.spi;
 
 
-import io.mifos.portfolio.api.v1.domain.Case;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.api.v1.domain.Pattern;
+import io.mifos.portfolio.api.v1.domain.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,7 +35,7 @@ public interface PatternFactory {
   void changeParameters(Long caseId, String parameters);
   Optional<String> getParameters(Long caseId, int minorCurrencyUnitDigits);
   Set<String> getNextActionsForState(Case.State state);
-  List<CostComponent> getCostComponentsForAction(
+  Payment getCostComponentsForAction(
       String productIdentifier,
       String caseIdentifier,
       String actionIdentifier,

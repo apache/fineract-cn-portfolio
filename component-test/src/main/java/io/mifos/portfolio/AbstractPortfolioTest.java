@@ -268,14 +268,14 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
                                           final Set<String> accountDesignators,
                                           final BigDecimal amount,
                                           final CostComponent... expectedCostComponents) {
-    final List<CostComponent> costComponents = portfolioManager.getCostComponentsForAction(
+    final Payment payment = portfolioManager.getCostComponentsForAction(
         productIdentifier,
         customerCaseIdentifier,
         action.name(),
         accountDesignators,
         amount
     );
-    final Set<CostComponent> setOfCostComponents = new HashSet<>(costComponents);
+    final Set<CostComponent> setOfCostComponents = new HashSet<>(payment.getCostComponents());
     final Set<CostComponent> setOfExpectedCostComponents = Stream.of(expectedCostComponents)
         .filter(x -> x.getAmount().compareTo(BigDecimal.ZERO) != 0)
         .collect(Collectors.toSet());

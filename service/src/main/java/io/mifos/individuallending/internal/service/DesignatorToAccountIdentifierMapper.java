@@ -25,6 +25,7 @@ import io.mifos.portfolio.service.internal.repository.ProductAccountAssignmentEn
 
 import javax.annotation.Nonnull;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -51,12 +52,16 @@ public class DesignatorToAccountIdentifierMapper {
             productAccountAssignments.stream().map(ProductMapper::mapAccountAssignmentEntity));
   }
 
-  public String mapOrThrow(final @Nonnull String accountDesignator) {
+  public Optional<String> map(final @Nonnull String accountDesignator) {
     return allAccountAssignmentsAsStream()
-            .filter(x -> x.getDesignator().equals(accountDesignator))
-            .findFirst()
-            .map(AccountAssignment::getAccountIdentifier)
-            .orElseThrow(() -> ServiceException.badRequest("A required account designator was not set ''{0}''.", accountDesignator));
+        .filter(x -> x.getDesignator().equals(accountDesignator))
+        .findFirst()
+        .map(AccountAssignment::getAccountIdentifier);
+  }
+
+  public String mapOrThrow(final @Nonnull String accountDesignator) {
+    return map(accountDesignator).orElseThrow(() ->
+        ServiceException.badRequest("A required account designator was not set ''{0}''.", accountDesignator));
   }
 
   public Stream<AccountAssignment> getLedgersNeedingAccounts() {

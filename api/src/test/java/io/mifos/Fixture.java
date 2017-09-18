@@ -35,15 +35,9 @@ import static java.math.BigDecimal.ROUND_HALF_EVEN;
  */
 @SuppressWarnings("WeakerAccess")
 public class Fixture {
-  static final String INCOME_LEDGER_IDENTIFIER = "1000";
-  static final String FEES_AND_CHARGES_LEDGER_IDENTIFIER = "1300";
-  static final String CASH_LEDGER_IDENTIFIER = "7300";
-  static final String PENDING_DISBURSAL_LEDGER_IDENTIFIER = "7320";
-  static final String CUSTOMER_LOAN_LEDGER_IDENTIFIER = "7353";
   static final String LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER = "7310";
   static final String LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER = "1310";
   static final String PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER = "1312";
-  static final String TELLER_ONE_ACCOUNT_IDENTIFIER = "7352";
 
   static int uniquenessSuffix = 0;
 
@@ -62,7 +56,6 @@ public class Fixture {
     product.setMinorCurrencyUnitDigits(2);
 
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
-    accountAssignments.add(new AccountAssignment(PENDING_DISBURSAL, PENDING_DISBURSAL_LEDGER_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(PROCESSING_FEE_INCOME, PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(ORIGINATION_FEE_INCOME, LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(DISBURSEMENT_FEE_INCOME, "001-004"));

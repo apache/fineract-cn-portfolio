@@ -26,7 +26,7 @@ import io.mifos.portfolio.api.v1.PermittableGroupIds;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
 import io.mifos.portfolio.api.v1.domain.Command;
-import io.mifos.portfolio.api.v1.domain.CostComponent;
+import io.mifos.portfolio.api.v1.domain.Payment;
 import io.mifos.portfolio.service.internal.checker.CaseChecker;
 import io.mifos.portfolio.service.internal.command.ChangeCaseCommand;
 import io.mifos.portfolio.service.internal.command.CreateCaseCommand;
@@ -45,7 +45,6 @@ import javax.validation.Valid;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -194,12 +193,13 @@ public class CaseRestController {
           produces = MediaType.APPLICATION_JSON_VALUE
   )
   @ResponseBody
-  List<CostComponent> getCostComponentsForAction(@PathVariable("productidentifier") final String productIdentifier,
-                                                 @PathVariable("caseidentifier") final String caseIdentifier,
-                                                 @PathVariable("actionidentifier") final String actionIdentifier,
-                                                 @RequestParam(value="fordatetime", required = false, defaultValue = "") final @ValidLocalDateTimeString String forDateTimeString,
-                                                 @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators,
-                                                 @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize)
+  Payment getCostComponentsForAction(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @PathVariable("actionidentifier") final String actionIdentifier,
+      @RequestParam(value="fordatetime", required = false, defaultValue = "") final @ValidLocalDateTimeString String forDateTimeString,
+      @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators,
+      @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize)
   {
     checkThatCaseExists(productIdentifier, caseIdentifier);
 

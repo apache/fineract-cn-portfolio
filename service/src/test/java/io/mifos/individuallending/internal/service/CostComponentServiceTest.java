@@ -15,6 +15,7 @@
  */
 package io.mifos.individuallending.internal.service;
 
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import org.junit.Assert;
 import org.junit.Test;
@@ -22,11 +23,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
+import java.util.*;
 
-import static io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR;
+import static io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator.REQUESTED_DISBURSEMENT_DESIGNATOR;
 import static io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR;
 
 /**
@@ -40,7 +39,7 @@ public class CostComponentServiceTest {
     BigDecimal maximumBalance = BigDecimal.ZERO;
     BigDecimal runningBalance = BigDecimal.ZERO;
     BigDecimal loanPaymentSize = BigDecimal.ZERO;
-    BigDecimal expectedAmount = BigDecimal.ZERO;
+    BigDecimal expectedAmount = BigDecimal.ONE;
 
     private TestCase(String description) {
       this.description = description;
@@ -70,6 +69,18 @@ public class CostComponentServiceTest {
       this.expectedAmount = expectedAmount;
       return this;
     }
+
+    @Override
+    public String toString() {
+      return "TestCase{" +
+          "description='" + description + '\'' +
+          ", chargeProportionalDesignator=" + chargeProportionalDesignator +
+          ", maximumBalance=" + maximumBalance +
+          ", runningBalance=" + runningBalance +
+          ", loanPaymentSize=" + loanPaymentSize +
+          ", expectedAmount=" + expectedAmount +
+          '}';
+    }
   }
 
   @Parameterized.Parameters
@@ -77,9 +88,9 @@ public class CostComponentServiceTest {
     final Collection<CostComponentServiceTest.TestCase> ret = new ArrayList<>();
     ret.add(new TestCase("simple"));
     ret.add(new TestCase("distribution fee")
-        .chargeProportionalDesignator(PRINCIPAL_ADJUSTMENT_DESIGNATOR)
+        .chargeProportionalDesignator(REQUESTED_DISBURSEMENT_DESIGNATOR)
         .maximumBalance(BigDecimal.valueOf(2000))
-        .loanPaymentSize(BigDecimal.valueOf(-2000))
+        .loanPaymentSize(BigDecimal.valueOf(2000))
         .expectedAmount(BigDecimal.valueOf(2000)));
     ret.add(new TestCase("origination fee")
         .chargeProportionalDesignator(RUNNING_BALANCE_DESIGNATOR)
@@ -96,14 +107,18 @@ public class CostComponentServiceTest {
 
   @Test
   public void getAmountProportionalTo() {
+    final SimulatedRunningBalances runningBalances = new SimulatedRunningBalances();
+    runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN, testCase.runningBalance.negate());
     final BigDecimal amount = CostComponentService.getAmountProportionalTo(
         testCase.chargeProportionalDesignator,
         testCase.maximumBalance,
-        testCase.runningBalance,
+        runningBalances,
         testCase.loanPaymentSize,
-        Collections.emptyMap());
+        testCase.loanPaymentSize,
+        testCase.loanPaymentSize,
+        new PaymentBuilder(runningBalances, false));
 
-    Assert.assertEquals(testCase.expectedAmount, amount);
+    Assert.assertEquals(testCase.toString(), testCase.expectedAmount, amount);
   }
 
 }

@@ -15,59 +15,51 @@
  */
 package io.mifos.individuallending.api.v1.domain.caseinstance;
 
-import io.mifos.portfolio.api.v1.domain.Payment;
-
 import java.math.BigDecimal;
-import java.util.Map;
 import java.util.Objects;
 
 /**
  * @author Myrle Krantz
  */
-public class PlannedPayment {
-  private Payment payment;
-  private Map<String, BigDecimal> balances;
+public class Balance {
+  private String accountDesignator;
+  private BigDecimal amount;
 
-  public PlannedPayment(Payment payment, Map<String, BigDecimal> balances) {
-    this.payment = payment;
-    this.balances = balances;
+  public String getAccountDesignator() {
+    return accountDesignator;
   }
 
-  public Payment getPayment() {
-    return payment;
+  public void setAccountDesignator(String accountDesignator) {
+    this.accountDesignator = accountDesignator;
   }
 
-  public void setPayment(Payment payment) {
-    this.payment = payment;
+  public BigDecimal getAmount() {
+    return amount;
   }
 
-  public Map<String, BigDecimal> getBalances() {
-    return balances;
-  }
-
-  public void setBalances(Map<String, BigDecimal> balances) {
-    this.balances = balances;
+  public void setAmount(BigDecimal amount) {
+    this.amount = amount;
   }
 
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    PlannedPayment that = (PlannedPayment) o;
-    return Objects.equals(payment, that.payment) &&
-        Objects.equals(balances, that.balances);
+    Balance balance = (Balance) o;
+    return Objects.equals(accountDesignator, balance.accountDesignator) &&
+        Objects.equals(amount, balance.amount);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(payment, balances);
+    return Objects.hash(accountDesignator, amount);
   }
 
   @Override
   public String toString() {
-    return "PlannedPayment{" +
-        "payment=" + payment +
-        ", balances=" + balances +
+    return "Balance{" +
+        "accountDesignator='" + accountDesignator + '\'' +
+        ", amount=" + amount +
         '}';
   }
 }

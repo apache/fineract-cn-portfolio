@@ -32,7 +32,6 @@ import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.individuallending.internal.service.*;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.service.internal.mapper.CaseMapper;
@@ -99,20 +98,13 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.OPEN);
 
-    final CostComponentsForRepaymentPeriod costComponents
+    final PaymentBuilder paymentBuilder
         = costComponentService.getCostComponentsForOpen(dataContextOfAction);
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
             = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponents.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.OPEN,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.OPEN, designatorToAccountIdentifierMapper);
 
     final LocalDateTime today = today();
 
@@ -143,20 +135,13 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.DENY);
 
-    final CostComponentsForRepaymentPeriod costComponents
+    final PaymentBuilder paymentBuilder
         = costComponentService.getCostComponentsForDeny(dataContextOfAction);
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponents.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.DENY,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.DENY, designatorToAccountIdentifierMapper);
 
     final LocalDateTime today = today();
 
@@ -195,17 +180,10 @@ public class IndividualLoanCommandHandler {
             );
     caseRepository.save(dataContextOfAction.getCustomerCaseEntity());
 
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+    final PaymentBuilder paymentBuilder =
         costComponentService.getCostComponentsForApprove(dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.APPROVE,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.APPROVE, designatorToAccountIdentifierMapper);
 
     final LocalDateTime today = today();
 
@@ -236,21 +214,13 @@ public class IndividualLoanCommandHandler {
     checkIfTasksAreOutstanding(dataContextOfAction, Action.DISBURSE);
 
     final BigDecimal disbursalAmount = Optional.ofNullable(command.getCommand().getPaymentSize()).orElse(BigDecimal.ZERO);
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+    final PaymentBuilder paymentBuilder =
         costComponentService.getCostComponentsForDisburse(dataContextOfAction, disbursalAmount);
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
-    final List<ChargeInstance> charges =
-        costComponentsForRepaymentPeriod.stream()
-            .map(entry -> mapCostComponentEntryToChargeInstance(
-                Action.DISBURSE,
-                entry,
-                designatorToAccountIdentifierMapper))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-        .collect(Collectors.toList());
+    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.DISBURSE, designatorToAccountIdentifierMapper);
 
     final LocalDateTime today = today();
 
@@ -272,7 +242,7 @@ public class IndividualLoanCommandHandler {
     final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
     final BigDecimal currentBalance = accountingAdapter.getCurrentBalance(customerLoanAccountIdentifier).negate();
 
-    final BigDecimal newLoanPaymentSize = costComponentService.getLoanPaymentSize(
+    final BigDecimal newLoanPaymentSize = costComponentService.getLoanPaymentSizeForSingleDisbursement(
         currentBalance.add(disbursalAmount),
         dataContextOfAction);
 
@@ -298,20 +268,13 @@ public class IndividualLoanCommandHandler {
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+    final PaymentBuilder paymentBuilder =
         costComponentService.getCostComponentsForApplyInterest(dataContextOfAction);
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.APPLY_INTEREST,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.APPLY_INTEREST, designatorToAccountIdentifierMapper);
 
     accountingAdapter.bookCharges(charges,
         "Applied interest on " + command.getForTime(),
@@ -340,7 +303,7 @@ public class IndividualLoanCommandHandler {
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+    final PaymentBuilder paymentBuilder =
         costComponentService.getCostComponentsForAcceptPayment(
             dataContextOfAction,
             command.getCommand().getPaymentSize(),
@@ -349,14 +312,7 @@ public class IndividualLoanCommandHandler {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.ACCEPT_PAYMENT,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.ACCEPT_PAYMENT, designatorToAccountIdentifierMapper);
 
     final LocalDateTime today = today();
 
@@ -387,20 +343,13 @@ public class IndividualLoanCommandHandler {
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+    final PaymentBuilder paymentBuilder =
         costComponentService.getCostComponentsForMarkLate(dataContextOfAction, DateConverter.fromIsoString(command.getForTime()));
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.MARK_LATE,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.MARK_LATE, designatorToAccountIdentifierMapper);
 
     final LocalDateTime today = today();
 
@@ -446,29 +395,21 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.CLOSE);
 
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+    final PaymentBuilder paymentBuilder =
         costComponentService.getCostComponentsForClose(dataContextOfAction);
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
-    final List<ChargeInstance> charges =
-        costComponentsForRepaymentPeriod.stream()
-            .map(entry -> mapCostComponentEntryToChargeInstance(
-                Action.DISBURSE,
-                entry,
-                designatorToAccountIdentifierMapper))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .collect(Collectors.toList());
+    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.CLOSE, designatorToAccountIdentifierMapper);
 
     final LocalDateTime today = today();
 
     accountingAdapter.bookCharges(charges,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
-        dataContextOfAction.getMessageForCharge(Action.DISBURSE),
-        Action.DISBURSE.getTransactionType());
+        dataContextOfAction.getMessageForCharge(Action.CLOSE),
+        Action.CLOSE.getTransactionType());
 
     final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
     customerCase.setCurrentState(Case.State.CLOSED.name());
@@ -496,36 +437,6 @@ public class IndividualLoanCommandHandler {
     caseRepository.save(customerCase);
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
-  }
-
-  private static Optional<ChargeInstance> mapCostComponentEntryToChargeInstance(
-      final Action action,
-      final Map.Entry<ChargeDefinition, CostComponent> costComponentEntry,
-      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
-    final ChargeDefinition chargeDefinition = costComponentEntry.getKey();
-    final BigDecimal chargeAmount = costComponentEntry.getValue().getAmount();
-
-    if (CostComponentService.chargeIsAccrued(chargeDefinition)) {
-      if (Action.valueOf(chargeDefinition.getAccrueAction()) == action)
-        return Optional.of(new ChargeInstance(
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            chargeAmount));
-      else if (Action.valueOf(chargeDefinition.getChargeAction()) == action)
-        return Optional.of(new ChargeInstance(
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
-            chargeAmount));
-      else
-        return Optional.empty();
-    }
-    else if (Action.valueOf(chargeDefinition.getChargeAction()) == action)
-      return Optional.of(new ChargeInstance(
-          designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
-          designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
-          chargeAmount));
-    else
-      return Optional.empty();
   }
 
   private Map<String, BigDecimal> getRequestedChargeAmounts(final @Nullable List<CostComponent> costComponents) {

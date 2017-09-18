@@ -15,7 +15,6 @@
  */
 package io.mifos.individuallending;
 
-import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.customer.api.v1.client.CustomerManager;
@@ -30,10 +29,8 @@ import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType
 import io.mifos.individuallending.internal.service.CostComponentService;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.DataContextService;
-import io.mifos.portfolio.api.v1.domain.Case;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.api.v1.domain.Pattern;
+import io.mifos.individuallending.internal.service.PaymentBuilder;
+import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.service.ServiceConstants;
 import io.mifos.products.spi.PatternFactory;
 import io.mifos.products.spi.ProductCommandDispatcher;
@@ -47,7 +44,6 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.*;
 import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.*;
@@ -88,8 +84,8 @@ public class IndividualLendingPatternFactory implements PatternFactory {
 
     final Set<String> individualLendingRequiredAccounts = new HashSet<>();
     individualLendingRequiredAccounts.add(CUSTOMER_LOAN);
-    individualLendingRequiredAccounts.add(PENDING_DISBURSAL);
-    individualLendingRequiredAccounts.add(LOAN_FUNDS_SOURCE);
+    //TODO: fix in migration individualLendingRequiredAccounts.add(PENDING_DISBURSAL);
+    //was String PENDING_DISBURSAL = "pending-disbursal";
     individualLendingRequiredAccounts.add(LOAN_FUNDS_SOURCE);
     individualLendingRequiredAccounts.add(PROCESSING_FEE_INCOME);
     individualLendingRequiredAccounts.add(ORIGINATION_FEE_INCOME);
@@ -111,35 +107,37 @@ public class IndividualLendingPatternFactory implements PatternFactory {
   public static List<ChargeDefinition> defaultIndividualLoanCharges() {
     final List<ChargeDefinition> ret = new ArrayList<>();
     final ChargeDefinition processingFee = charge(
-            PROCESSING_FEE_NAME,
-            Action.OPEN,
-            BigDecimal.ONE,
-            ENTRY,
-            PROCESSING_FEE_INCOME);
+        PROCESSING_FEE_NAME,
+        Action.DISBURSE, //TODO: fix existing charges in migration
+        BigDecimal.ONE,
+        CUSTOMER_LOAN, //TODO: fix existing charges in migration
+        PROCESSING_FEE_INCOME);
     processingFee.setReadOnly(false);
 
     final ChargeDefinition loanOriginationFee = charge(
-            LOAN_ORIGINATION_FEE_NAME,
-            Action.APPROVE,
-            BigDecimal.ONE,
-            ENTRY,
-            ORIGINATION_FEE_INCOME);
+        LOAN_ORIGINATION_FEE_NAME,
+        Action.DISBURSE, //TODO: fix existing charges in migration
+        BigDecimal.ONE,
+        CUSTOMER_LOAN, //TODO: fix existing charges in migration
+        ORIGINATION_FEE_INCOME);
     loanOriginationFee.setReadOnly(false);
 
-    final ChargeDefinition loanFundsAllocation = charge(
+    /*final ChargeDefinition loanFundsAllocation = charge(
             LOAN_FUNDS_ALLOCATION_ID,
             Action.APPROVE,
             BigDecimal.valueOf(100),
             LOAN_FUNDS_SOURCE,
             PENDING_DISBURSAL);
-    loanFundsAllocation.setReadOnly(true);
+    loanFundsAllocation.setReadOnly(true);*/
+    //TODO: handle removing this extraneous charge in migration.
 
     final ChargeDefinition disbursementFee = charge(
-            DISBURSEMENT_FEE_NAME,
-            Action.DISBURSE,
-            BigDecimal.valueOf(0.1),
-            ENTRY,
-            DISBURSEMENT_FEE_INCOME);
+        DISBURSEMENT_FEE_NAME,
+        Action.DISBURSE,
+        BigDecimal.valueOf(0.1),
+        CUSTOMER_LOAN, //TODO: fix existing charges in migration
+        DISBURSEMENT_FEE_INCOME);
+    disbursementFee.setProportionalTo(ChargeProportionalDesignator.REQUESTED_DISBURSEMENT_DESIGNATOR.getValue());  //TODO: fix existing charges in migration
     disbursementFee.setReadOnly(false);
 
     final ChargeDefinition disbursePayment = new ChargeDefinition();
@@ -147,13 +145,14 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     disbursePayment.setIdentifier(DISBURSE_PAYMENT_ID);
     disbursePayment.setName(DISBURSE_PAYMENT_NAME);
     disbursePayment.setDescription(DISBURSE_PAYMENT_NAME);
-    disbursePayment.setFromAccountDesignator(LOANS_PAYABLE);
+    disbursePayment.setFromAccountDesignator(CUSTOMER_LOAN);  //TODO: fix existing charges in migration
     disbursePayment.setToAccountDesignator(ENTRY);
-    disbursePayment.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.getValue());
+    disbursePayment.setProportionalTo(ChargeProportionalDesignator.REQUESTED_DISBURSEMENT_DESIGNATOR.getValue());
     disbursePayment.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
     disbursePayment.setAmount(BigDecimal.valueOf(100));
     disbursePayment.setReadOnly(true);
 
+    /*
     final ChargeDefinition trackPrincipalDisbursePayment = new ChargeDefinition();
     trackPrincipalDisbursePayment.setChargeAction(Action.DISBURSE.name());
     trackPrincipalDisbursePayment.setIdentifier(TRACK_DISBURSAL_PAYMENT_ID);
@@ -161,10 +160,11 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     trackPrincipalDisbursePayment.setDescription(TRACK_DISBURSAL_PAYMENT_NAME);
     trackPrincipalDisbursePayment.setFromAccountDesignator(PENDING_DISBURSAL);
     trackPrincipalDisbursePayment.setToAccountDesignator(CUSTOMER_LOAN);
-    trackPrincipalDisbursePayment.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.getValue());
+    trackPrincipalDisbursePayment.setProportionalTo(ChargeProportionalDesignator.REQUESTED_DISBURSEMENT_DESIGNATOR.getValue());
     trackPrincipalDisbursePayment.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
     trackPrincipalDisbursePayment.setAmount(BigDecimal.valueOf(100));
-    trackPrincipalDisbursePayment.setReadOnly(true);
+    trackPrincipalDisbursePayment.setReadOnly(true);*/
+    //TODO: handle removing this extraneous charge in migration.
 
     final ChargeDefinition lateFee = charge(
             LATE_FEE_NAME,
@@ -174,17 +174,17 @@ public class IndividualLendingPatternFactory implements PatternFactory {
             LATE_FEE_INCOME);
     lateFee.setAccrueAction(Action.MARK_LATE.name());
     lateFee.setAccrualAccountDesignator(LATE_FEE_ACCRUAL);
-    lateFee.setProportionalTo(ChargeProportionalDesignator.REPAYMENT_DESIGNATOR.getValue());
+    lateFee.setProportionalTo(ChargeProportionalDesignator.CONTRACTUAL_REPAYMENT_DESIGNATOR.getValue());
     lateFee.setChargeOnTop(true);
     lateFee.setReadOnly(false);
 
     //TODO: Make multiple write off allowance charges.
     final ChargeDefinition writeOffAllowanceCharge = charge(
-            ALLOW_FOR_WRITE_OFF_NAME,
-            Action.MARK_LATE,
-            BigDecimal.valueOf(30),
-            PENDING_DISBURSAL,
-            ARREARS_ALLOWANCE);
+        ALLOW_FOR_WRITE_OFF_NAME,
+        Action.MARK_LATE,
+        BigDecimal.valueOf(30),
+        LOAN_FUNDS_SOURCE, //TODO: this and previous value ("pending-disbursal") are not correct and will require migration.
+        ARREARS_ALLOWANCE);
     writeOffAllowanceCharge.setProportionalTo(ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue());
     writeOffAllowanceCharge.setReadOnly(true);
 
@@ -206,46 +206,48 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     customerRepaymentCharge.setIdentifier(REPAYMENT_ID);
     customerRepaymentCharge.setName(REPAYMENT_NAME);
     customerRepaymentCharge.setDescription(REPAYMENT_NAME);
-    customerRepaymentCharge.setFromAccountDesignator(CUSTOMER_LOAN);
-    customerRepaymentCharge.setToAccountDesignator(ENTRY);
-    customerRepaymentCharge.setProportionalTo(ChargeProportionalDesignator.REPAYMENT_DESIGNATOR.getValue());
+    customerRepaymentCharge.setFromAccountDesignator(ENTRY);  //TODO: fix existing charges in migration
+    customerRepaymentCharge.setToAccountDesignator(CUSTOMER_LOAN);  //TODO: fix existing charges in migration
+    customerRepaymentCharge.setProportionalTo(ChargeProportionalDesignator.REQUESTED_REPAYMENT_DESIGNATOR.getValue());
     customerRepaymentCharge.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
     customerRepaymentCharge.setAmount(BigDecimal.valueOf(100));
     customerRepaymentCharge.setReadOnly(true);
 
-    final ChargeDefinition trackReturnPrincipalCharge = new ChargeDefinition();
+    /*final ChargeDefinition trackReturnPrincipalCharge = new ChargeDefinition();
     trackReturnPrincipalCharge.setChargeAction(Action.ACCEPT_PAYMENT.name());
     trackReturnPrincipalCharge.setIdentifier(TRACK_RETURN_PRINCIPAL_ID);
     trackReturnPrincipalCharge.setName(TRACK_RETURN_PRINCIPAL_NAME);
     trackReturnPrincipalCharge.setDescription(TRACK_RETURN_PRINCIPAL_NAME);
     trackReturnPrincipalCharge.setFromAccountDesignator(LOAN_FUNDS_SOURCE);
     trackReturnPrincipalCharge.setToAccountDesignator(LOANS_PAYABLE);
-    trackReturnPrincipalCharge.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.getValue());
+    trackReturnPrincipalCharge.setProportionalTo(ChargeProportionalDesignator.REQUESTED_DISBURSEMENT_DESIGNATOR.getValue());
     trackReturnPrincipalCharge.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
     trackReturnPrincipalCharge.setAmount(BigDecimal.valueOf(100));
-    trackReturnPrincipalCharge.setReadOnly(true);
+    trackReturnPrincipalCharge.setReadOnly(true);*/
+    //TODO: handle removing this extraneous charge in migration.
 
-    final ChargeDefinition disbursementReturnCharge = charge(
+    /*final ChargeDefinition disbursementReturnCharge = charge(
         RETURN_DISBURSEMENT_NAME,
         Action.CLOSE,
         BigDecimal.valueOf(100),
         PENDING_DISBURSAL,
         LOAN_FUNDS_SOURCE);
     disbursementReturnCharge.setProportionalTo(ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue());
-    disbursementReturnCharge.setReadOnly(true);
+    disbursementReturnCharge.setReadOnly(true);*/
+    //TODO: handle removing this extraneous charge in migration.
 
     ret.add(processingFee);
     ret.add(loanOriginationFee);
-    ret.add(loanFundsAllocation);
+    //TODO: ret.add(loanFundsAllocation);
     ret.add(disbursementFee);
     ret.add(disbursePayment);
-    ret.add(trackPrincipalDisbursePayment);
+    //TODO: ret.add(trackPrincipalDisbursePayment);
     ret.add(lateFee);
     ret.add(writeOffAllowanceCharge);
     ret.add(interestCharge);
     ret.add(customerRepaymentCharge);
-    ret.add(trackReturnPrincipalCharge);
-    ret.add(disbursementReturnCharge);
+    //TODO: ret.add(trackReturnPrincipalCharge);
+    //TODO: ret.add(disbursementReturnCharge);
 
     return ret;
   }
@@ -344,7 +346,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
   }
 
   @Override
-  public List<CostComponent> getCostComponentsForAction(
+  public Payment getCostComponentsForAction(
       final String productIdentifier,
       final String caseIdentifier,
       final String actionIdentifier,
@@ -356,35 +358,13 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     final Case.State caseState = Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState());
     checkActionCanBeExecuted(caseState, action);
 
-    Stream<Map.Entry<ChargeDefinition, CostComponent>> costComponentStream = costComponentService.getCostComponentsForAction(
+    final PaymentBuilder paymentBuilder = costComponentService.getCostComponentsForAction(
         action,
         dataContextOfAction,
         forPaymentSize,
-        forDateTime.toLocalDate())
-        .stream();
+        forDateTime.toLocalDate());
 
-    if (!forAccountDesignators.isEmpty()) {
-      costComponentStream = costComponentStream
-          .filter(costComponentEntry -> chargeReferencesAccountDesignators(costComponentEntry.getKey(), action, forAccountDesignators));
-    }
-
-    return costComponentStream
-        .map(costComponentEntry -> new CostComponent(costComponentEntry.getKey().getIdentifier(), costComponentEntry.getValue().getAmount()))
-        .collect(Collectors.toList());
-  }
-
-  private boolean chargeReferencesAccountDesignators(
-      final ChargeDefinition chargeDefinition,
-      final Action action,
-      final Set<String> forAccountDesignators) {
-    final Set<String> accountsToCompare = Sets.newHashSet(
-        chargeDefinition.getFromAccountDesignator(),
-        chargeDefinition.getToAccountDesignator()
-    );
-    if (chargeDefinition.getAccrualAccountDesignator() != null)
-      accountsToCompare.add(chargeDefinition.getAccrualAccountDesignator());
-
-    return !Sets.intersection(accountsToCompare, forAccountDesignators).isEmpty();
+    return paymentBuilder.buildPayment(action, forAccountDesignators);
   }
 
   public static void checkActionCanBeExecuted(final Case.State state, final Action action) {

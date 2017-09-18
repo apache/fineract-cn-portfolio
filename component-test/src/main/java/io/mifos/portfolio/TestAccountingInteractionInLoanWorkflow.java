@@ -35,6 +35,7 @@ import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.rhythm.spi.v1.client.BeatListener;
 import io.mifos.rhythm.spi.v1.domain.BeatPublish;
 import io.mifos.rhythm.spi.v1.events.BeatPublishEvent;
+import org.assertj.core.util.Sets;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -67,8 +68,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private Product product = null;
   private Case customerCase = null;
   private TaskDefinition taskDefinition = null;
-  private CaseParameters caseParameters = null;
-  private String pendingDisbursalAccountIdentifier = null;
   private String customerLoanAccountIdentifier = null;
 
   private BigDecimal expectedCurrentBalance = null;
@@ -181,14 +180,18 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       week++;
     }
 
-    final BigDecimal minPayment = repayments.stream().min(BigDecimal::compareTo).orElseThrow(IllegalStateException::new);
-    final BigDecimal maxPayment = repayments.stream().max(BigDecimal::compareTo).orElseThrow(IllegalStateException::new);
-    final BigDecimal delta = maxPayment.subtract(minPayment).abs();
-    Assert.assertTrue("Payments are " + repayments,
-        delta.divide(maxPayment, BigDecimal.ROUND_HALF_EVEN).compareTo(BigDecimal.valueOf(0.01)) <= 0);
+    checkRepaymentVariance(repayments);
 
 
     step8Close();
+  }
+
+  private void checkRepaymentVariance(List<BigDecimal> repayments) {
+    final BigDecimal minPayment = repayments.stream().min(BigDecimal::compareTo).orElseThrow(IllegalStateException::new);
+    final BigDecimal maxPayment = repayments.stream().max(BigDecimal::compareTo).orElseThrow(IllegalStateException::new);
+    final BigDecimal delta = maxPayment.subtract(minPayment).abs();
+    Assert.assertTrue("Payments vary too much. Payments are " + repayments,
+        delta.divide(maxPayment, BigDecimal.ROUND_HALF_EVEN).compareTo(BigDecimal.valueOf(0.01)) <= 0);
   }
 
   @Test
@@ -209,7 +212,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     while (expectedCurrentBalance.compareTo(BigDecimal.ZERO) > 0) {
       logger.info("Simulating week {}. Expected current balance {}.", week, expectedCurrentBalance);
       if (week == weekOfLateRepayment) {
-        final BigDecimal lateFee = BigDecimal.valueOf(14_49, MINOR_CURRENCY_UNIT_DIGITS);
+        final BigDecimal lateFee = BigDecimal.valueOf(17_31, MINOR_CURRENCY_UNIT_DIGITS);
         step6CalculateInterestAndCheckForLatenessForRangeOfDays(
             today,
             (week * 7) + 1,
@@ -231,12 +234,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     repayments.remove(3);
 
-    final BigDecimal minPayment = repayments.stream().min(BigDecimal::compareTo).orElseThrow(IllegalStateException::new);
-    final BigDecimal maxPayment = repayments.stream().max(BigDecimal::compareTo).orElseThrow(IllegalStateException::new);
-    final BigDecimal delta = maxPayment.subtract(minPayment).abs();
-    Assert.assertTrue("Payments are " + repayments,
-        delta.divide(maxPayment, BigDecimal.ROUND_HALF_EVEN).compareTo(BigDecimal.valueOf(0.01)) <= 0);
-
+    checkRepaymentVariance(repayments);
 
     step8Close();
   }
@@ -244,16 +242,16 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private BigDecimal findNextRepaymentAmount(
       final LocalDateTime referenceDate,
       final int dayNumber) {
-    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
 
-    final List<CostComponent> costComponentsForNextPayment = portfolioManager.getCostComponentsForAction(
+    final Payment nextPayment = portfolioManager.getCostComponentsForAction(
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.ACCEPT_PAYMENT.name(),
         null,
         null,
         DateConverter.toIsoString(referenceDate.plusDays(dayNumber)));
-    return costComponentsForNextPayment.stream().filter(x -> x.getChargeIdentifier().equals(ChargeIdentifiers.REPAYMENT_ID)).findFirst()
+    return nextPayment.getCostComponents().stream().filter(x -> x.getChargeIdentifier().equals(ChargeIdentifiers.REPAYMENT_ID)).findFirst()
         .orElseThrow(() -> new IllegalArgumentException("return missing repayment charge."))
         .getAmount();
   }
@@ -277,7 +275,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.DISBURSEMENT_FEE_ID);
     lowerRangeDisbursementFeeChargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
     lowerRangeDisbursementFeeChargeDefinition.setAmount(DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT);
-    lowerRangeDisbursementFeeChargeDefinition.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.getValue());
+    lowerRangeDisbursementFeeChargeDefinition.setProportionalTo(ChargeProportionalDesignator.REQUESTED_DISBURSEMENT_DESIGNATOR.getValue());
     lowerRangeDisbursementFeeChargeDefinition.setForSegmentSet(DISBURSEMENT_RANGES);
     lowerRangeDisbursementFeeChargeDefinition.setFromSegment(DISBURSEMENT_LOWER_RANGE);
     lowerRangeDisbursementFeeChargeDefinition.setToSegment(DISBURSEMENT_LOWER_RANGE);
@@ -297,7 +295,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     upperRangeDisbursementFeeChargeDefinition.setChargeAction(lowerRangeDisbursementFeeChargeDefinition.getChargeAction());
     upperRangeDisbursementFeeChargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
     upperRangeDisbursementFeeChargeDefinition.setAmount(DISBURSEMENT_FEE_UPPER_RANGE_AMOUNT);
-    upperRangeDisbursementFeeChargeDefinition.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_ADJUSTMENT_DESIGNATOR.getValue());
+    upperRangeDisbursementFeeChargeDefinition.setProportionalTo(ChargeProportionalDesignator.REQUESTED_DISBURSEMENT_DESIGNATOR.getValue());
     upperRangeDisbursementFeeChargeDefinition.setForSegmentSet(DISBURSEMENT_RANGES);
     upperRangeDisbursementFeeChargeDefinition.setFromSegment(DISBURSEMENT_UPPER_RANGE);
     upperRangeDisbursementFeeChargeDefinition.setToSegment(DISBURSEMENT_UPPER_RANGE);
@@ -314,8 +312,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
   private void step2CreateCase() throws InterruptedException {
     logger.info("step2CreateCase");
-    caseParameters = Fixture.createAdjustedCaseParameters(x ->
-      x.setPaymentCycle(new PaymentCycle(ChronoUnit.WEEKS, 1, null, null, null))
+    final CaseParameters caseParameters = Fixture.createAdjustedCaseParameters(x ->
+        x.setPaymentCycle(new PaymentCycle(ChronoUnit.WEEKS, 1, null, null, null))
     );
     final String caseParametersAsString = new Gson().toJson(caseParameters);
     customerCase = createAdjustedCase(product.getIdentifier(), x -> x.setParameters(caseParametersAsString));
@@ -330,9 +328,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.OPEN,
-        Collections.singleton(AccountDesignators.ENTRY),
         null,
-        new CostComponent(ChargeIdentifiers.PROCESSING_FEE_ID, PROCESSING_FEE_AMOUNT));
+        null);
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -341,11 +338,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, Action.DENY);
-
-    AccountingFixture.verifyTransfer(ledgerManager,
-        AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, AccountingFixture.PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER,
-        PROCESSING_FEE_AMOUNT, product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN
-    );
   }
 
 
@@ -356,7 +348,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DENY,
-        Collections.singleton(AccountDesignators.ENTRY),
+        null,
         null);
     checkStateTransfer(
         product.getIdentifier(),
@@ -379,9 +371,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.APPROVE,
-        Collections.singleton(AccountDesignators.ENTRY),
         null,
-        new CostComponent(ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID, LOAN_ORIGINATION_FEE_AMOUNT));
+        null);
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -391,19 +382,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Case.State.APPROVED);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE, Action.CLOSE);
 
-    pendingDisbursalAccountIdentifier =
-        AccountingFixture.verifyAccountCreation(ledgerManager, AccountingFixture.PENDING_DISBURSAL_LEDGER_IDENTIFIER, AccountType.ASSET);
     customerLoanAccountIdentifier =
         AccountingFixture.verifyAccountCreation(ledgerManager, AccountingFixture.CUSTOMER_LOAN_LEDGER_IDENTIFIER, AccountType.ASSET);
-
-    final Set<Debtor> debtors = new HashSet<>();
-    debtors.add(new Debtor(AccountingFixture.LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER, caseParameters.getMaximumBalance().toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, LOAN_ORIGINATION_FEE_AMOUNT.toPlainString()));
-
-    final Set<Creditor> creditors = new HashSet<>();
-    creditors.add(new Creditor(pendingDisbursalAccountIdentifier, caseParameters.getMaximumBalance().toPlainString()));
-    creditors.add(new Creditor(AccountingFixture.LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER, LOAN_ORIGINATION_FEE_AMOUNT.toPlainString()));
-    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE);
 
     expectedCurrentBalance = BigDecimal.ZERO;
   }
@@ -418,8 +398,10 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DISBURSE,
-        Collections.singleton(AccountDesignators.ENTRY),
+        Sets.newLinkedHashSet(AccountDesignators.ENTRY, AccountDesignators.CUSTOMER_LOAN),
         amount, new CostComponent(whichDisbursementFee, disbursementFeeAmount),
+        new CostComponent(ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID, LOAN_ORIGINATION_FEE_AMOUNT),
+        new CostComponent(ChargeIdentifiers.PROCESSING_FEE_ID, PROCESSING_FEE_AMOUNT),
         new CostComponent(ChargeIdentifiers.DISBURSE_PAYMENT_ID, amount));
     checkStateTransfer(
         product.getIdentifier(),
@@ -434,16 +416,17 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
 
-
     final Set<Debtor> debtors = new HashSet<>();
-    debtors.add(new Debtor(pendingDisbursalAccountIdentifier, amount.toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, disbursementFeeAmount.toPlainString()));
+    debtors.add(new Debtor(customerLoanAccountIdentifier, amount.toPlainString()));
+    debtors.add(new Debtor(customerLoanAccountIdentifier, PROCESSING_FEE_AMOUNT.toPlainString()));
+    debtors.add(new Debtor(customerLoanAccountIdentifier, disbursementFeeAmount.toPlainString()));
+    debtors.add(new Debtor(customerLoanAccountIdentifier, LOAN_ORIGINATION_FEE_AMOUNT.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
-    creditors.add(new Creditor(customerLoanAccountIdentifier, amount.toPlainString()));
-    creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toString()));
+    creditors.add(new Creditor(AccountingFixture.PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER, PROCESSING_FEE_AMOUNT.toPlainString()));
     creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, disbursementFeeAmount.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER, LOAN_ORIGINATION_FEE_AMOUNT.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE);
 
     expectedCurrentBalance = expectedCurrentBalance.add(amount);
@@ -499,7 +482,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final String beatIdentifier = "alignment0";
     final String midnightTimeStamp = DateConverter.toIsoString(forTime);
 
-    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
 
     final BigDecimal calculatedInterest = expectedCurrentBalance.multiply(Fixture.INTEREST_RATE.divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN))
         .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
@@ -509,7 +492,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.APPLY_INTEREST,
-        Collections.singleton(AccountDesignators.CUSTOMER_LOAN),
+        null,
         null,
         new CostComponent(ChargeIdentifiers.INTEREST_ID, calculatedInterest));
 
@@ -518,7 +501,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
           product.getIdentifier(),
           customerCase.getIdentifier(),
           Action.MARK_LATE,
-          Collections.singleton(AccountDesignators.CUSTOMER_LOAN),
+          null,
           null,
           new CostComponent(ChargeIdentifiers.LATE_FEE_ID, calculatedLateFee));
     }
@@ -561,9 +544,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       final BigDecimal lateFee) throws InterruptedException {
     logger.info("step7PaybackPartialAmount '{}'", amount);
 
-    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
-
-    final BigDecimal principal = amount.subtract(interestAccrued).subtract(lateFee);
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
 
     checkCostComponentForActionCorrect(
         product.getIdentifier(),
@@ -572,7 +553,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         new HashSet<>(Arrays.asList(AccountDesignators.ENTRY, AccountDesignators.CUSTOMER_LOAN, AccountDesignators.LOAN_FUNDS_SOURCE)),
         amount,
         new CostComponent(ChargeIdentifiers.REPAYMENT_ID, amount),
-        new CostComponent(ChargeIdentifiers.TRACK_RETURN_PRINCIPAL_ID, principal),
         new CostComponent(ChargeIdentifiers.INTEREST_ID, interestAccrued),
         new CostComponent(ChargeIdentifiers.LATE_FEE_ID, lateFee));
     checkStateTransfer(
@@ -589,16 +569,14 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
 
     final Set<Debtor> debtors = new HashSet<>();
-    debtors.add(new Debtor(customerLoanAccountIdentifier, amount.toPlainString()));
-    debtors.add(new Debtor(AccountingFixture.LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER, principal.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
     if (interestAccrued.compareTo(BigDecimal.ZERO) != 0)
       debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
     if (lateFee.compareTo(BigDecimal.ZERO) != 0)
       debtors.add(new Debtor(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFee.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
-    creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toPlainString()));
-    creditors.add(new Creditor(AccountingFixture.LOANS_PAYABLE_ACCOUNT_IDENTIFIER, principal.toPlainString()));
+    creditors.add(new Creditor(customerLoanAccountIdentifier, amount.toPlainString()));
     if (interestAccrued.compareTo(BigDecimal.ZERO) != 0)
       creditors.add(new Creditor(AccountingFixture.CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
     if (lateFee.compareTo(BigDecimal.ZERO) != 0)
@@ -613,13 +591,13 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private void step8Close() throws InterruptedException {
     logger.info("step8Close");
 
-    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance.negate());
+    AccountingFixture.mockBalance(customerLoanAccountIdentifier, expectedCurrentBalance);
 
     checkCostComponentForActionCorrect(
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.CLOSE,
-        Collections.singleton(AccountDesignators.ENTRY),
+        null,
         null);
     checkStateTransfer(
         product.getIdentifier(),

@@ -60,16 +60,11 @@ public class Fixture {
     product.setMinorCurrencyUnitDigits(MINOR_CURRENCY_UNIT_DIGITS);
 
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
-    final AccountAssignment pendingDisbursalAccountAssignment = new AccountAssignment();
-    pendingDisbursalAccountAssignment.setDesignator(PENDING_DISBURSAL);
-    pendingDisbursalAccountAssignment.setLedgerIdentifier(PENDING_DISBURSAL_LEDGER_IDENTIFIER);
-    accountAssignments.add(pendingDisbursalAccountAssignment);
     accountAssignments.add(new AccountAssignment(PROCESSING_FEE_INCOME, PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(ORIGINATION_FEE_INCOME, LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(DISBURSEMENT_FEE_INCOME, DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(INTEREST_INCOME, CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(INTEREST_ACCRUAL, LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER));
-    accountAssignments.add(new AccountAssignment(LOANS_PAYABLE, LOANS_PAYABLE_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(LATE_FEE_INCOME, LATE_FEE_INCOME_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(LATE_FEE_ACCRUAL, LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(ARREARS_ALLOWANCE, ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER));

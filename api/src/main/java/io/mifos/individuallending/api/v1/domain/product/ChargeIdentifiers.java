@@ -22,10 +22,6 @@ import java.util.Locale;
  */
 @SuppressWarnings("unused")
 public interface ChargeIdentifiers {
-  String LOAN_FUNDS_ALLOCATION_NAME = "Loan funds allocation";
-  String LOAN_FUNDS_ALLOCATION_ID = "loan-funds-allocation";
-  String RETURN_DISBURSEMENT_NAME = "Return disbursement";
-  String RETURN_DISBURSEMENT_ID = "return-disbursement";
   String INTEREST_NAME = "Interest";
   String INTEREST_ID = "interest";
   String ALLOW_FOR_WRITE_OFF_NAME = "Allow for write-off";
@@ -36,16 +32,12 @@ public interface ChargeIdentifiers {
   String DISBURSEMENT_FEE_ID = "disbursement-fee";
   String DISBURSE_PAYMENT_NAME = "Disburse payment";
   String DISBURSE_PAYMENT_ID = "disburse-payment";
-  String TRACK_DISBURSAL_PAYMENT_NAME = "Track disburse payment";
-  String TRACK_DISBURSAL_PAYMENT_ID = "track-disburse-payment";
   String LOAN_ORIGINATION_FEE_NAME = "Loan origination fee";
   String LOAN_ORIGINATION_FEE_ID = "loan-origination-fee";
   String PROCESSING_FEE_NAME = "Processing fee";
   String PROCESSING_FEE_ID = "processing-fee";
   String REPAYMENT_NAME = "Repayment";
   String REPAYMENT_ID = "repayment";
-  String TRACK_RETURN_PRINCIPAL_NAME = "Track return principal";
-  String TRACK_RETURN_PRINCIPAL_ID = "track-return-principal";
 
   static String nameToIdentifier(String name) {
     return name.toLowerCase(Locale.US).replace(" ", "-");

@@ -17,6 +17,7 @@ package io.mifos.portfolio.api.v1.client;
 
 import io.mifos.core.api.annotation.ThrowsException;
 import io.mifos.core.api.util.CustomFeignClientsConfiguration;
+import io.mifos.portfolio.api.v1.domain.Payment;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.api.v1.validation.ValidSortColumn;
 import io.mifos.portfolio.api.v1.validation.ValidSortDirection;
@@ -345,7 +346,7 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(
+  Payment getCostComponentsForAction(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("caseidentifier") final String caseIdentifier,
       @PathVariable("actionidentifier") final String actionIdentifier,
@@ -360,7 +361,7 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(
+  Payment getCostComponentsForAction(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("caseidentifier") final String caseIdentifier,
       @PathVariable("actionidentifier") final String actionIdentifier,
@@ -375,7 +376,7 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(
+  Payment getCostComponentsForAction(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("caseidentifier") final String caseIdentifier,
       @PathVariable("actionidentifier") final String actionIdentifier,
@@ -388,7 +389,7 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(
+  Payment getCostComponentsForAction(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("caseidentifier") final String caseIdentifier,
       @PathVariable("actionidentifier") final String actionIdentifier);

@@ -18,7 +18,7 @@ package io.mifos.portfolio.service.internal.service;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
-import io.mifos.portfolio.api.v1.domain.CostComponent;
+import io.mifos.portfolio.api.v1.domain.Payment;
 import io.mifos.portfolio.service.internal.mapper.CaseMapper;
 import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
@@ -133,12 +133,12 @@ public class CaseService {
     return this.findByIdentifier(productIdentifier, caseIdentifier).isPresent();
   }
 
-  public List<CostComponent> getActionCostComponentsForCase(final String productIdentifier,
-                                                            final String caseIdentifier,
-                                                            final String actionIdentifier,
-                                                            final LocalDateTime localDateTime,
-                                                            final Set<String> forAccountDesignatorsList,
-                                                            final BigDecimal forPaymentSize) {
+  public Payment getActionCostComponentsForCase(final String productIdentifier,
+                                                final String caseIdentifier,
+                                                final String actionIdentifier,
+                                                final LocalDateTime localDateTime,
+                                                final Set<String> forAccountDesignatorsList,
+                                                final BigDecimal forPaymentSize) {
     return getPatternFactoryOrThrow(productIdentifier).getCostComponentsForAction(
         productIdentifier,
         caseIdentifier,

@@ -158,9 +158,9 @@ public class CostComponentService {
       final @Nullable BigDecimal requestedDisbursalSize) {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
-    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
+    final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
     final RealRunningBalances runningBalances = new RealRunningBalances(accountingAdapter, designatorToAccountIdentifierMapper);
-    final BigDecimal currentBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN);
+    final BigDecimal currentBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
 
     if (requestedDisbursalSize != null &&
         dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum().compareTo(
@@ -168,7 +168,7 @@ public class CostComponentService {
       throw ServiceException.conflict("Cannot disburse over the maximum balance.");
 
     final Optional<LocalDateTime> optionalStartOfTerm = accountingAdapter.getDateOfOldestEntryContainingMessage(
-        customerLoanAccountIdentifier,
+        customerLoanPrincipalAccountIdentifier,
         dataContextOfAction.getMessageForCharge(Action.DISBURSE));
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
@@ -218,10 +218,9 @@ public class CostComponentService {
   {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
-    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
     final RunningBalances runningBalances = new RealRunningBalances(accountingAdapter, designatorToAccountIdentifierMapper);
 
-    final LocalDate startOfTerm = getStartOfTermOrThrow(dataContextOfAction, customerLoanAccountIdentifier);
+    final LocalDate startOfTerm = getStartOfTermOrThrow(dataContextOfAction, designatorToAccountIdentifierMapper);
 
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
@@ -262,10 +261,9 @@ public class CostComponentService {
   {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
-    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
     final RealRunningBalances runningBalances = new RealRunningBalances(accountingAdapter, designatorToAccountIdentifierMapper);
 
-    final LocalDate startOfTerm = getStartOfTermOrThrow(dataContextOfAction, customerLoanAccountIdentifier);
+    final LocalDate startOfTerm = getStartOfTermOrThrow(dataContextOfAction, designatorToAccountIdentifierMapper);
 
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
@@ -299,10 +297,10 @@ public class CostComponentService {
     }
     else {
       if (scheduledAction.actionPeriod != null && scheduledAction.actionPeriod.isLastPeriod()) {
-        loanPaymentSize = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN);
+        loanPaymentSize = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
       }
       else {
-        final BigDecimal paymentSizeBeforeOnTopCharges = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN)
+        final BigDecimal paymentSizeBeforeOnTopCharges = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP)
             .min(dataContextOfAction.getCaseParametersEntity().getPaymentSize());
 
         @SuppressWarnings("UnnecessaryLocalVariable")
@@ -332,14 +330,12 @@ public class CostComponentService {
   public PaymentBuilder getCostComponentsForClose(final DataContextOfAction dataContextOfAction) {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
-    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
     final RealRunningBalances runningBalances = new RealRunningBalances(accountingAdapter, designatorToAccountIdentifierMapper);
 
-    if (runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN).compareTo(BigDecimal.ZERO) != 0)
+    if (runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP).compareTo(BigDecimal.ZERO) != 0)
       throw ServiceException.conflict("Cannot close loan until the balance is zero.");
 
-
-    final LocalDate startOfTerm = getStartOfTermOrThrow(dataContextOfAction, customerLoanAccountIdentifier);
+    final LocalDate startOfTerm = getStartOfTermOrThrow(dataContextOfAction, designatorToAccountIdentifierMapper);
 
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
@@ -379,10 +375,9 @@ public class CostComponentService {
   {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
-    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
     final RunningBalances runningBalances = new RealRunningBalances(accountingAdapter, designatorToAccountIdentifierMapper);
 
-    final LocalDate startOfTerm = getStartOfTermOrThrow(dataContextOfAction, customerLoanAccountIdentifier);
+    final LocalDate startOfTerm = getStartOfTermOrThrow(dataContextOfAction, designatorToAccountIdentifierMapper);
 
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
@@ -516,8 +511,8 @@ public class CostComponentService {
       case MAXIMUM_BALANCE_DESIGNATOR:
         return maximumBalance;
       case RUNNING_BALANCE_DESIGNATOR: {
-        final BigDecimal customerLoanRunningBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN);
-        return customerLoanRunningBalance.subtract(paymentBuilder.getBalanceAdjustment(AccountDesignators.CUSTOMER_LOAN));
+        final BigDecimal customerLoanRunningBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
+        return customerLoanRunningBalance.subtract(paymentBuilder.getBalanceAdjustment(AccountDesignators.CUSTOMER_LOAN_GROUP));
       }
       case CONTRACTUAL_REPAYMENT_DESIGNATOR:
         return contractualRepayment;
@@ -602,7 +597,7 @@ public class CostComponentService {
         minorCurrencyUnitDigits,
         false
         );
-    final BigDecimal finalDisbursementSize = paymentBuilder.getBalanceAdjustment(AccountDesignators.CUSTOMER_LOAN).negate();
+    final BigDecimal finalDisbursementSize = paymentBuilder.getBalanceAdjustment(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL).negate();
 
     final MonetaryAmount presentValue = AnnuityPayment.calculate(
         Money.of(finalDisbursementSize, "XXX"),
@@ -644,9 +639,12 @@ public class CostComponentService {
   }
 
   private LocalDate getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction,
-                                          final String customerLoanAccountIdentifier) {
+                                          final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
+
+    final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+
     final Optional<LocalDateTime> firstDisbursalDateTime = accountingAdapter.getDateOfOldestEntryContainingMessage(
-        customerLoanAccountIdentifier,
+        customerLoanPrincipalAccountIdentifier,
         dataContextOfAction.getMessageForCharge(Action.DISBURSE));
 
     return firstDisbursalDateTime.map(LocalDateTime::toLocalDate)

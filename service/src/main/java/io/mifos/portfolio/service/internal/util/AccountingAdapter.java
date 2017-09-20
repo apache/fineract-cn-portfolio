@@ -28,6 +28,7 @@ import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.service.ServiceConstants;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -48,6 +49,7 @@ import static io.mifos.individuallending.api.v1.domain.product.AccountDesignator
  */
 @Component
 public class AccountingAdapter {
+
 
   public enum IdentifierType {LEDGER, ACCOUNT}
 
@@ -153,7 +155,11 @@ public class AccountingAdapter {
     return Optional.of(ret);
   }
 
-  public BigDecimal getCurrentBalance(final String accountIdentifier) {
+  public BigDecimal getTotalOfCurrentAccountBalances(final String... accountIdentifiers) {
+    return Arrays.stream(accountIdentifiers).map(this::getCurrentAccountBalance).reduce(BigDecimal.ZERO, BigDecimal::add);
+  }
+
+  public BigDecimal getCurrentAccountBalance(final String accountIdentifier) {
     try {
       final Account account = ledgerManager.findAccount(accountIdentifier);
       if (account == null)
@@ -163,6 +169,24 @@ public class AccountingAdapter {
     catch (final AccountNotFoundException e) {
      throw ServiceException.internalError("Could not find the account with identifier ''{0}''", accountIdentifier);
     }
+  }
+  public String createLedger(final String customerIdentifier, final String groupName, final String parentLedger) {
+    final Ledger ledger = ledgerManager.findLedger(parentLedger);
+    final List<Ledger> subLedgers = ledger.getSubLedgers() == null ? Collections.emptyList() : ledger.getSubLedgers();
+
+    final Ledger generatedLedger = new Ledger();
+    generatedLedger.setShowAccountsInChart(true);
+    generatedLedger.setParentLedgerIdentifier(parentLedger);
+    generatedLedger.setType(ledger.getType());
+    final String ledgerIdentifer = createLedgerIdentifier(customerIdentifier, groupName, subLedgers);
+    generatedLedger.setIdentifier(ledgerIdentifer);
+    generatedLedger.setDescription("Individual loan case specific ledger");
+    generatedLedger.setName(ledgerIdentifer);
+
+    logger.info("Creating ledger with identifier '{}'", ledgerIdentifer);
+
+    ledgerManager.createLedger(generatedLedger); //TODO: wait?
+    return ledgerIdentifer;
   }
 
   public String createAccountForLedgerAssignment(final String customerIdentifier, final AccountAssignment ledgerAssignment) {
@@ -197,8 +221,24 @@ public class AccountingAdapter {
             customerIdentifier, ledgerAssignment.getDesignator(), ledgerAssignment.getLedgerIdentifier()));
   }
 
+  private String createLedgerIdentifier(
+      final String customerIdentifier,
+      final String groupName,
+      final List<Ledger> subLedgers) {
+    final String partialCustomerIdentifer = StringUtils.left(customerIdentifier, 22);
+    final String partialGroupName = StringUtils.left(groupName, 3);
+    final Set<String> subLedgerIdentifiers = subLedgers.stream().map(Ledger::getIdentifier).collect(Collectors.toSet());
+    long index = 0;
+    while (true) {
+      index++;
+      final String generatedIdentifier = partialCustomerIdentifer + "." + partialGroupName + "." + String.format("%05d", index);
+      if (!subLedgerIdentifiers.contains(generatedIdentifier))
+        return generatedIdentifier;
+    }
+  }
+
   private String createAccountNumber(final String customerIdentifier, final String designator, final long accountIndex) {
-    return customerIdentifier + "." + designator
+    return StringUtils.left(customerIdentifier, 22) + "." + StringUtils.left(designator, 3)
             + "." + String.format("%05d", accountIndex);
   }
 

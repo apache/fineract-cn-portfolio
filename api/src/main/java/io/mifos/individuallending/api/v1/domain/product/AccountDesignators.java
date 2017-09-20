@@ -20,15 +20,21 @@ package io.mifos.individuallending.api.v1.domain.product;
  */
 @SuppressWarnings("unused")
 public interface AccountDesignators {
-  String CUSTOMER_LOAN = "customer-loan";
-  String LOAN_FUNDS_SOURCE = "loan-funds-source";
-  String PROCESSING_FEE_INCOME = "processing-fee-income";
-  String ORIGINATION_FEE_INCOME = "origination-fee-income";
-  String DISBURSEMENT_FEE_INCOME = "disbursement-fee-income";
-  String INTEREST_INCOME = "interest-income";
-  String INTEREST_ACCRUAL = "interest-accrual";
-  String LATE_FEE_INCOME = "late-fee-income";
-  String LATE_FEE_ACCRUAL = "late-fee-accrual";
-  String ARREARS_ALLOWANCE = "arrears-allowance";
-  String ENTRY = "entry";
+  //These are maximum 3 characters because they are used to create account and ledger identifiers.
+  //Account and ledger identifiers are limited to 34 characters, and 32 characters respectively.
+  //These accounting identifiers are composed of the customer identifier, this identifier, and a counter.
+  String CUSTOMER_LOAN_GROUP = "cll";
+  String CUSTOMER_LOAN_PRINCIPAL = "clp";
+  String CUSTOMER_LOAN_INTEREST = "cli";
+  String CUSTOMER_LOAN_FEES = "clf";
+  String LOAN_FUNDS_SOURCE = "ls";
+  String PROCESSING_FEE_INCOME = "pfi";
+  String ORIGINATION_FEE_INCOME = "ofi";
+  String DISBURSEMENT_FEE_INCOME = "dfi";
+  String INTEREST_INCOME = "ii";
+  String INTEREST_ACCRUAL = "ia";
+  String LATE_FEE_INCOME = "lfi";
+  String LATE_FEE_ACCRUAL = "lfa";
+  String ARREARS_ALLOWANCE = "aa";
+  String ENTRY = "ey";
 }

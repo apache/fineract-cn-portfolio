@@ -36,8 +36,12 @@ public interface ChargeIdentifiers {
   String LOAN_ORIGINATION_FEE_ID = "loan-origination-fee";
   String PROCESSING_FEE_NAME = "Processing fee";
   String PROCESSING_FEE_ID = "processing-fee";
-  String REPAYMENT_NAME = "Repayment";
-  String REPAYMENT_ID = "repayment";
+  String REPAY_PRINCIPAL_NAME = "Repay principal";
+  String REPAY_PRINCIPAL_ID = "repay-principal";
+  String REPAY_INTEREST_NAME = "Repay interest";
+  String REPAY_INTEREST_ID = "repay-interest";
+  String REPAY_FEES_NAME = "Repay fees";
+  String REPAY_FEES_ID = "repay-fees";
 
   static String nameToIdentifier(String name) {
     return name.toLowerCase(Locale.US).replace(" ", "-");

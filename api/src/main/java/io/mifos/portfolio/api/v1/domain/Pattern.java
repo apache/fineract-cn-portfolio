@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -23,14 +24,10 @@ import java.util.Set;
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class Pattern {
   private String parameterPackage;
-  private Set<String> accountAssignmentsRequired;
+  private Set<String> accountAssignmentGroups;
+  private Set<RequiredAccountAssignment> accountAssignmentsRequired;
 
   public Pattern() {
-  }
-
-  public Pattern(String parametersNameSpace, Set<String> accountAssignmentsRequired) {
-    this.parameterPackage = parametersNameSpace;
-    this.accountAssignmentsRequired = accountAssignmentsRequired;
   }
 
   public String getParameterPackage() {
@@ -41,11 +38,19 @@ public class Pattern {
     this.parameterPackage = parameterPackage;
   }
 
-  public Set<String> getAccountAssignmentsRequired() {
+  public Set<String> getAccountAssignmentGroups() {
+    return accountAssignmentGroups;
+  }
+
+  public void setAccountAssignmentGroups(Set<String> accountAssignmentGroups) {
+    this.accountAssignmentGroups = accountAssignmentGroups;
+  }
+
+  public Set<RequiredAccountAssignment> getAccountAssignmentsRequired() {
     return accountAssignmentsRequired;
   }
 
-  public void setAccountAssignmentsRequired(Set<String> accountAssignmentsRequired) {
+  public void setAccountAssignmentsRequired(Set<RequiredAccountAssignment> accountAssignmentsRequired) {
     this.accountAssignmentsRequired = accountAssignmentsRequired;
   }
 
@@ -53,25 +58,23 @@ public class Pattern {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-
     Pattern pattern = (Pattern) o;
-
-    return parameterPackage != null ? parameterPackage.equals(pattern.parameterPackage) : pattern.parameterPackage == null && (accountAssignmentsRequired != null ? accountAssignmentsRequired.equals(pattern.accountAssignmentsRequired) : pattern.accountAssignmentsRequired == null);
-
+    return Objects.equals(parameterPackage, pattern.parameterPackage) &&
+        Objects.equals(accountAssignmentGroups, pattern.accountAssignmentGroups) &&
+        Objects.equals(accountAssignmentsRequired, pattern.accountAssignmentsRequired);
   }
 
   @Override
   public int hashCode() {
-    int result = parameterPackage != null ? parameterPackage.hashCode() : 0;
-    result = 31 * result + (accountAssignmentsRequired != null ? accountAssignmentsRequired.hashCode() : 0);
-    return result;
+    return Objects.hash(parameterPackage, accountAssignmentGroups, accountAssignmentsRequired);
   }
 
   @Override
   public String toString() {
     return "Pattern{" +
-            "parameterPackage='" + parameterPackage + '\'' +
-            ", accountAssignmentsRequired=" + accountAssignmentsRequired +
-            '}';
+        "parameterPackage='" + parameterPackage + '\'' +
+        ", accountAssignmentGroups=" + accountAssignmentGroups +
+        ", accountAssignmentsRequired=" + accountAssignmentsRequired +
+        '}';
   }
 }

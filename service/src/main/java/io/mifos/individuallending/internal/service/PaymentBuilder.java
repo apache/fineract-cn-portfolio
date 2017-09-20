@@ -16,11 +16,13 @@
 package io.mifos.individuallending.internal.service;
 
 import com.google.common.collect.Sets;
+import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Payment;
+import io.mifos.portfolio.api.v1.domain.RequiredAccountAssignment;
 import io.mifos.portfolio.service.internal.util.ChargeInstance;
 
 import java.math.BigDecimal;
@@ -107,26 +109,18 @@ public class PaymentBuilder {
       final ChargeDefinition chargeDefinition,
       final BigDecimal chargeAmount) {
     BigDecimal adjustedChargeAmount = BigDecimal.ZERO;
-    if (this.accrualAccounting) {
-      if (chargeIsAccrued(chargeDefinition)) {
-        if (Action.valueOf(chargeDefinition.getAccrueAction()) == action) {
-          final BigDecimal maxDebit = prePaymentBalances.getMaxDebit(chargeDefinition.getFromAccountDesignator(), chargeAmount);
-          adjustedChargeAmount = prePaymentBalances.getMaxCredit(chargeDefinition.getAccrualAccountDesignator(), maxDebit);
-
-          this.addToBalance(chargeDefinition.getFromAccountDesignator(), adjustedChargeAmount.negate());
-          this.addToBalance(chargeDefinition.getAccrualAccountDesignator(), adjustedChargeAmount);
-        } else if (Action.valueOf(chargeDefinition.getChargeAction()) == action) {
-          final BigDecimal maxDebit = prePaymentBalances.getMaxDebit(chargeDefinition.getAccrualAccountDesignator(), chargeAmount);
-          adjustedChargeAmount = prePaymentBalances.getMaxCredit(chargeDefinition.getToAccountDesignator(), maxDebit);
-
-          this.addToBalance(chargeDefinition.getAccrualAccountDesignator(), adjustedChargeAmount.negate());
-          this.addToBalance(chargeDefinition.getToAccountDesignator(), adjustedChargeAmount);
-        }
-      } else if (Action.valueOf(chargeDefinition.getChargeAction()) == action) {
+    if (this.accrualAccounting && chargeIsAccrued(chargeDefinition)) {
+      if (Action.valueOf(chargeDefinition.getAccrueAction()) == action) {
         final BigDecimal maxDebit = prePaymentBalances.getMaxDebit(chargeDefinition.getFromAccountDesignator(), chargeAmount);
-        adjustedChargeAmount = prePaymentBalances.getMaxCredit(chargeDefinition.getToAccountDesignator(), maxDebit);
+        adjustedChargeAmount = prePaymentBalances.getMaxCredit(chargeDefinition.getAccrualAccountDesignator(), maxDebit);
 
         this.addToBalance(chargeDefinition.getFromAccountDesignator(), adjustedChargeAmount.negate());
+        this.addToBalance(chargeDefinition.getAccrualAccountDesignator(), adjustedChargeAmount);
+      } else if (Action.valueOf(chargeDefinition.getChargeAction()) == action) {
+        final BigDecimal maxDebit = prePaymentBalances.getMaxDebit(chargeDefinition.getAccrualAccountDesignator(), chargeAmount);
+        adjustedChargeAmount = prePaymentBalances.getMaxCredit(chargeDefinition.getToAccountDesignator(), maxDebit);
+
+        this.addToBalance(chargeDefinition.getAccrualAccountDesignator(), adjustedChargeAmount.negate());
         this.addToBalance(chargeDefinition.getToAccountDesignator(), adjustedChargeAmount);
       }
     }
@@ -179,9 +173,30 @@ public class PaymentBuilder {
     if (chargeDefinition.getAccrualAccountDesignator() != null)
       accountsToCompare.add(chargeDefinition.getAccrualAccountDesignator());
 
-    return !Sets.intersection(accountsToCompare, forAccountDesignators).isEmpty();
+    final Set<String> expandedForAccountDesignators = expandAccountDesignators(forAccountDesignators);
+
+    return !Sets.intersection(accountsToCompare, expandedForAccountDesignators).isEmpty();
   }
 
+  static Set<String> expandAccountDesignators(final Set<String> accountDesignators) {
+    final Set<RequiredAccountAssignment> accountAssignmentsRequired = IndividualLendingPatternFactory.individualLendingPattern().getAccountAssignmentsRequired();
+    final Map<String, List<RequiredAccountAssignment>> accountAssignmentsByGroup = accountAssignmentsRequired.stream()
+        .filter(x -> x.getGroup() != null)
+        .collect(Collectors.groupingBy(RequiredAccountAssignment::getGroup, Collectors.toList()));
+    final Set<String> groupExpansions = accountDesignators.stream()
+        .flatMap(accountDesignator -> {
+          final List<RequiredAccountAssignment> group = accountAssignmentsByGroup.get(accountDesignator);
+          if (group != null)
+            return group.stream();
+          else
+            return Stream.empty();
+        })
+        .map(RequiredAccountAssignment::getAccountDesignator)
+        .collect(Collectors.toSet());
+    final Set<String> ret = new HashSet<>(accountDesignators);
+    ret.addAll(groupExpansions);
+    return ret;
+  }
 
   private static CostComponent constructEmptyCostComponent(final ChargeDefinition chargeDefinition) {
     final CostComponent ret = new CostComponent();

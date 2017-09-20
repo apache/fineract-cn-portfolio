@@ -28,13 +28,12 @@ import java.util.concurrent.TimeUnit;
  * @author Myrle Krantz
  */
 public class RealRunningBalances implements RunningBalances {
-  private final ExpiringMap<String, BigDecimal> realBalanceCache;
-
+  private final ExpiringMap<String, BigDecimal> realAccountBalanceCache;
 
   RealRunningBalances(
       final AccountingAdapter accountingAdapter,
       final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
-    this.realBalanceCache = ExpiringMap.builder()
+    this.realAccountBalanceCache = ExpiringMap.builder()
         .maxSize(20)
         .expirationPolicy(ExpirationPolicy.CREATED)
         .expiration(30,TimeUnit.SECONDS)
@@ -46,13 +45,13 @@ public class RealRunningBalances implements RunningBalances {
           else {
             accountIdentifier = Optional.of(designatorToAccountIdentifierMapper.mapOrThrow(accountDesignator));
           }
-          return accountIdentifier.map(accountingAdapter::getCurrentBalance).orElse(BigDecimal.ZERO);
+          return accountIdentifier.map(accountingAdapter::getCurrentAccountBalance).orElse(BigDecimal.ZERO);
         })
         .build();
   }
 
   @Override
-  public BigDecimal getBalance(final String accountDesignator) {
-    return realBalanceCache.get(accountDesignator);
+  public BigDecimal getAccountBalance(final String accountDesignator) {
+    return realAccountBalanceCache.get(accountDesignator);
   }
 }

@@ -108,7 +108,7 @@ public class CostComponentServiceTest {
   @Test
   public void getAmountProportionalTo() {
     final SimulatedRunningBalances runningBalances = new SimulatedRunningBalances();
-    runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN, testCase.runningBalance.negate());
+    runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.runningBalance.negate());
     final BigDecimal amount = CostComponentService.getAmountProportionalTo(
         testCase.chargeProportionalDesignator,
         testCase.maximumBalance,

@@ -59,7 +59,9 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
         ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID,
         ChargeIdentifiers.DISBURSE_PAYMENT_ID,
         ChargeIdentifiers.INTEREST_ID,
-        ChargeIdentifiers.REPAYMENT_ID)
+        ChargeIdentifiers.REPAY_PRINCIPAL_ID,
+        ChargeIdentifiers.REPAY_INTEREST_ID,
+        ChargeIdentifiers.REPAY_FEES_ID)
         .collect(Collectors.toSet());
     final Set<String> expectedChangeableChargeDefinitionIdentifiers = Stream.of(
         ChargeIdentifiers.DISBURSEMENT_FEE_ID,

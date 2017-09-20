@@ -169,15 +169,27 @@ public class IndividualLoanCommandHandler {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
             = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
+    //Create the needed account assignments for groups and persist them for the case.
+    designatorToAccountIdentifierMapper.getGroupsNeedingLedgers()
+        .map(groupNeedingLedger -> new AccountAssignment(groupNeedingLedger.getGroupName(),
+            accountingAdapter.createLedger(
+                dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
+                groupNeedingLedger.getGroupName(),
+                groupNeedingLedger.getParentLedger())))
+        .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
+        .forEach(caseAccountAssignmentEntity -> dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity));
+
     //Create the needed account assignments and persist them for the case.
     designatorToAccountIdentifierMapper.getLedgersNeedingAccounts()
-            .map(ledger ->
-                    new AccountAssignment(ledger.getDesignator(),
-                            accountingAdapter.createAccountForLedgerAssignment(dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(), ledger)))
-            .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
-            .forEach(caseAccountAssignmentEntity ->
-              dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity)
-            );
+        .map(ledger ->
+            new AccountAssignment(ledger.getDesignator(),
+                accountingAdapter.createAccountForLedgerAssignment(
+                    dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
+                    ledger)))
+        .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
+        .forEach(caseAccountAssignmentEntity ->
+            dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity)
+        );
     caseRepository.save(dataContextOfAction.getCustomerCaseEntity());
 
     final PaymentBuilder paymentBuilder =
@@ -239,8 +251,10 @@ public class IndividualLoanCommandHandler {
       customerCase.setCurrentState(Case.State.ACTIVE.name());
       caseRepository.save(customerCase);
     }
-    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
-    final BigDecimal currentBalance = accountingAdapter.getCurrentBalance(customerLoanAccountIdentifier).negate();
+    final String customerLoanPrinicipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+    final String customerLoanInterestAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+    final String customerLoanFeesAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_FEES);
+    final BigDecimal currentBalance = accountingAdapter.getTotalOfCurrentAccountBalances(customerLoanPrinicipalAccountIdentifier, customerLoanInterestAccountIdentifier, customerLoanFeesAccountIdentifier);
 
     final BigDecimal newLoanPaymentSize = costComponentService.getLoanPaymentSizeForSingleDisbursement(
         currentBalance.add(disbursalAmount),

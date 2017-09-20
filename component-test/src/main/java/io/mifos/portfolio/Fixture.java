@@ -19,6 +19,7 @@ import com.google.gson.Gson;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessFactor;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessSnapshot;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
 import io.mifos.portfolio.api.v1.domain.*;
 
@@ -71,10 +72,20 @@ public class Fixture {
     //accountAssignments.add(new AccountAssignment(ENTRY, ...));
     // Don't assign entry account in test since it usually will not be assigned IRL.
     accountAssignments.add(new AccountAssignment(LOAN_FUNDS_SOURCE, LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER));
-    final AccountAssignment customerLoanAccountAssignment = new AccountAssignment();
-    customerLoanAccountAssignment.setDesignator(CUSTOMER_LOAN);
-    customerLoanAccountAssignment.setLedgerIdentifier(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
-    accountAssignments.add(customerLoanAccountAssignment);
+    final AccountAssignment customerLoanPrincipalAccountAssignment = new AccountAssignment();
+    customerLoanPrincipalAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+    customerLoanPrincipalAccountAssignment.setLedgerIdentifier(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
+    accountAssignments.add(customerLoanPrincipalAccountAssignment);
+
+    final AccountAssignment customerLoanInterestAccountAssignment = new AccountAssignment();
+    customerLoanInterestAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+    customerLoanInterestAccountAssignment.setLedgerIdentifier(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
+    accountAssignments.add(customerLoanInterestAccountAssignment);
+
+    final AccountAssignment customerLoanFeesAccountAssignment = new AccountAssignment();
+    customerLoanFeesAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_FEES);
+    customerLoanFeesAccountAssignment.setLedgerIdentifier(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
+    accountAssignments.add(customerLoanFeesAccountAssignment);
     product.setAccountAssignments(accountAssignments);
 
     final ProductParameters productParameters = new ProductParameters();

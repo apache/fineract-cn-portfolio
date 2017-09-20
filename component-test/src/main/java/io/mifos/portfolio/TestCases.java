@@ -21,6 +21,7 @@ import io.mifos.core.test.domain.TimeStampChecker;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessFactor;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessSnapshot;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
@@ -36,9 +37,6 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.CUSTOMER_LOAN;
-import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.ENTRY;
 
 /**
  * @author Myrle Krantz
@@ -96,8 +94,8 @@ public class TestCases extends AbstractPortfolioTest {
     final Case caseInstance = createAdjustedCase(product.getIdentifier(), x -> x.setParameters(originalParameters));
 
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
-    accountAssignments.add(new AccountAssignment(CUSTOMER_LOAN, "002-011"));
-    accountAssignments.add(new AccountAssignment(ENTRY, "002-012"));
+    accountAssignments.add(new AccountAssignment(AccountDesignators.CUSTOMER_LOAN_GROUP, "002-011"));
+    accountAssignments.add(new AccountAssignment(AccountDesignators.ENTRY, "002-012"));
     caseInstance.setAccountAssignments(accountAssignments);
 
     newCaseParameters.setMaximumBalance(Fixture.fixScale(BigDecimal.TEN));

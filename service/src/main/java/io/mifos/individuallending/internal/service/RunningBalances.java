@@ -15,7 +15,10 @@
  */
 package io.mifos.individuallending.internal.service;
 
+import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
+import io.mifos.portfolio.api.v1.domain.Pattern;
+import io.mifos.portfolio.api.v1.domain.RequiredAccountAssignment;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -29,7 +32,9 @@ public interface RunningBalances {
     final BigDecimal negative = BigDecimal.valueOf(-1);
     final BigDecimal positive = BigDecimal.valueOf(1);
 
-    this.put(AccountDesignators.CUSTOMER_LOAN, negative);
+    this.put(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, negative);
+    this.put(AccountDesignators.CUSTOMER_LOAN_FEES, negative);
+    this.put(AccountDesignators.CUSTOMER_LOAN_INTEREST, negative);
     this.put(AccountDesignators.LOAN_FUNDS_SOURCE, negative);
     this.put(AccountDesignators.PROCESSING_FEE_INCOME, positive);
     this.put(AccountDesignators.ORIGINATION_FEE_INCOME, positive);
@@ -42,7 +47,24 @@ public interface RunningBalances {
     this.put(AccountDesignators.ENTRY, positive);
   }};
 
-  BigDecimal getBalance(final String accountDesignator);
+  BigDecimal getAccountBalance(final String accountDesignator);
+
+  default BigDecimal getLedgerBalance(final String ledgerDesignator) {
+    final Pattern individualLendingPattern = IndividualLendingPatternFactory.individualLendingPattern();
+    return individualLendingPattern.getAccountAssignmentsRequired().stream()
+        .filter(requiredAccountAssignment -> ledgerDesignator.equals(requiredAccountAssignment.getGroup()))
+        .map(RequiredAccountAssignment::getAccountDesignator)
+        .map(this::getAccountBalance)
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
+  }
+
+  default BigDecimal getBalance(final String designator) {
+    final Pattern individualLendingPattern = IndividualLendingPatternFactory.individualLendingPattern();
+    if (individualLendingPattern.getAccountAssignmentGroups().contains(designator))
+      return getLedgerBalance(designator);
+    else
+      return getAccountBalance(designator);
+  }
 
   default BigDecimal getMaxDebit(final String accountDesignator, final BigDecimal amount) {
     if (accountDesignator.equals(AccountDesignators.ENTRY))

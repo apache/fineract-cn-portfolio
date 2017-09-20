@@ -67,7 +67,7 @@ public class Fixture {
     //accountAssignments.add(new AccountAssignment(ENTRY, ...));
     // Don't assign entry account in test since it usually will not be assigned IRL.
     accountAssignments.add(new AccountAssignment(LOAN_FUNDS_SOURCE, LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER));
-    accountAssignments.add(new AccountAssignment(CUSTOMER_LOAN, "001-013"));
+    accountAssignments.add(new AccountAssignment(CUSTOMER_LOAN_GROUP, "001-013"));
     product.setAccountAssignments(accountAssignments);
 
     final ProductParameters productParameters = new ProductParameters();
@@ -104,7 +104,7 @@ public class Fixture {
 
 
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
-    accountAssignments.add(new AccountAssignment(CUSTOMER_LOAN, "001-011"));
+    accountAssignments.add(new AccountAssignment(CUSTOMER_LOAN_GROUP, "001-011"));
     accountAssignments.add(new AccountAssignment(ENTRY, "001-012"));
     ret.setAccountAssignments(accountAssignments);
     ret.setCurrentState(Case.State.CREATED.name());

@@ -30,7 +30,8 @@ public class SimulatedRunningBalances implements RunningBalances {
     this.balances = new HashMap<>();
   }
 
-  public BigDecimal getBalance(final String accountDesignator) {
+  @Override
+  public BigDecimal getAccountBalance(final String accountDesignator) {
     return balances.getOrDefault(accountDesignator, BigDecimal.ZERO);
   }
 

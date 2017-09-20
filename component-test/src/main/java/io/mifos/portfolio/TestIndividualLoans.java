@@ -90,7 +90,7 @@ public class TestIndividualLoans extends AbstractPortfolioTest {
     Assert.assertNotNull(paymentScheduleFirstPage);
     paymentScheduleFirstPage.getElements().forEach(x -> {
       x.getPayment().getCostComponents().forEach(y -> Assert.assertEquals(product.getMinorCurrencyUnitDigits(), y.getAmount().scale()));
-      Assert.assertEquals(product.getMinorCurrencyUnitDigits(), x.getBalances().get(AccountDesignators.CUSTOMER_LOAN).scale());
+      Assert.assertEquals(product.getMinorCurrencyUnitDigits(), x.getBalances().get(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL).scale());
     });
   }
 

@@ -105,7 +105,7 @@ class Fixture {
     chargeDefinition.setAccrueAction(Action.APPLY_INTEREST.name());
     chargeDefinition.setChargeAction(Action.ACCEPT_PAYMENT.name());
     chargeDefinition.setAmount(BigDecimal.ONE);
-    chargeDefinition.setFromAccountDesignator(AccountDesignators.CUSTOMER_LOAN);
+    chargeDefinition.setFromAccountDesignator(AccountDesignators.CUSTOMER_LOAN_INTEREST);
     chargeDefinition.setAccrualAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
     chargeDefinition.setToAccountDesignator(AccountDesignators.INTEREST_INCOME);
     return new ScheduledCharge(scheduledAction, chargeDefinition, Optional.empty());

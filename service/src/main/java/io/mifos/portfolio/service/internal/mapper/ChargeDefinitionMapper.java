@@ -104,7 +104,7 @@ public class ChargeDefinitionMapper {
         return true;
       case PROCESSING_FEE_ID:
         return true;
-      case REPAYMENT_ID:
+      case REPAY_PRINCIPAL_ID:
         return false;
       default:
         return false;

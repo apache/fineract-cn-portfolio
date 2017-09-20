@@ -127,16 +127,16 @@ public class BeatPublishCommandHandler {
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
-    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
+    final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
     final String lateFeeAccrualAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.LATE_FEE_ACCRUAL);
 
-    final BigDecimal currentBalance = accountingAdapter.getCurrentBalance(customerLoanAccountIdentifier);
+    final BigDecimal currentBalance = accountingAdapter.getCurrentAccountBalance(customerLoanPrincipalAccountIdentifier);
     if (currentBalance.compareTo(BigDecimal.ZERO) == 0) //No late fees if the current balance is zilch.
       return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
 
 
     final LocalDateTime dateOfMostRecentDisbursement =
-        accountingAdapter.getDateOfMostRecentEntryContainingMessage(customerLoanAccountIdentifier, dataContextOfAction.getMessageForCharge(Action.DISBURSE))
+        accountingAdapter.getDateOfMostRecentEntryContainingMessage(customerLoanPrincipalAccountIdentifier, dataContextOfAction.getMessageForCharge(Action.DISBURSE))
             .orElseThrow(() ->
                 ServiceException.badRequest("No last disbursal date for ''{0}.{1}'' could be determined.  " +
                     "Therefore it cannot be checked for lateness.", productIdentifier, caseIdentifier));
@@ -155,7 +155,7 @@ public class BeatPublishCommandHandler {
         .multiply(BigDecimal.valueOf(repaymentPeriodsBetweenBeginningAndToday));
 
     final BigDecimal paymentsSum = accountingAdapter.sumMatchingEntriesSinceDate(
-        customerLoanAccountIdentifier,
+        customerLoanPrincipalAccountIdentifier,
         dateOfMostRecentDisbursement.toLocalDate(),
         dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT));
 
@@ -165,7 +165,7 @@ public class BeatPublishCommandHandler {
         dataContextOfAction.getMessageForCharge(Action.MARK_LATE));
 
     if (paymentsSum.compareTo(expectedPaymentSum.add(lateFeesAccrued)) < 0) {
-      final Optional<LocalDateTime> dateOfMostRecentLateFee = accountingAdapter.getDateOfMostRecentEntryContainingMessage(customerLoanAccountIdentifier, dataContextOfAction.getMessageForCharge(Action.MARK_LATE));
+      final Optional<LocalDateTime> dateOfMostRecentLateFee = accountingAdapter.getDateOfMostRecentEntryContainingMessage(customerLoanPrincipalAccountIdentifier, dataContextOfAction.getMessageForCharge(Action.MARK_LATE));
       if (!dateOfMostRecentLateFee.isPresent() ||
           mostRecentLateFeeIsBeforeMostRecentRepaymentPeriod(repaymentPeriods, dateOfMostRecentLateFee.get())) {
         commandBus.dispatch(new MarkLateCommand(productIdentifier, caseIdentifier, command.getForTime()));

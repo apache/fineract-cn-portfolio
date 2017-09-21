@@ -19,7 +19,9 @@ import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.NotFoundException;
 import io.mifos.core.lang.DateConverter;
+import io.mifos.core.lang.TenantContextHolder;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.portfolio.service.internal.util.AccountingListener;
 import org.hamcrest.Description;
 import org.junit.Assert;
 import org.mockito.AdditionalMatchers;
@@ -477,10 +479,17 @@ class AccountingFixture {
   }
 
   private static class CreateLedgerAnswer implements Answer {
+    private final AccountingListener accountingListener;
+
+    public CreateLedgerAnswer(AccountingListener accountingListener) {
+      this.accountingListener = accountingListener;
+    }
+
     @Override
     public Void answer(final InvocationOnMock invocation) throws Throwable {
       final Ledger ledger = invocation.getArgumentAt(0, Ledger.class);
       makeLedgerResponsive(ledger, (LedgerManager) invocation.getMock());
+      accountingListener.onPostLedger(TenantContextHolder.checkedGetIdentifier(), ledger.getIdentifier());
       return null;
     }
   }
@@ -512,7 +521,7 @@ class AccountingFixture {
     }
   }
 
-  static void mockAccountingPrereqs(final LedgerManager ledgerManagerMock) {
+  static void mockAccountingPrereqs(final LedgerManager ledgerManagerMock, final AccountingListener accountingListener) {
     makeAccountResponsive(loanFundsSourceAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(loanOriginationFeesIncomeAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(processingFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);
@@ -536,7 +545,7 @@ class AccountingFixture {
     Mockito.doAnswer(new FindAccountAnswer()).when(ledgerManagerMock).findAccount(Matchers.anyString());
     Mockito.doAnswer(new CreateAccountAnswer()).when(ledgerManagerMock).createAccount(Matchers.any());
     Mockito.doAnswer(new CreateJournalEntryAnswer()).when(ledgerManagerMock).createJournalEntry(Matchers.any(JournalEntry.class));
-    Mockito.doAnswer(new CreateLedgerAnswer()).when(ledgerManagerMock).createLedger(Matchers.any(Ledger.class));
+    Mockito.doAnswer(new CreateLedgerAnswer(accountingListener)).when(ledgerManagerMock).createLedger(Matchers.any(Ledger.class));
   }
 
   static void mockBalance(final String accountIdentifier, final BigDecimal balance) {

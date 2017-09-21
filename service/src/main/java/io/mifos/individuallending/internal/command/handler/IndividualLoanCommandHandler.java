@@ -152,12 +152,26 @@ public class IndividualLoanCommandHandler {
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
   }
 
+  static class InterruptedInALambdaException extends RuntimeException {
+
+    private final InterruptedException interruptedException;
+
+    InterruptedInALambdaException(InterruptedException e) {
+      interruptedException = e;
+    }
+
+    void throwWrappedException() throws InterruptedException {
+      throw interruptedException;
+    }
+  }
+
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(
       selectorName = EventConstants.SELECTOR_NAME,
       selectorValue = IndividualLoanEventConstants.APPROVE_INDIVIDUALLOAN_CASE)
-  public IndividualLoanCommandEvent process(final ApproveCommand command) {
+  public IndividualLoanCommandEvent process(final ApproveCommand command) throws InterruptedException
+  {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
     final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
@@ -170,14 +184,25 @@ public class IndividualLoanCommandHandler {
             = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
     //Create the needed account assignments for groups and persist them for the case.
-    designatorToAccountIdentifierMapper.getGroupsNeedingLedgers()
-        .map(groupNeedingLedger -> new AccountAssignment(groupNeedingLedger.getGroupName(),
-            accountingAdapter.createLedger(
-                dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
-                groupNeedingLedger.getGroupName(),
-                groupNeedingLedger.getParentLedger())))
-        .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
-        .forEach(caseAccountAssignmentEntity -> dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity));
+    try {
+      designatorToAccountIdentifierMapper.getGroupsNeedingLedgers()
+          .map(groupNeedingLedger -> {
+            try {
+              final String createdLedgerIdentifier = accountingAdapter.createLedger(
+                  dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
+                  groupNeedingLedger.getGroupName(),
+                  groupNeedingLedger.getParentLedger());
+              return new AccountAssignment(groupNeedingLedger.getGroupName(), createdLedgerIdentifier);
+            } catch (InterruptedException e) {
+              throw new InterruptedInALambdaException(e);
+            }
+          })
+          .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
+          .forEach(caseAccountAssignmentEntity -> dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity));
+    }
+    catch (final InterruptedInALambdaException e) {
+      e.throwWrappedException();
+    }
 
     //Create the needed account assignments and persist them for the case.
     designatorToAccountIdentifierMapper.getLedgersNeedingAccounts()

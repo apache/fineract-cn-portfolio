@@ -24,6 +24,7 @@ import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.lang.DateConverter;
 import io.mifos.core.lang.DateRange;
 import io.mifos.core.lang.ServiceException;
+import io.mifos.core.lang.listening.EventExpectation;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.service.ServiceConstants;
@@ -39,6 +40,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -54,12 +56,15 @@ public class AccountingAdapter {
   public enum IdentifierType {LEDGER, ACCOUNT}
 
   private final LedgerManager ledgerManager;
+  private final AccountingListener accountingListener;
   private final Logger logger;
 
   @Autowired
   public AccountingAdapter(@SuppressWarnings("SpringJavaAutowiringInspection") final LedgerManager ledgerManager,
+                           final AccountingListener accountingListener,
                            @Qualifier(ServiceConstants.LOGGER_NAME) final Logger logger) {
     this.ledgerManager = ledgerManager;
+    this.accountingListener = accountingListener;
     this.logger = logger;
   }
 
@@ -170,7 +175,12 @@ public class AccountingAdapter {
      throw ServiceException.internalError("Could not find the account with identifier ''{0}''", accountIdentifier);
     }
   }
-  public String createLedger(final String customerIdentifier, final String groupName, final String parentLedger) {
+
+  public String createLedger(
+      final String customerIdentifier,
+      final String groupName,
+      final String parentLedger) throws InterruptedException
+  {
     final Ledger ledger = ledgerManager.findLedger(parentLedger);
     final List<Ledger> subLedgers = ledger.getSubLedgers() == null ? Collections.emptyList() : ledger.getSubLedgers();
 
@@ -185,7 +195,13 @@ public class AccountingAdapter {
 
     logger.info("Creating ledger with identifier '{}'", ledgerIdentifer);
 
-    ledgerManager.createLedger(generatedLedger); //TODO: wait?
+    final EventExpectation expectation = accountingListener.expectLedgerCreation(generatedLedger.getIdentifier());
+    ledgerManager.createLedger(generatedLedger);
+    final boolean ledgerCreationDetected = expectation.waitForOccurrence(5, TimeUnit.SECONDS);
+    if (!ledgerCreationDetected)
+      logger.warn("Waited 5 seconds for creation of ledger '{}', but it was not detected. This could cause subsequent " +
+              "account creations to fail. Is there something wrong with the accounting service? Is ActiveMQ setup properly?",
+          generatedLedger.getIdentifier());
     return ledgerIdentifer;
   }
 

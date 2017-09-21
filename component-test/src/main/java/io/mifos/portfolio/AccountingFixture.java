@@ -228,7 +228,7 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(LATE_FEE_INCOME_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.LIABILITY.name()); //TODO: ??
+    ret.setType(AccountType.REVENUE.name());
     return ret;
   }
 
@@ -236,7 +236,7 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER);
     ret.setLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.LIABILITY.name()); //TODO: ??
+    ret.setType(AccountType.REVENUE.name());
     return ret;
   }
 
@@ -481,7 +481,7 @@ class AccountingFixture {
   private static class CreateLedgerAnswer implements Answer {
     private final AccountingListener accountingListener;
 
-    public CreateLedgerAnswer(AccountingListener accountingListener) {
+    CreateLedgerAnswer(AccountingListener accountingListener) {
       this.accountingListener = accountingListener;
     }
 

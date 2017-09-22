@@ -28,10 +28,9 @@ import io.mifos.individuallending.internal.repository.CaseCreditWorthinessFactor
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType;
-import io.mifos.individuallending.internal.service.costcomponent.CostComponentService;
+import io.mifos.individuallending.internal.service.costcomponent.*;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.DataContextService;
-import io.mifos.individuallending.internal.service.costcomponent.PaymentBuilder;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.service.ServiceConstants;
 import io.mifos.products.spi.PatternFactory;
@@ -42,6 +41,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -108,13 +108,24 @@ public class IndividualLendingPatternFactory implements PatternFactory {
         AccountType.LIABILITY.name()));
     INDIVIDUAL_LENDING_PATTERN.setAccountAssignmentsRequired(individualLendingRequiredAccounts);
   }
+
+
   public static Pattern individualLendingPattern() {
     return INDIVIDUAL_LENDING_PATTERN;
   }
 
   private final CaseParametersRepository caseParametersRepository;
   private final DataContextService dataContextService;
-  private final CostComponentService costComponentService;
+  private final OpenPaymentBuilderService openPaymentBuilderService;
+  private final ApprovePaymentBuilderService approvePaymentBuilderService;
+  private final DenyPaymentBuilderService denyPaymentBuilderService;
+  private final DisbursePaymentBuilderService disbursePaymentBuilderService;
+  private final ApplyInterestPaymentBuilderService applyInterestPaymentBuilderService;
+  private final AcceptPaymentBuilderService acceptPaymentBuilderService;
+  private final ClosePaymentBuilderService closePaymentBuilderService;
+  private final MarkLatePaymentBuilderService markLatePaymentBuilderService;
+  private final WriteOffPaymentBuilderService writeOffPaymentBuilderService;
+  private final RecoverPaymentBuilderService recoverPaymentBuilderService;
   private final CustomerManager customerManager;
   private final IndividualLendingCommandDispatcher individualLendingCommandDispatcher;
   private final Gson gson;
@@ -123,14 +134,33 @@ public class IndividualLendingPatternFactory implements PatternFactory {
   IndividualLendingPatternFactory(
       final CaseParametersRepository caseParametersRepository,
       final DataContextService dataContextService,
-      final CostComponentService costComponentService,
+      final OpenPaymentBuilderService openPaymentBuilderService,
+      final ApprovePaymentBuilderService approvePaymentBuilderService,
+      final DenyPaymentBuilderService denyPaymentBuilderService,
+      final DisbursePaymentBuilderService disbursePaymentBuilderService,
+      final ApplyInterestPaymentBuilderService applyInterestPaymentBuilderService,
+      final AcceptPaymentBuilderService acceptPaymentBuilderService,
+      final ClosePaymentBuilderService closePaymentBuilderService,
+      final MarkLatePaymentBuilderService markLatePaymentBuilderService,
+      final WriteOffPaymentBuilderService writeOffPaymentBuilderService,
+      final RecoverPaymentBuilderService recoverPaymentBuilderService,
       final CustomerManager customerManager,
       final IndividualLendingCommandDispatcher individualLendingCommandDispatcher,
       @Qualifier(ServiceConstants.GSON_NAME) final Gson gson)
   {
     this.caseParametersRepository = caseParametersRepository;
     this.dataContextService = dataContextService;
-    this.costComponentService = costComponentService;
+    this.openPaymentBuilderService = openPaymentBuilderService;
+    this.approvePaymentBuilderService = approvePaymentBuilderService;
+    this.denyPaymentBuilderService = denyPaymentBuilderService;
+    this.disbursePaymentBuilderService = disbursePaymentBuilderService;
+    this.applyInterestPaymentBuilderService = applyInterestPaymentBuilderService;
+    this.acceptPaymentBuilderService = acceptPaymentBuilderService;
+    this.closePaymentBuilderService = closePaymentBuilderService;
+    this.markLatePaymentBuilderService = markLatePaymentBuilderService;
+    this.writeOffPaymentBuilderService = writeOffPaymentBuilderService;
+    this.recoverPaymentBuilderService = recoverPaymentBuilderService;
+
     this.customerManager = customerManager;
     this.individualLendingCommandDispatcher = individualLendingCommandDispatcher;
     this.gson = gson;
@@ -386,11 +416,60 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     final Case.State caseState = Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState());
     checkActionCanBeExecuted(caseState, action);
 
-    final PaymentBuilder paymentBuilder = costComponentService.getCostComponentsForAction(
+    return getPaymentForAction(
         action,
         dataContextOfAction,
+        forAccountDesignators,
         forPaymentSize,
         forDateTime.toLocalDate());
+  }
+
+  private Payment getPaymentForAction(
+      final Action action,
+      final DataContextOfAction dataContextOfAction,
+      final Set<String> forAccountDesignators,
+      final BigDecimal forPaymentSize,
+      final LocalDate forDate) {
+    final PaymentBuilderService paymentBuilderService;
+    switch (action) {
+      case OPEN:
+        paymentBuilderService = openPaymentBuilderService;
+        break;
+      case APPROVE:
+        paymentBuilderService = approvePaymentBuilderService;
+        break;
+      case DENY:
+        paymentBuilderService = denyPaymentBuilderService;
+        break;
+      case DISBURSE:
+        paymentBuilderService = disbursePaymentBuilderService;
+        break;
+      case APPLY_INTEREST:
+        paymentBuilderService = applyInterestPaymentBuilderService;
+        break;
+      case ACCEPT_PAYMENT:
+        paymentBuilderService = acceptPaymentBuilderService;
+        break;
+      case CLOSE:
+        paymentBuilderService = closePaymentBuilderService;
+        break;
+      case MARK_LATE:
+        paymentBuilderService = markLatePaymentBuilderService;
+        break;
+      case WRITE_OFF:
+        paymentBuilderService = writeOffPaymentBuilderService;
+        break;
+      case RECOVER:
+        paymentBuilderService = recoverPaymentBuilderService;
+        break;
+      default:
+        throw ServiceException.internalError("Invalid action: ''{0}''.", action.name());
+    }
+
+    final PaymentBuilder paymentBuilder = paymentBuilderService.getPaymentBuilder(
+        dataContextOfAction,
+        forPaymentSize,
+        forDate);
 
     return paymentBuilder.buildPayment(action, forAccountDesignators);
   }

@@ -30,9 +30,8 @@ import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.individuallending.internal.command.*;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.individuallending.internal.service.*;
-import io.mifos.individuallending.internal.service.costcomponent.CostComponentService;
+import io.mifos.individuallending.internal.service.costcomponent.*;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
-import io.mifos.individuallending.internal.service.costcomponent.PaymentBuilder;
 import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpers;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
@@ -67,7 +66,16 @@ import java.util.stream.Collectors;
 public class IndividualLoanCommandHandler {
   private final CaseRepository caseRepository;
   private final DataContextService dataContextService;
-  private final CostComponentService costComponentService;
+  private final OpenPaymentBuilderService openPaymentBuilderService;
+  private final ApprovePaymentBuilderService approvePaymentBuilderService;
+  private final DenyPaymentBuilderService denyPaymentBuilderService;
+  private final DisbursePaymentBuilderService disbursePaymentBuilderService;
+  private final ApplyInterestPaymentBuilderService applyInterestPaymentBuilderService;
+  private final AcceptPaymentBuilderService acceptPaymentBuilderService;
+  private final ClosePaymentBuilderService closePaymentBuilderService;
+  private final MarkLatePaymentBuilderService markLatePaymentBuilderService;
+  private final WriteOffPaymentBuilderService writeOffPaymentBuilderService;
+  private final RecoverPaymentBuilderService recoverPaymentBuilderService;
   private final AccountingAdapter accountingAdapter;
   private final TaskInstanceRepository taskInstanceRepository;
   private final CaseParametersRepository caseParametersRepository;
@@ -76,13 +84,31 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandHandler(
       final CaseRepository caseRepository,
       final DataContextService dataContextService,
-      final CostComponentService costComponentService,
+      final OpenPaymentBuilderService openPaymentBuilderService,
+      final ApprovePaymentBuilderService approvePaymentBuilderService,
+      final DenyPaymentBuilderService denyPaymentBuilderService,
+      final DisbursePaymentBuilderService disbursePaymentBuilderService,
+      final ApplyInterestPaymentBuilderService applyInterestPaymentBuilderService,
+      final AcceptPaymentBuilderService acceptPaymentBuilderService,
+      final ClosePaymentBuilderService closePaymentBuilderService,
+      final MarkLatePaymentBuilderService markLatePaymentBuilderService,
+      final WriteOffPaymentBuilderService writeOffPaymentBuilderService,
+      final RecoverPaymentBuilderService recoverPaymentBuilderService,
       final AccountingAdapter accountingAdapter,
       final TaskInstanceRepository taskInstanceRepository,
       final CaseParametersRepository caseParametersRepository) {
     this.caseRepository = caseRepository;
     this.dataContextService = dataContextService;
-    this.costComponentService = costComponentService;
+    this.openPaymentBuilderService = openPaymentBuilderService;
+    this.approvePaymentBuilderService = approvePaymentBuilderService;
+    this.denyPaymentBuilderService = denyPaymentBuilderService;
+    this.disbursePaymentBuilderService = disbursePaymentBuilderService;
+    this.applyInterestPaymentBuilderService = applyInterestPaymentBuilderService;
+    this.acceptPaymentBuilderService = acceptPaymentBuilderService;
+    this.closePaymentBuilderService = closePaymentBuilderService;
+    this.markLatePaymentBuilderService = markLatePaymentBuilderService;
+    this.writeOffPaymentBuilderService = writeOffPaymentBuilderService;
+    this.recoverPaymentBuilderService = recoverPaymentBuilderService;
     this.accountingAdapter = accountingAdapter;
     this.taskInstanceRepository = taskInstanceRepository;
     this.caseParametersRepository = caseParametersRepository;
@@ -103,7 +129,7 @@ public class IndividualLoanCommandHandler {
     checkIfTasksAreOutstanding(dataContextOfAction, Action.OPEN);
 
     final PaymentBuilder paymentBuilder
-        = costComponentService.getCostComponentsForOpen(dataContextOfAction);
+        = openPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today());
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
             = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -140,7 +166,7 @@ public class IndividualLoanCommandHandler {
     checkIfTasksAreOutstanding(dataContextOfAction, Action.DENY);
 
     final PaymentBuilder paymentBuilder
-        = costComponentService.getCostComponentsForDeny(dataContextOfAction);
+        = denyPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today());
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -222,7 +248,7 @@ public class IndividualLoanCommandHandler {
     caseRepository.save(dataContextOfAction.getCustomerCaseEntity());
 
     final PaymentBuilder paymentBuilder =
-        costComponentService.getCostComponentsForApprove(dataContextOfAction);
+        approvePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today());
 
     final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.APPROVE, designatorToAccountIdentifierMapper);
 
@@ -256,7 +282,7 @@ public class IndividualLoanCommandHandler {
 
     final BigDecimal disbursalAmount = Optional.ofNullable(command.getCommand().getPaymentSize()).orElse(BigDecimal.ZERO);
     final PaymentBuilder paymentBuilder =
-        costComponentService.getCostComponentsForDisburse(dataContextOfAction, disbursalAmount);
+        disbursePaymentBuilderService.getPaymentBuilder(dataContextOfAction, disbursalAmount, CostComponentService.today());
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -285,7 +311,7 @@ public class IndividualLoanCommandHandler {
     final String customerLoanFeesAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_FEES);
     final BigDecimal currentBalance = accountingAdapter.getTotalOfCurrentAccountBalances(customerLoanPrinicipalAccountIdentifier, customerLoanInterestAccountIdentifier, customerLoanFeesAccountIdentifier);
 
-    final BigDecimal newLoanPaymentSize = costComponentService.getLoanPaymentSizeForSingleDisbursement(
+    final BigDecimal newLoanPaymentSize = disbursePaymentBuilderService.getLoanPaymentSizeForSingleDisbursement(
         currentBalance.add(disbursalAmount),
         dataContextOfAction);
 
@@ -312,7 +338,7 @@ public class IndividualLoanCommandHandler {
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
     final PaymentBuilder paymentBuilder =
-        costComponentService.getCostComponentsForApplyInterest(dataContextOfAction);
+        applyInterestPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today());
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -347,7 +373,7 @@ public class IndividualLoanCommandHandler {
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
     final PaymentBuilder paymentBuilder =
-        costComponentService.getCostComponentsForAcceptPayment(
+        acceptPaymentBuilderService.getPaymentBuilder(
             dataContextOfAction,
             command.getCommand().getPaymentSize(),
             DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate());
@@ -387,7 +413,7 @@ public class IndividualLoanCommandHandler {
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
     final PaymentBuilder paymentBuilder =
-        costComponentService.getCostComponentsForMarkLate(dataContextOfAction, DateConverter.fromIsoString(command.getForTime()));
+        markLatePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, DateConverter.fromIsoString(command.getForTime()).toLocalDate());
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
@@ -439,7 +465,7 @@ public class IndividualLoanCommandHandler {
     checkIfTasksAreOutstanding(dataContextOfAction, Action.CLOSE);
 
     final PaymentBuilder paymentBuilder =
-        costComponentService.getCostComponentsForClose(dataContextOfAction);
+        closePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today());
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);

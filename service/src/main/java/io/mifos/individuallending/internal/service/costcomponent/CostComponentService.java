@@ -15,28 +15,22 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.AnnuityPayment;
-import io.mifos.individuallending.internal.service.DataContextOfAction;
-import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
 import io.mifos.individuallending.internal.service.RateCollectors;
-import io.mifos.individuallending.internal.service.schedule.*;
+import io.mifos.individuallending.internal.service.schedule.Period;
+import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import org.javamoney.calc.common.Rate;
 import org.javamoney.moneta.Money;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 import javax.money.MonetaryAmount;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -44,17 +38,9 @@ import java.util.stream.Collectors;
 /**
  * @author Myrle Krantz
  */
-@Service
 public class CostComponentService {
   private static final int EXTRA_PRECISION = 4;
   private static final int RUNNING_CALCULATION_PRECISION = 8;
-
-  private final AccountingAdapter accountingAdapter;
-
-  @Autowired
-  public CostComponentService(final AccountingAdapter accountingAdapter) {
-    this.accountingAdapter = accountingAdapter;
-  }
 
   public static PaymentBuilder getCostComponentsForScheduledCharges(
       final Map<ChargeDefinition, CostComponent> accruedCostComponents,
@@ -240,43 +226,6 @@ public class CostComponentService {
   private static boolean isAccrualChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
     return chargeDefinition.getAccrueAction() != null &&
         chargeDefinition.getAccrueAction().equals(action.name());
-  }
-
-  CostComponent getAccruedCostComponentToApply(final DataContextOfAction dataContextOfAction,
-                                               final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
-                                               final LocalDate startOfTerm,
-                                               final ChargeDefinition chargeDefinition) {
-    final CostComponent ret = new CostComponent();
-
-    final String accrualAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator());
-
-    final BigDecimal amountAccrued = accountingAdapter.sumMatchingEntriesSinceDate(
-        accrualAccountIdentifier,
-        startOfTerm,
-        dataContextOfAction.getMessageForCharge(Action.valueOf(chargeDefinition.getAccrueAction())));
-    final BigDecimal amountApplied = accountingAdapter.sumMatchingEntriesSinceDate(
-        accrualAccountIdentifier,
-        startOfTerm,
-        dataContextOfAction.getMessageForCharge(Action.valueOf(chargeDefinition.getChargeAction())));
-
-    ret.setChargeIdentifier(chargeDefinition.getIdentifier());
-    ret.setAmount(amountAccrued.subtract(amountApplied));
-    return ret;
-  }
-
-  LocalDate getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction,
-                                  final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
-
-    final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
-
-    final Optional<LocalDateTime> firstDisbursalDateTime = accountingAdapter.getDateOfOldestEntryContainingMessage(
-        customerLoanPrincipalAccountIdentifier,
-        dataContextOfAction.getMessageForCharge(Action.DISBURSE));
-
-    return firstDisbursalDateTime.map(LocalDateTime::toLocalDate)
-        .orElseThrow(() -> ServiceException.internalError(
-            "Start of term for loan ''{0}'' could not be acquired from accounting.",
-            dataContextOfAction.getCompoundIdentifer()));
   }
 
   public static LocalDate today() {

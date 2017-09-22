@@ -38,10 +38,10 @@ public class DataContextOfAction {
   private final CaseParametersEntity caseParameters;
   private final List<AccountAssignment> oneTimeAccountAssignments;
 
-  DataContextOfAction(final @Nonnull ProductEntity product,
-                      final @Nonnull CaseEntity customerCase,
-                      final @Nonnull CaseParametersEntity caseParameters,
-                      final @Nullable List<AccountAssignment> oneTimeAccountAssignments) {
+  public DataContextOfAction(final @Nonnull ProductEntity product,
+                             final @Nonnull CaseEntity customerCase,
+                             final @Nonnull CaseParametersEntity caseParameters,
+                             final @Nullable List<AccountAssignment> oneTimeAccountAssignments) {
     this.product = product;
     this.customerCase = customerCase;
     this.caseParameters = caseParameters;

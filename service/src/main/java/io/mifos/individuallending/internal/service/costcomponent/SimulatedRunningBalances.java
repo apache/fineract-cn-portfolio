@@ -16,7 +16,12 @@
 
 package io.mifos.individuallending.internal.service.costcomponent;
 
+import io.mifos.individuallending.internal.service.DataContextOfAction;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,15 +29,34 @@ import java.util.Map;
  * @author Myrle Krantz
  */
 public class SimulatedRunningBalances implements RunningBalances {
-  final private Map<String, BigDecimal> balances;
+  final private Map<String, BigDecimal> balances = new HashMap<>();
+  private final LocalDate startOfTerm;
 
   public SimulatedRunningBalances() {
-    this.balances = new HashMap<>();
+    this.startOfTerm = LocalDate.now(Clock.systemUTC());
+  }
+
+  SimulatedRunningBalances(final LocalDate startOfTerm) {
+    this.startOfTerm = startOfTerm;
   }
 
   @Override
   public BigDecimal getAccountBalance(final String accountDesignator) {
     return balances.getOrDefault(accountDesignator, BigDecimal.ZERO);
+  }
+
+  @Override
+  public BigDecimal getAccruedBalanceForCharge(
+      final DataContextOfAction dataContextOfAction,
+      final LocalDate startOfTerm,
+      final ChargeDefinition chargeDefinition) {
+    return balances.getOrDefault(chargeDefinition.getAccrualAccountDesignator(), BigDecimal.ZERO);
+    //This is not accurate for all cases, but good enough for the cases it's used in.
+  }
+
+  @Override
+  public LocalDate getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction) {
+    return startOfTerm;
   }
 
   void adjustBalance(final String key, final BigDecimal amount) {

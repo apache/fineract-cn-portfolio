@@ -43,16 +43,13 @@ import java.util.stream.Collectors;
  */
 @Service
 public class ClosePaymentBuilderService implements PaymentBuilderService {
-  private final CostComponentService costComponentService;
   private final ScheduledChargesService scheduledChargesService;
   private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public ClosePaymentBuilderService(
-      final CostComponentService costComponentService,
       final ScheduledChargesService scheduledChargesService,
       final AccountingAdapter accountingAdapter) {
-    this.costComponentService = costComponentService;
     this.scheduledChargesService = scheduledChargesService;
     this.accountingAdapter = accountingAdapter;
   }
@@ -69,7 +66,7 @@ public class ClosePaymentBuilderService implements PaymentBuilderService {
     if (runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP).compareTo(BigDecimal.ZERO) != 0)
       throw ServiceException.conflict("Cannot close loan until the balance is zero.");
 
-    final LocalDate startOfTerm = costComponentService.getStartOfTermOrThrow(dataContextOfAction, designatorToAccountIdentifierMapper);
+    final LocalDate startOfTerm = runningBalances.getStartOfTermOrThrow(dataContextOfAction);
 
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
@@ -87,7 +84,11 @@ public class ClosePaymentBuilderService implements PaymentBuilderService {
         .stream()
         .map(ScheduledCharge::getChargeDefinition)
         .collect(Collectors.toMap(chargeDefinition -> chargeDefinition,
-            chargeDefinition -> costComponentService.getAccruedCostComponentToApply(dataContextOfAction, designatorToAccountIdentifierMapper, startOfTerm, chargeDefinition)));
+            chargeDefinition -> PaymentBuilderService.getAccruedCostComponentToApply(
+                runningBalances,
+                dataContextOfAction,
+                startOfTerm,
+                chargeDefinition)));
 
     return CostComponentService.getCostComponentsForScheduledCharges(
         accruedCostComponents,

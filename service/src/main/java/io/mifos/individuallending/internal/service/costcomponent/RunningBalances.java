@@ -17,10 +17,13 @@ package io.mifos.individuallending.internal.service.costcomponent;
 
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
+import io.mifos.individuallending.internal.service.DataContextOfAction;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.portfolio.api.v1.domain.RequiredAccountAssignment;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,6 +51,13 @@ public interface RunningBalances {
   }};
 
   BigDecimal getAccountBalance(final String accountDesignator);
+
+  BigDecimal getAccruedBalanceForCharge(
+      final DataContextOfAction dataContextOfAction,
+      final LocalDate startOfTerm,
+      final ChargeDefinition chargeDefinition);
+
+  LocalDate getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction);
 
   default BigDecimal getLedgerBalance(final String ledgerDesignator) {
     final Pattern individualLendingPattern = IndividualLendingPatternFactory.individualLendingPattern();

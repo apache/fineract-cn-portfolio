@@ -42,16 +42,13 @@ import java.util.stream.Collectors;
  */
 @Service
 public class AcceptPaymentBuilderService implements PaymentBuilderService {
-  private final CostComponentService costComponentService;
   private final ScheduledChargesService scheduledChargesService;
   private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public AcceptPaymentBuilderService(
-      final CostComponentService costComponentService,
       final ScheduledChargesService scheduledChargesService,
       final AccountingAdapter accountingAdapter) {
-    this.costComponentService = costComponentService;
     this.scheduledChargesService = scheduledChargesService;
     this.accountingAdapter = accountingAdapter;
   }
@@ -65,7 +62,15 @@ public class AcceptPaymentBuilderService implements PaymentBuilderService {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final RealRunningBalances runningBalances = new RealRunningBalances(accountingAdapter, designatorToAccountIdentifierMapper);
 
-    final LocalDate startOfTerm = costComponentService.getStartOfTermOrThrow(dataContextOfAction, designatorToAccountIdentifierMapper);
+    return getPaymentBuilderHelper(dataContextOfAction, requestedLoanPaymentSize, forDate, runningBalances);
+  }
+
+  PaymentBuilder getPaymentBuilderHelper(
+      final DataContextOfAction dataContextOfAction,
+      final BigDecimal requestedLoanPaymentSize,
+      final LocalDate forDate,
+      final RunningBalances runningBalances) {
+    final LocalDate startOfTerm = runningBalances.getStartOfTermOrThrow(dataContextOfAction);
 
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
@@ -89,7 +94,11 @@ public class AcceptPaymentBuilderService implements PaymentBuilderService {
         .stream()
         .map(ScheduledCharge::getChargeDefinition)
         .collect(Collectors.toMap(chargeDefinition -> chargeDefinition,
-            chargeDefinition -> costComponentService.getAccruedCostComponentToApply(dataContextOfAction, designatorToAccountIdentifierMapper, startOfTerm, chargeDefinition)));
+            chargeDefinition -> PaymentBuilderService.getAccruedCostComponentToApply(
+                runningBalances,
+                dataContextOfAction,
+                startOfTerm,
+                chargeDefinition)));
 
 
     final BigDecimal loanPaymentSize;

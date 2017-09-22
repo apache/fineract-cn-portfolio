@@ -47,16 +47,13 @@ import java.util.stream.Collectors;
  */
 @Service
 public class DisbursePaymentBuilderService implements PaymentBuilderService {
-  private final CostComponentService costComponentService;
   private final ScheduledChargesService scheduledChargesService;
   private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public DisbursePaymentBuilderService(
-      final CostComponentService costComponentService,
       final ScheduledChargesService scheduledChargesService,
       final AccountingAdapter accountingAdapter) {
-    this.costComponentService = costComponentService;
     this.scheduledChargesService = scheduledChargesService;
     this.accountingAdapter = accountingAdapter;
   }
@@ -104,9 +101,9 @@ public class DisbursePaymentBuilderService implements PaymentBuilderService {
                 .stream()
                 .map(ScheduledCharge::getChargeDefinition)
                 .collect(Collectors.toMap(chargeDefinition -> chargeDefinition,
-                    chargeDefinition -> costComponentService.getAccruedCostComponentToApply(
+                    chargeDefinition -> PaymentBuilderService.getAccruedCostComponentToApply(
+                        runningBalances,
                         dataContextOfAction,
-                        designatorToAccountIdentifierMapper,
                         startOfTerm.toLocalDate(),
                         chargeDefinition)))).orElse(Collections.emptyMap());
 

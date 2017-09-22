@@ -32,7 +32,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -43,16 +42,13 @@ import java.util.stream.Collectors;
  */
 @Service
 public class MarkLatePaymentBuilderService implements PaymentBuilderService {
-  private final CostComponentService costComponentService;
   private final ScheduledChargesService scheduledChargesService;
   private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public MarkLatePaymentBuilderService(
-      final CostComponentService costComponentService,
       final ScheduledChargesService scheduledChargesService,
       final AccountingAdapter accountingAdapter) {
-    this.costComponentService = costComponentService;
     this.scheduledChargesService = scheduledChargesService;
     this.accountingAdapter = accountingAdapter;
   }
@@ -66,7 +62,7 @@ public class MarkLatePaymentBuilderService implements PaymentBuilderService {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final RunningBalances runningBalances = new RealRunningBalances(accountingAdapter, designatorToAccountIdentifierMapper);
 
-    final LocalDate startOfTerm = costComponentService.getStartOfTermOrThrow(dataContextOfAction, designatorToAccountIdentifierMapper);
+    final LocalDate startOfTerm = runningBalances.getStartOfTermOrThrow(dataContextOfAction);
 
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
@@ -86,7 +82,11 @@ public class MarkLatePaymentBuilderService implements PaymentBuilderService {
         .stream()
         .map(ScheduledCharge::getChargeDefinition)
         .collect(Collectors.toMap(chargeDefinition -> chargeDefinition,
-            chargeDefinition -> costComponentService.getAccruedCostComponentToApply(dataContextOfAction, designatorToAccountIdentifierMapper, startOfTerm, chargeDefinition)));
+            chargeDefinition -> PaymentBuilderService.getAccruedCostComponentToApply(
+                runningBalances,
+                dataContextOfAction,
+                startOfTerm,
+                chargeDefinition)));
 
 
     return CostComponentService.getCostComponentsForScheduledCharges(

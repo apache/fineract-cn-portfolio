@@ -28,7 +28,7 @@ import java.util.Objects;
 /**
  * @author Myrle Krantz
  */
-final class AnnuityPayment implements MonetaryOperator {
+public final class AnnuityPayment implements MonetaryOperator {
   private Rate rate;
   private int periods;
 
@@ -52,10 +52,10 @@ final class AnnuityPayment implements MonetaryOperator {
     return new AnnuityPayment(rate, periods);
   }
 
-  static MonetaryAmount calculate(
-          final @Nonnull MonetaryAmount amount,
-          final @Nonnull Rate rate,
-          final @Nonnegative int periods)
+  public static MonetaryAmount calculate(
+      final @Nonnull MonetaryAmount amount,
+      final @Nonnull Rate rate,
+      final @Nonnegative int periods)
   {
     Objects.requireNonNull(amount, "Amount required");
     Objects.requireNonNull(rate, "Rate required");

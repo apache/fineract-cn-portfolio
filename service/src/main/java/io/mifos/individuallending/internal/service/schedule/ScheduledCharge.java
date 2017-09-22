@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.schedule;
 
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 
@@ -29,7 +29,7 @@ public class ScheduledCharge {
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private final Optional<ChargeRange> chargeRange;
 
-  ScheduledCharge(
+  public ScheduledCharge(
       @Nonnull final ScheduledAction scheduledAction,
       @Nonnull final ChargeDefinition chargeDefinition,
       @SuppressWarnings("OptionalUsedAsFieldOrParameterType") @Nonnull final Optional<ChargeRange> chargeRange) {
@@ -38,15 +38,15 @@ public class ScheduledCharge {
     this.chargeRange = chargeRange;
   }
 
-  ScheduledAction getScheduledAction() {
+  public ScheduledAction getScheduledAction() {
     return scheduledAction;
   }
 
-  ChargeDefinition getChargeDefinition() {
+  public ChargeDefinition getChargeDefinition() {
     return chargeDefinition;
   }
 
-  Optional<ChargeRange> getChargeRange() {
+  public Optional<ChargeRange> getChargeRange() {
     return chargeRange;
   }
 

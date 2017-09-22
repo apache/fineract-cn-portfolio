@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.costcomponent;
 
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
@@ -110,6 +110,7 @@ public class CostComponentServiceTest {
     final SimulatedRunningBalances runningBalances = new SimulatedRunningBalances();
     runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.runningBalance.negate());
     final BigDecimal amount = CostComponentService.getAmountProportionalTo(
+        null,
         testCase.chargeProportionalDesignator,
         testCase.maximumBalance,
         runningBalances,

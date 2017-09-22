@@ -20,6 +20,10 @@ import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.service.costcomponent.CostComponentService;
+import io.mifos.individuallending.internal.service.costcomponent.PaymentBuilder;
+import io.mifos.individuallending.internal.service.costcomponent.SimulatedRunningBalances;
+import io.mifos.individuallending.internal.service.schedule.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -51,7 +55,7 @@ public class IndividualLoanService {
 
     final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(initialDisbursalDate, dataContextOfAction.getCaseParameters());
 
-    final Set<Action> actionsScheduled = scheduledActions.stream().map(x -> x.action).collect(Collectors.toSet());
+    final Set<Action> actionsScheduled = scheduledActions.stream().map(ScheduledAction::getAction).collect(Collectors.toSet());
 
     final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(dataContextOfAction.getProductEntity().getIdentifier(), scheduledActions);
 
@@ -175,9 +179,9 @@ public class IndividualLoanService {
 
   private static Period getPeriodFromScheduledCharge(final ScheduledCharge scheduledCharge) {
     final ScheduledAction scheduledAction = scheduledCharge.getScheduledAction();
-    if (ScheduledActionHelpers.actionHasNoActionPeriod(scheduledAction.action))
+    if (ScheduledActionHelpers.actionHasNoActionPeriod(scheduledAction.getAction()))
       return new Period(null, null);
     else
-      return scheduledAction.repaymentPeriod;
+      return scheduledAction.getRepaymentPeriod();
   }
 }

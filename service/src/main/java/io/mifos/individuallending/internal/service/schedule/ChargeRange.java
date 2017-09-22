@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.schedule;
 
 import java.math.BigDecimal;
 import java.util.Objects;
@@ -22,7 +22,7 @@ import java.util.Optional;
 /**
  * @author Myrle Krantz
  */
-class ChargeRange {
+public class ChargeRange {
   final private BigDecimal from;
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   final private Optional<BigDecimal> to;
@@ -34,7 +34,7 @@ class ChargeRange {
     this.to = to;
   }
 
-  boolean amountIsWithinRange(BigDecimal amountProportionalTo) {
+  public boolean amountIsWithinRange(final BigDecimal amountProportionalTo) {
     return to.map(bigDecimal -> from.compareTo(amountProportionalTo) <= 0 &&
         bigDecimal.compareTo(amountProportionalTo) > 0)
         .orElseGet(() -> from.compareTo(amountProportionalTo) <= 0);

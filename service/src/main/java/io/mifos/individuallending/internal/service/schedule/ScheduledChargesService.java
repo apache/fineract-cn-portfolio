@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.schedule;
 
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentEntity;
@@ -47,7 +47,7 @@ public class ScheduledChargesService {
     this.balanceSegmentRepository = balanceSegmentRepository;
   }
 
-  List<ScheduledCharge> getScheduledCharges(
+  public List<ScheduledCharge> getScheduledCharges(
       final String productIdentifier,
       final @Nonnull List<ScheduledAction> scheduledActions) {
     final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByChargeAction

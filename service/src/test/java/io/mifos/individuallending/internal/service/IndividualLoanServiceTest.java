@@ -24,6 +24,10 @@ import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
+import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
+import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpers;
+import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
+import io.mifos.individuallending.internal.service.schedule.ScheduledChargesService;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.PaymentCycle;
@@ -101,6 +105,8 @@ public class IndividualLoanServiceTest {
         INTEREST_ID,
         DISBURSEMENT_FEE_ID,
         REPAY_PRINCIPAL_ID,
+        REPAY_FEES_ID,
+        REPAY_INTEREST_ID,
         DISBURSE_PAYMENT_ID,
         LATE_FEE_ID
         ));
@@ -317,13 +323,18 @@ public class IndividualLoanServiceTest {
     final Set<BigDecimal> customerRepayments = Stream.iterate(1, x -> x + 1).limit(allPlannedPayments.size() - 1)
         .map(x ->
         {
-          final BigDecimal valueOfRepaymentCostComponent = allPlannedPayments.get(x).getPayment().getCostComponents().stream()
+          final BigDecimal valueOfRepayPrincipalCostComponent = allPlannedPayments.get(x).getPayment().getCostComponents().stream()
               .filter(costComponent -> costComponent.getChargeIdentifier().equals(ChargeIdentifiers.REPAY_PRINCIPAL_ID))
               .map(CostComponent::getAmount)
               .reduce(BigDecimal::add)
               .orElse(BigDecimal.ZERO);
-          final BigDecimal valueOfInterestCostComponent = allPlannedPayments.get(x).getPayment().getCostComponents().stream()
-              .filter(costComponent -> costComponent.getChargeIdentifier().equals(ChargeIdentifiers.INTEREST_ID))
+          final BigDecimal valueOfRepayFeeCostComponent = allPlannedPayments.get(x).getPayment().getCostComponents().stream()
+              .filter(costComponent -> costComponent.getChargeIdentifier().equals(ChargeIdentifiers.REPAY_FEES_ID))
+              .map(CostComponent::getAmount)
+              .reduce(BigDecimal::add)
+              .orElse(BigDecimal.ZERO);
+          final BigDecimal valueOfRepayInterestCostComponent = allPlannedPayments.get(x).getPayment().getCostComponents().stream()
+              .filter(costComponent -> costComponent.getChargeIdentifier().equals(ChargeIdentifiers.REPAY_INTEREST_ID))
               .map(CostComponent::getAmount)
               .reduce(BigDecimal::add)
               .orElse(BigDecimal.ZERO);
@@ -331,12 +342,12 @@ public class IndividualLoanServiceTest {
               getBalanceForPayment(allPlannedPayments, AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, x - 1)
                   .subtract(
                       getBalanceForPayment(allPlannedPayments, AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, x));
-          Assert.assertEquals("Checking payment " + x, valueOfRepaymentCostComponent.subtract(valueOfInterestCostComponent), principalDifference);
+          Assert.assertEquals("Checking payment " + x, valueOfRepayPrincipalCostComponent, principalDifference);
           Assert.assertNotEquals("Remaining principle should always be positive or zero.",
               getBalanceForPayment(allPlannedPayments, AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, x).signum(), -1);
           final boolean containsLateFee = allPlannedPayments.get(x).getPayment().getCostComponents().stream().anyMatch(y -> y.getChargeIdentifier().equals(LATE_FEE_ID));
           Assert.assertFalse("Late fee should not be included in planned payments", containsLateFee);
-          return valueOfRepaymentCostComponent;
+          return valueOfRepayPrincipalCostComponent.add(valueOfRepayInterestCostComponent).add(valueOfRepayFeeCostComponent);
         }
     ).collect(Collectors.toSet());
 
@@ -395,8 +406,8 @@ public class IndividualLoanServiceTest {
         scheduledActions);
 
     final List<LocalDate> interestCalculationDates = scheduledCharges.stream()
-        .filter(scheduledCharge -> scheduledCharge.getScheduledAction().action == Action.APPLY_INTEREST)
-        .map(scheduledCharge -> scheduledCharge.getScheduledAction().when)
+        .filter(scheduledCharge -> scheduledCharge.getScheduledAction().getAction() == Action.APPLY_INTEREST)
+        .map(scheduledCharge -> scheduledCharge.getScheduledAction().getWhen())
         .collect(Collectors.toList());
 
     final List<LocalDate> allTheDaysAfterTheInitialDisbursementDate
@@ -407,11 +418,11 @@ public class IndividualLoanServiceTest {
     Assert.assertEquals(interestCalculationDates, allTheDaysAfterTheInitialDisbursementDate);
 
     final List<LocalDate> acceptPaymentDates = scheduledCharges.stream()
-        .filter(scheduledCharge -> scheduledCharge.getScheduledAction().action == Action.ACCEPT_PAYMENT)
-        .map(scheduledCharge -> scheduledCharge.getScheduledAction().when)
+        .filter(scheduledCharge -> scheduledCharge.getScheduledAction().getAction() == Action.ACCEPT_PAYMENT)
+        .map(scheduledCharge -> scheduledCharge.getScheduledAction().getWhen())
         .collect(Collectors.toList());
     final long expectedAcceptPayments = scheduledActions.stream()
-        .filter(x -> x.action == Action.ACCEPT_PAYMENT).count();
+        .filter(x -> x.getAction() == Action.ACCEPT_PAYMENT).count();
     final List<ChargeDefinition> chargeDefinitionsMappedToAcceptPayment = chargeDefinitionsByChargeAction.get(Action.ACCEPT_PAYMENT.name());
     final int numberOfChangeDefinitionsMappedToAcceptPayment = chargeDefinitionsMappedToAcceptPayment == null ? 0 : chargeDefinitionsMappedToAcceptPayment.size();
     Assert.assertEquals("check for correct number of scheduled charges for accept payment",
@@ -421,7 +432,7 @@ public class IndividualLoanServiceTest {
     final Map<ActionDatePair, Set<ChargeDefinition>> searchableScheduledCharges = scheduledCharges.stream()
         .collect(
             Collectors.groupingBy(scheduledCharge ->
-                new ActionDatePair(scheduledCharge.getScheduledAction().action, scheduledCharge.getScheduledAction().when),
+                new ActionDatePair(scheduledCharge.getScheduledAction().getAction(), scheduledCharge.getScheduledAction().getWhen()),
                 Collectors.mapping(ScheduledCharge::getChargeDefinition, Collectors.toSet())));
 
     testCase.chargeDefinitionsForActions.forEach((key, value) ->

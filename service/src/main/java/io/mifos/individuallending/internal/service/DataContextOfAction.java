@@ -68,7 +68,7 @@ public class DataContextOfAction {
     return oneTimeAccountAssignments;
   }
 
-  String getCompoundIdentifer() {
+  public String getCompoundIdentifer() {
     return product.getIdentifier() + "." + customerCase.getIdentifier();
   }
 
@@ -76,7 +76,7 @@ public class DataContextOfAction {
     return getCompoundIdentifer() + "." + action.name();
   }
 
-  BigDecimal getInterest() {
+  public BigDecimal getInterest() {
     return customerCase.getInterest();
   }
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.schedule;
 
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 
@@ -28,20 +28,20 @@ import java.util.Objects;
 public class ScheduledAction {
   final Action action;
   final LocalDate when;
-  final @Nullable Period actionPeriod;
-  final @Nullable Period repaymentPeriod;
+  private final @Nullable Period actionPeriod;
+  private final @Nullable Period repaymentPeriod;
 
-  ScheduledAction(@Nonnull final Action action,
-                  @Nonnull final LocalDate when,
-                  @Nonnull final Period actionPeriod,
-                  @Nonnull final Period repaymentPeriod) {
+  public ScheduledAction(@Nonnull final Action action,
+                         @Nonnull final LocalDate when,
+                         @Nonnull final Period actionPeriod,
+                         @Nonnull final Period repaymentPeriod) {
     this.action = action;
     this.when = when;
     this.actionPeriod = actionPeriod;
     this.repaymentPeriod = repaymentPeriod;
   }
 
-  ScheduledAction(@Nonnull final Action action,
+  public ScheduledAction(@Nonnull final Action action,
                   @Nonnull final LocalDate when,
                   @Nonnull final Period actionPeriod) {
     this.action = action;
@@ -50,7 +50,7 @@ public class ScheduledAction {
     this.repaymentPeriod = null;
   }
 
-  ScheduledAction(@Nonnull final Action action,
+  public ScheduledAction(@Nonnull final Action action,
                   @Nonnull final LocalDate when) {
     this.action = action;
     this.when = when;
@@ -86,5 +86,23 @@ public class ScheduledAction {
             ", actionPeriod=" + actionPeriod +
             ", repaymentPeriod=" + repaymentPeriod +
             '}';
+  }
+
+  @Nullable
+  public Period getActionPeriod() {
+    return actionPeriod;
+  }
+
+  public Action getAction() {
+    return action;
+  }
+
+  @Nullable
+  public Period getRepaymentPeriod() {
+    return repaymentPeriod;
+  }
+
+  public LocalDate getWhen() {
+    return when;
   }
 }

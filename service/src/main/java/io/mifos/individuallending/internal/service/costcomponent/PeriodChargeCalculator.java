@@ -13,9 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.costcomponent;
 
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.service.RateCollectors;
+import io.mifos.individuallending.internal.service.schedule.Period;
+import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
+import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpers;
+import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 
 import java.math.BigDecimal;
@@ -37,7 +42,7 @@ class PeriodChargeCalculator {
       final int precision) {
     return scheduledCharges.stream()
             .filter(PeriodChargeCalculator::accruedInterestCharge)
-            .collect(Collectors.groupingBy(scheduledCharge -> scheduledCharge.getScheduledAction().repaymentPeriod,
+            .collect(Collectors.groupingBy(scheduledCharge -> scheduledCharge.getScheduledAction().getRepaymentPeriod(),
                     Collectors.mapping(x -> chargeAmountPerPeriod(x, interest, precision), RateCollectors.compound(precision))));
   }
 
@@ -46,8 +51,8 @@ class PeriodChargeCalculator {
     return scheduledCharge.getChargeDefinition().getAccrualAccountDesignator() != null &&
         scheduledCharge.getChargeDefinition().getAccrueAction() != null &&
         scheduledCharge.getChargeDefinition().getAccrueAction().equals(Action.APPLY_INTEREST.name()) &&
-        scheduledCharge.getScheduledAction().action == Action.ACCEPT_PAYMENT &&
-        scheduledCharge.getScheduledAction().actionPeriod != null &&
+        scheduledCharge.getScheduledAction().getAction() == Action.ACCEPT_PAYMENT &&
+        scheduledCharge.getScheduledAction().getActionPeriod() != null &&
         scheduledCharge.getChargeDefinition().getChargeMethod() == ChargeDefinition.ChargeMethod.INTEREST;
   }
 
@@ -65,7 +70,7 @@ class PeriodChargeCalculator {
 
     final BigDecimal actionPeriodDuration
         = BigDecimal.valueOf(
-        scheduledAction.actionPeriod
+        scheduledAction.getActionPeriod()
             .getDuration()
             .getSeconds());
     final Optional<BigDecimal> accrualPeriodDuration = Optional.ofNullable(chargeDefinition.getAccrueAction())

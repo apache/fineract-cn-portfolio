@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.costcomponent;
 
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
+import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import net.jodah.expiringmap.ExpirationPolicy;
 import net.jodah.expiringmap.ExpiringMap;

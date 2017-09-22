@@ -13,13 +13,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.costcomponent;
 
 import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
+import io.mifos.individuallending.internal.service.*;
+import io.mifos.individuallending.internal.service.schedule.*;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
@@ -296,7 +298,7 @@ public class CostComponentService {
       loanPaymentSize = requestedLoanPaymentSize;
     }
     else {
-      if (scheduledAction.actionPeriod != null && scheduledAction.actionPeriod.isLastPeriod()) {
+      if (scheduledAction.getActionPeriod() != null && scheduledAction.getActionPeriod().isLastPeriod()) {
         loanPaymentSize = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
       }
       else {
@@ -421,7 +423,7 @@ public class CostComponentService {
     return null;
   }
 
-  static PaymentBuilder getCostComponentsForScheduledCharges(
+  public static PaymentBuilder getCostComponentsForScheduledCharges(
       final Map<ChargeDefinition, CostComponent> accruedCostComponents,
       final Collection<ScheduledCharge> scheduledCharges,
       final BigDecimal maximumBalance,
@@ -433,7 +435,6 @@ public class CostComponentService {
       final int minorCurrencyUnitDigits,
       final boolean accrualAccounting) {
     final PaymentBuilder paymentBuilder = new PaymentBuilder(preChargeBalances, accrualAccounting);
-    //TODO: once you've fixed getAmountProportionalTo, use the passed in variable.
 
     for (Map.Entry<ChargeDefinition, CostComponent> entry : accruedCostComponents.entrySet()) {
       final ChargeDefinition chargeDefinition = entry.getKey();
@@ -448,7 +449,7 @@ public class CostComponentService {
 
 
     for (final ScheduledCharge scheduledCharge : scheduledCharges) {
-      if (accrualAccounting || !isAccrualChargeForAction(scheduledCharge.getChargeDefinition(), scheduledCharge.getScheduledAction().action)) {
+      if (accrualAccounting || !isAccrualChargeForAction(scheduledCharge.getChargeDefinition(), scheduledCharge.getScheduledAction().getAction())) {
         final BigDecimal amountProportionalTo = getAmountProportionalTo(
             scheduledCharge,
             maximumBalance,
@@ -457,7 +458,6 @@ public class CostComponentService {
             requestedDisbursement,
             requestedRepayment,
             paymentBuilder);
-        //TODO: getAmountProportionalTo is programmed under the assumption of non-accrual accounting.
         if (scheduledCharge.getChargeRange().map(x ->
             !x.amountIsWithinRange(amountProportionalTo)).orElse(false))
           continue;
@@ -466,7 +466,7 @@ public class CostComponentService {
             .apply(amountProportionalTo)
             .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
         paymentBuilder.adjustBalances(
-            scheduledCharge.getScheduledAction().action,
+            scheduledCharge.getScheduledAction().getAction(),
             scheduledCharge.getChargeDefinition(),
             chargeAmount);
       }
@@ -487,6 +487,7 @@ public class CostComponentService {
         = ChargeProportionalDesignator.fromString(scheduledCharge.getChargeDefinition().getProportionalTo());
     return optionalChargeProportionalTo.map(chargeProportionalTo ->
         getAmountProportionalTo(
+            scheduledCharge,
             chargeProportionalTo,
             maximumBalance,
             runningBalances,
@@ -498,6 +499,7 @@ public class CostComponentService {
   }
 
   static BigDecimal getAmountProportionalTo(
+      final ScheduledCharge scheduledCharge,
       final ChargeProportionalDesignator chargeProportionalTo,
       final BigDecimal maximumBalance,
       final RunningBalances runningBalances,
@@ -519,7 +521,13 @@ public class CostComponentService {
       case REQUESTED_DISBURSEMENT_DESIGNATOR:
         return requestedDisbursement;
       case REQUESTED_REPAYMENT_DESIGNATOR:
-        return requestedRepayment;
+        return requestedRepayment.add(paymentBuilder.getBalanceAdjustment(AccountDesignators.ENTRY));
+      case TO_ACCOUNT_DESIGNATOR:
+        return runningBalances.getBalance(scheduledCharge.getChargeDefinition().getToAccountDesignator())
+            .subtract(paymentBuilder.getBalanceAdjustment(scheduledCharge.getChargeDefinition().getToAccountDesignator()));
+      case FROM_ACCOUNT_DESIGNATOR:
+        return runningBalances.getBalance(scheduledCharge.getChargeDefinition().getFromAccountDesignator())
+            .add(paymentBuilder.getBalanceAdjustment(scheduledCharge.getChargeDefinition().getFromAccountDesignator()));
       default:
         return BigDecimal.ZERO;
     }
@@ -565,7 +573,7 @@ public class CostComponentService {
         hypotheticalScheduledCharges);
   }
 
-  static BigDecimal getLoanPaymentSize(
+  public static BigDecimal getLoanPaymentSize(
       final BigDecimal maximumBalanceSize,
       final BigDecimal disbursementSize,
       final BigDecimal interest,
@@ -583,7 +591,7 @@ public class CostComponentService {
         .collect(RateCollectors.geometricMean(precision));
 
     final List<ScheduledCharge> disbursementFees = scheduledCharges.stream()
-        .filter(x -> x.getScheduledAction().action.equals(Action.DISBURSE))
+        .filter(x -> x.getScheduledAction().getAction().equals(Action.DISBURSE))
         .collect(Collectors.toList());
     final PaymentBuilder paymentBuilder = getCostComponentsForScheduledCharges(
         Collections.emptyMap(),
@@ -597,7 +605,9 @@ public class CostComponentService {
         minorCurrencyUnitDigits,
         false
         );
-    final BigDecimal finalDisbursementSize = paymentBuilder.getBalanceAdjustment(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL).negate();
+    final BigDecimal finalDisbursementSize = paymentBuilder.getBalanceAdjustment(
+        AccountDesignators.CUSTOMER_LOAN_PRINCIPAL,
+        AccountDesignators.CUSTOMER_LOAN_FEES).negate();
 
     final MonetaryAmount presentValue = AnnuityPayment.calculate(
         Money.of(finalDisbursementSize, "XXX"),

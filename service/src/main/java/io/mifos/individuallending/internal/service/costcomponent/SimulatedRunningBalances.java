@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.costcomponent;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
@@ -26,7 +26,7 @@ import java.util.Map;
 public class SimulatedRunningBalances implements RunningBalances {
   final private Map<String, BigDecimal> balances;
 
-  SimulatedRunningBalances() {
+  public SimulatedRunningBalances() {
     this.balances = new HashMap<>();
   }
 

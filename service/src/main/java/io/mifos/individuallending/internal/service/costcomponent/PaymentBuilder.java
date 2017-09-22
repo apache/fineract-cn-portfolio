@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.costcomponent;
 
 import com.google.common.collect.Sets;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Payment;
@@ -82,7 +83,7 @@ public class PaymentBuilder {
     return new Payment(costComponentList, balanceAdjustments);
   }
 
-  PlannedPayment accumulatePlannedPayment(final SimulatedRunningBalances balances) {
+  public PlannedPayment accumulatePlannedPayment(final SimulatedRunningBalances balances) {
     final Payment payment = buildPayment();
     balanceAdjustments.forEach(balances::adjustBalance);
     final Map<String, BigDecimal> balancesCopy = balances.snapshot();
@@ -100,8 +101,10 @@ public class PaymentBuilder {
         .collect(Collectors.toList());
   }
 
-  BigDecimal getBalanceAdjustment(final String accountDesignator) {
-    return balanceAdjustments.getOrDefault(accountDesignator, BigDecimal.ZERO);
+  BigDecimal getBalanceAdjustment(final String... accountDesignators) {
+    return Arrays.stream(accountDesignators)
+        .map(accountDesignator -> balanceAdjustments.getOrDefault(accountDesignator, BigDecimal.ZERO))
+        .reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 
   void adjustBalances(
@@ -111,22 +114,19 @@ public class PaymentBuilder {
     BigDecimal adjustedChargeAmount = BigDecimal.ZERO;
     if (this.accrualAccounting && chargeIsAccrued(chargeDefinition)) {
       if (Action.valueOf(chargeDefinition.getAccrueAction()) == action) {
-        final BigDecimal maxDebit = prePaymentBalances.getMaxDebit(chargeDefinition.getFromAccountDesignator(), chargeAmount);
-        adjustedChargeAmount = prePaymentBalances.getMaxCredit(chargeDefinition.getAccrualAccountDesignator(), maxDebit);
+        adjustedChargeAmount = getMaxCharge(chargeDefinition.getFromAccountDesignator(), chargeDefinition.getAccrualAccountDesignator(), chargeAmount);
 
         this.addToBalance(chargeDefinition.getFromAccountDesignator(), adjustedChargeAmount.negate());
         this.addToBalance(chargeDefinition.getAccrualAccountDesignator(), adjustedChargeAmount);
       } else if (Action.valueOf(chargeDefinition.getChargeAction()) == action) {
-        final BigDecimal maxDebit = prePaymentBalances.getMaxDebit(chargeDefinition.getAccrualAccountDesignator(), chargeAmount);
-        adjustedChargeAmount = prePaymentBalances.getMaxCredit(chargeDefinition.getToAccountDesignator(), maxDebit);
+        adjustedChargeAmount = getMaxCharge(chargeDefinition.getAccrualAccountDesignator(), chargeDefinition.getToAccountDesignator(), chargeAmount);
 
         this.addToBalance(chargeDefinition.getAccrualAccountDesignator(), adjustedChargeAmount.negate());
         this.addToBalance(chargeDefinition.getToAccountDesignator(), adjustedChargeAmount);
       }
     }
     else if (Action.valueOf(chargeDefinition.getChargeAction()) == action) {
-      final BigDecimal maxDebit = prePaymentBalances.getMaxDebit(chargeDefinition.getFromAccountDesignator(), chargeAmount);
-      adjustedChargeAmount = prePaymentBalances.getMaxCredit(chargeDefinition.getToAccountDesignator(), maxDebit);
+      adjustedChargeAmount = getMaxCharge(chargeDefinition.getFromAccountDesignator(), chargeDefinition.getToAccountDesignator(), chargeAmount);
 
       this.addToBalance(chargeDefinition.getFromAccountDesignator(), adjustedChargeAmount.negate());
       this.addToBalance(chargeDefinition.getToAccountDesignator(), adjustedChargeAmount);
@@ -134,6 +134,20 @@ public class PaymentBuilder {
 
 
     addToCostComponent(chargeDefinition, adjustedChargeAmount);
+  }
+
+  private BigDecimal getMaxCharge(
+      final String fromAccountDesignator,
+      final String toAccountDesignator,
+      final BigDecimal plannedCharge) {
+    final BigDecimal expectedImpactOnDebitAccount = plannedCharge.add(this.getBalanceAdjustment(fromAccountDesignator));
+    final BigDecimal maxImpactOnDebitAccount = prePaymentBalances.getMaxDebit(fromAccountDesignator, expectedImpactOnDebitAccount);
+    final BigDecimal maxDebit = maxImpactOnDebitAccount.subtract(this.getBalanceAdjustment(fromAccountDesignator));
+
+    final BigDecimal expectedImpactOnCreditAccount = plannedCharge.add(this.getBalanceAdjustment(toAccountDesignator));
+    final BigDecimal maxImpactOnCreditAccount = prePaymentBalances.getMaxCredit(toAccountDesignator, expectedImpactOnCreditAccount);
+    final BigDecimal maxCredit = maxImpactOnCreditAccount.subtract(this.getBalanceAdjustment(toAccountDesignator));
+    return maxCredit.min(maxDebit);
   }
 
   private static boolean chargeIsAccrued(final ChargeDefinition chargeDefinition) {

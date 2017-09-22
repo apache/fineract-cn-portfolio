@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.schedule;
 
 
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
@@ -25,7 +25,7 @@ import java.util.Optional;
 /**
  * @author Myrle Krantz
  */
-class ScheduledChargeComparator implements Comparator<ScheduledCharge>
+public class ScheduledChargeComparator implements Comparator<ScheduledCharge>
 {
   @Override
   public int compare(ScheduledCharge o1, ScheduledCharge o2) {

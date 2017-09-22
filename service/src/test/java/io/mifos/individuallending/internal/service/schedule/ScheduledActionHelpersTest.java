@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.schedule;
 
-import io.mifos.portfolio.api.v1.domain.PaymentCycle;
-import io.mifos.portfolio.api.v1.domain.TermRange;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.portfolio.api.v1.domain.PaymentCycle;
+import io.mifos.portfolio.api.v1.domain.TermRange;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -371,19 +371,19 @@ public class ScheduledActionHelpersTest {
     Assert.assertTrue("Case " + testCase.description + " missing these expected results " + missingExpectedResults,
         missingExpectedResults.isEmpty());
     result.forEach(x -> {
-      Assert.assertTrue(x.toString(), testCase.earliestActionDate.isBefore(x.when) || testCase.earliestActionDate.isEqual(x.when));
-      Assert.assertTrue(x.toString(), testCase.latestActionDate.isAfter(x.when) || testCase.latestActionDate.isEqual(x.when));
+      Assert.assertTrue(x.toString(), testCase.earliestActionDate.isBefore(x.getWhen()) || testCase.earliestActionDate.isEqual(x.getWhen()));
+      Assert.assertTrue(x.toString(), testCase.latestActionDate.isAfter(x.getWhen()) || testCase.latestActionDate.isEqual(x.getWhen()));
     });
     Assert.assertEquals(testCase.expectedPaymentCount, countActionsByType(result, Action.ACCEPT_PAYMENT));
     Assert.assertEquals(testCase.expectedInterestCount, countActionsByType(result, Action.APPLY_INTEREST));
     Assert.assertEquals(1, countActionsByType(result, Action.APPROVE));
     Assert.assertEquals(1, countActionsByType(result, Action.CLOSE));
-    result.stream().filter(scheduledAction -> !ScheduledActionHelpers.actionHasNoActionPeriod(scheduledAction.action))
+    result.stream().filter(scheduledAction -> !ScheduledActionHelpers.actionHasNoActionPeriod(scheduledAction.getAction()))
         .forEach(scheduledAction -> {
           Assert.assertNotNull("The action period of " + scheduledAction.toString() + " should not be null.",
-              scheduledAction.actionPeriod);
+              scheduledAction.getActionPeriod());
           Assert.assertNotNull("The repayment period of " + scheduledAction.toString() + " should not be null.",
-              scheduledAction.repaymentPeriod);
+              scheduledAction.getRepaymentPeriod());
         });
     Assert.assertTrue(noDuplicatesInResult(result));
     Assert.assertTrue(maximumOneInterestPerDay(result));
@@ -394,11 +394,11 @@ public class ScheduledActionHelpersTest {
     final LocalDate roughEndDate = ScheduledActionHelpers.getRoughEndDate(testCase.initialDisbursementDate, testCase.caseParameters);
 
     testCase.expectedResultContents.stream()
-        .filter(x -> x.action == Action.ACCEPT_PAYMENT)
+        .filter(x -> x.getAction() == Action.ACCEPT_PAYMENT)
         .forEach(expectedResultContents -> {
       final ScheduledAction nextScheduledPayment = ScheduledActionHelpers.getNextScheduledPayment(
           testCase.initialDisbursementDate,
-          expectedResultContents.when.minusDays(1),
+          expectedResultContents.getWhen().minusDays(1),
           roughEndDate,
           testCase.caseParameters);
       Assert.assertEquals(expectedResultContents, nextScheduledPayment);
@@ -410,18 +410,18 @@ public class ScheduledActionHelpersTest {
         roughEndDate,
         testCase.caseParameters);
 
-    Assert.assertNotNull(afterAction.actionPeriod);
-    Assert.assertTrue(afterAction.actionPeriod.isLastPeriod());
+    Assert.assertNotNull(afterAction.getActionPeriod());
+    Assert.assertTrue(afterAction.getActionPeriod().isLastPeriod());
   }
 
   private long countActionsByType(final List<ScheduledAction> scheduledActions, final Action actionToCount) {
-    return scheduledActions.stream().filter(x -> x.action == actionToCount).count();
+    return scheduledActions.stream().filter(x -> x.getAction() == actionToCount).count();
   }
 
   private boolean maximumOneInterestPerDay(final List<ScheduledAction> result) {
     final List<LocalDate> interestDays = result.stream()
-            .filter(x -> x.action == Action.APPLY_INTEREST)
-            .map(x -> x.when)
+            .filter(x -> x.getAction() == Action.APPLY_INTEREST)
+            .map(ScheduledAction::getWhen)
             .collect(Collectors.toList());
 
     final Set<LocalDate> interestDaysSet = new HashSet<>();

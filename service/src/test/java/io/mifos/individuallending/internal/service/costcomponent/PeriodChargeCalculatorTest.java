@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.costcomponent;
 
+import io.mifos.individuallending.internal.service.schedule.Period;
+import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,7 +38,7 @@ public class PeriodChargeCalculatorTest {
   private static class TestCase {
     final String description;
     List<ScheduledCharge> scheduledCharges;
-    int precision;
+    int precision = 20;
     Map<Period, BigDecimal> expectedPeriodRates;
     private BigDecimal interest;
 
@@ -46,11 +48,6 @@ public class PeriodChargeCalculatorTest {
 
     TestCase scheduledCharges(final List<ScheduledCharge> newVal) {
       this.scheduledCharges = newVal;
-      return this;
-    }
-
-    TestCase precision(final int newVal) {
-      this.precision = newVal;
       return this;
     }
 
@@ -98,7 +95,6 @@ public class PeriodChargeCalculatorTest {
     return new TestCase("simpleCase")
         .interest(BigDecimal.ONE)
         .scheduledCharges(scheduledCharges)
-        .precision(20)
         .expectedPeriodRates(expectedPeriodRates);
   }
 
@@ -119,7 +115,6 @@ public class PeriodChargeCalculatorTest {
     return new TestCase("bitOfCompoundingCase")
         .interest(BigDecimal.TEN)
         .scheduledCharges(scheduledCharges)
-        .precision(20)
         .expectedPeriodRates(expectedPeriodRates);
   }
 
@@ -137,7 +132,6 @@ public class PeriodChargeCalculatorTest {
     return new TestCase("zeroInterestPerPeriod")
         .interest(BigDecimal.ZERO)
         .scheduledCharges(scheduledCharges)
-        .precision(20)
         .expectedPeriodRates(expectedPeriodRates);
   }
 

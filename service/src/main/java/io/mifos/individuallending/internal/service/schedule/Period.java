@@ -13,9 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
-
-import io.mifos.core.lang.DateConverter;
+package io.mifos.individuallending.internal.service.schedule;
 
 import javax.annotation.Nonnull;
 import java.time.Duration;
@@ -31,25 +29,25 @@ public class Period implements Comparable<Period> {
   final private LocalDate endDate;
   final private boolean lastPeriod;
 
-  Period(final LocalDate beginDate, final LocalDate endDateExclusive) {
+  public Period(final LocalDate beginDate, final LocalDate endDateExclusive) {
     this.beginDate = beginDate;
     this.endDate = endDateExclusive;
     this.lastPeriod = false;
   }
 
-  Period(final LocalDate beginDate, final LocalDate endDateExclusive, final boolean lastPeriod) {
+  public Period(final LocalDate beginDate, final LocalDate endDateExclusive, final boolean lastPeriod) {
     this.beginDate = beginDate;
     this.endDate = endDateExclusive;
     this.lastPeriod = lastPeriod;
   }
 
-  Period(final LocalDate beginDate, final int periodLength) {
+  public Period(final LocalDate beginDate, final int periodLength) {
     this.beginDate = beginDate;
     this.endDate = beginDate.plusDays(periodLength);
     this.lastPeriod = false;
   }
 
-  Period(final int periodLength, final LocalDate endDate) {
+  public Period(final int periodLength, final LocalDate endDate) {
     this.beginDate = endDate.minusDays(periodLength);
     this.endDate = endDate;
     this.lastPeriod = false;
@@ -63,25 +61,17 @@ public class Period implements Comparable<Period> {
     return endDate;
   }
 
-  boolean isLastPeriod() {
+  public boolean isLastPeriod() {
     return lastPeriod;
   }
 
-  String getEndDateAsString() {
-    return endDate == null ? null : DateConverter.toIsoString(endDate);
-  }
-
-  Duration getDuration() {
+  public Duration getDuration() {
     long days = beginDate.until(endDate, ChronoUnit.DAYS);
     return ChronoUnit.DAYS.getDuration().multipliedBy(days);
   }
 
   boolean containsDate(final LocalDate date) {
     return this.getBeginDate().compareTo(date) <= 0 && this.getEndDate().compareTo(date) > 0;
-  }
-
-  boolean isDefined() {
-    return beginDate != null || endDate != null;
   }
 
   @Override

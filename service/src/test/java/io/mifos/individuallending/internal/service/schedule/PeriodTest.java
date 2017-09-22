@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service;
+package io.mifos.individuallending.internal.service.schedule;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -66,6 +66,7 @@ public class PeriodTest {
     final Period tommorrowPeriod = new Period(tommorrow, dayAfterTommorrow);
 
     Assert.assertTrue(yesterdayPeriod.compareTo(todayPeriod) < 0);
+    //noinspection EqualsWithItself
     Assert.assertTrue(todayPeriod.compareTo(todayPeriod) == 0);
     Assert.assertTrue(tommorrowPeriod.compareTo(todayPeriod) > 0);
   }

@@ -26,8 +26,10 @@ public enum ChargeProportionalDesignator {
   MAXIMUM_BALANCE_DESIGNATOR("{maximumbalance}", 1),
   RUNNING_BALANCE_DESIGNATOR("{runningbalance}", 2),
   REQUESTED_DISBURSEMENT_DESIGNATOR("{requesteddisbursement}", 3),
-  REQUESTED_REPAYMENT_DESIGNATOR("{requestedrepayment}", 4),
-  CONTRACTUAL_REPAYMENT_DESIGNATOR("{contractualrepayment}", 5),
+  TO_ACCOUNT_DESIGNATOR("{toAccount}", 4),
+  FROM_ACCOUNT_DESIGNATOR("{fromAccount}", 5),
+  REQUESTED_REPAYMENT_DESIGNATOR("{requestedrepayment}", 6),
+  CONTRACTUAL_REPAYMENT_DESIGNATOR("{contractualrepayment}", 7),
   ;
 
   private final String value;

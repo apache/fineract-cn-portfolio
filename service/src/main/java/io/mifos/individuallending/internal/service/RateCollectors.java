@@ -21,11 +21,11 @@ import java.util.stream.Collector;
 /**
  * @author Myrle Krantz
  */
-final class RateCollectors {
+public final class RateCollectors {
 
   private RateCollectors() {}
 
-  static Collector<BigDecimal, ?, BigDecimal> compound(int significantDigits)
+  public static Collector<BigDecimal, ?, BigDecimal> compound(int significantDigits)
   {
     return Collector.of(
             () -> new Compound(significantDigits),
@@ -34,7 +34,7 @@ final class RateCollectors {
             Compound::finish);
   }
 
-  static Collector<BigDecimal, ?, BigDecimal> geometricMean(int significantDigits)
+  public static Collector<BigDecimal, ?, BigDecimal> geometricMean(int significantDigits)
   {
     return Collector.of(
             () -> new GeometricMean(significantDigits),

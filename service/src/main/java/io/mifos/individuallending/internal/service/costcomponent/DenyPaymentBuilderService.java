@@ -42,10 +42,12 @@ public class DenyPaymentBuilderService implements PaymentBuilderService {
     this.scheduledChargesService = scheduledChargesService;
   }
 
+  @Override
   public PaymentBuilder getPaymentBuilder(
       final DataContextOfAction dataContextOfAction,
       final BigDecimal ignored,
-      final LocalDate forDate)
+      final LocalDate forDate,
+      final RunningBalances runningBalances)
   {
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();

@@ -39,7 +39,7 @@ public class RealRunningBalances implements RunningBalances {
   private final AccountingAdapter accountingAdapter;
   private final ExpiringMap<String, BigDecimal> realAccountBalanceCache;
 
-  RealRunningBalances(
+  public RealRunningBalances(
       final AccountingAdapter accountingAdapter,
       final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
     this.accountingAdapter = accountingAdapter;

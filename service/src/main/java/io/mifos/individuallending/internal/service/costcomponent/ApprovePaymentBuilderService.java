@@ -42,10 +42,12 @@ public class ApprovePaymentBuilderService implements PaymentBuilderService {
     this.scheduledChargesService = scheduledChargesService;
   }
 
+  @Override
   public PaymentBuilder getPaymentBuilder(
       final DataContextOfAction dataContextOfAction,
       final BigDecimal ignored,
-      final LocalDate forDate)
+      final LocalDate forDate,
+      final RunningBalances runningBalances)
   {
     //Charge the approval fee if applicable.
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();

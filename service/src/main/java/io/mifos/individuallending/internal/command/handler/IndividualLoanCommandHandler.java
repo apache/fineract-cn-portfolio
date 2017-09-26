@@ -128,11 +128,14 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.OPEN);
 
-    final PaymentBuilder paymentBuilder
-        = openPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today());
-
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
-            = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        designatorToAccountIdentifierMapper);
+
+    final PaymentBuilder paymentBuilder
+        = openPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
     final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.OPEN, designatorToAccountIdentifierMapper);
 
@@ -165,11 +168,14 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.DENY);
 
-    final PaymentBuilder paymentBuilder
-        = denyPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today());
-
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        designatorToAccountIdentifierMapper);
+
+    final PaymentBuilder paymentBuilder
+        = denyPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
     final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.DENY, designatorToAccountIdentifierMapper);
 
@@ -247,8 +253,12 @@ public class IndividualLoanCommandHandler {
         );
     caseRepository.save(dataContextOfAction.getCustomerCaseEntity());
 
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        designatorToAccountIdentifierMapper);
+
     final PaymentBuilder paymentBuilder =
-        approvePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today());
+        approvePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
     final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.APPROVE, designatorToAccountIdentifierMapper);
 
@@ -281,11 +291,15 @@ public class IndividualLoanCommandHandler {
     checkIfTasksAreOutstanding(dataContextOfAction, Action.DISBURSE);
 
     final BigDecimal disbursalAmount = Optional.ofNullable(command.getCommand().getPaymentSize()).orElse(BigDecimal.ZERO);
-    final PaymentBuilder paymentBuilder =
-        disbursePaymentBuilderService.getPaymentBuilder(dataContextOfAction, disbursalAmount, CostComponentService.today());
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        designatorToAccountIdentifierMapper);
+
+    final PaymentBuilder paymentBuilder =
+        disbursePaymentBuilderService.getPaymentBuilder(dataContextOfAction, disbursalAmount, CostComponentService.today(), runningBalances);
 
     final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.DISBURSE, designatorToAccountIdentifierMapper);
 
@@ -337,11 +351,14 @@ public class IndividualLoanCommandHandler {
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
-    final PaymentBuilder paymentBuilder =
-        applyInterestPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today());
-
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        designatorToAccountIdentifierMapper);
+
+    final PaymentBuilder paymentBuilder =
+        applyInterestPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
     final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.APPLY_INTEREST, designatorToAccountIdentifierMapper);
 
@@ -372,14 +389,18 @@ public class IndividualLoanCommandHandler {
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
+
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        designatorToAccountIdentifierMapper);
+
     final PaymentBuilder paymentBuilder =
         acceptPaymentBuilderService.getPaymentBuilder(
             dataContextOfAction,
             command.getCommand().getPaymentSize(),
-            DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate());
-
-    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
-        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+            DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate(), runningBalances);
 
     final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.ACCEPT_PAYMENT, designatorToAccountIdentifierMapper);
 
@@ -412,11 +433,15 @@ public class IndividualLoanCommandHandler {
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
-    final PaymentBuilder paymentBuilder =
-        markLatePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, DateConverter.fromIsoString(command.getForTime()).toLocalDate());
-
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        designatorToAccountIdentifierMapper);
+
+    final PaymentBuilder paymentBuilder =
+        markLatePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, DateConverter.fromIsoString(command.getForTime()).toLocalDate(),
+            runningBalances);
 
     final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.MARK_LATE, designatorToAccountIdentifierMapper);
 
@@ -464,11 +489,14 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.CLOSE);
 
-    final PaymentBuilder paymentBuilder =
-        closePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today());
-
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        designatorToAccountIdentifierMapper);
+
+    final PaymentBuilder paymentBuilder =
+        closePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
     final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.CLOSE, designatorToAccountIdentifierMapper);
 

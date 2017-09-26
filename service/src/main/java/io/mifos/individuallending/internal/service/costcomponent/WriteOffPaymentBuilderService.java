@@ -29,7 +29,12 @@ import java.time.LocalDate;
 @Service
 public class WriteOffPaymentBuilderService implements PaymentBuilderService {
   @Override
-  public PaymentBuilder getPaymentBuilder(@Nonnull DataContextOfAction dataContextOfAction, @Nullable BigDecimal requestedDisbursalSize, LocalDate forDate) {
+  public PaymentBuilder getPaymentBuilder(
+      final @Nonnull DataContextOfAction dataContextOfAction,
+      final @Nullable BigDecimal ignored,
+      final LocalDate forDate,
+      final RunningBalances runningBalances)
+  {
     return null;
   }
 }

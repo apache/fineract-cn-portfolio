@@ -20,14 +20,12 @@ import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
-import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
 import io.mifos.individuallending.internal.service.schedule.Period;
 import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
 import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
 import io.mifos.individuallending.internal.service.schedule.ScheduledChargesService;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -44,25 +42,20 @@ import java.util.stream.Collectors;
 @Service
 public class ClosePaymentBuilderService implements PaymentBuilderService {
   private final ScheduledChargesService scheduledChargesService;
-  private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public ClosePaymentBuilderService(
-      final ScheduledChargesService scheduledChargesService,
-      final AccountingAdapter accountingAdapter) {
+      final ScheduledChargesService scheduledChargesService) {
     this.scheduledChargesService = scheduledChargesService;
-    this.accountingAdapter = accountingAdapter;
   }
 
+  @Override
   public PaymentBuilder getPaymentBuilder(
       final DataContextOfAction dataContextOfAction,
       final BigDecimal ignored,
-      final LocalDate forDate)
+      final LocalDate forDate,
+      final RunningBalances runningBalances)
   {
-    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
-        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
-    final RealRunningBalances runningBalances = new RealRunningBalances(accountingAdapter, designatorToAccountIdentifierMapper);
-
     if (runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP).compareTo(BigDecimal.ZERO) != 0)
       throw ServiceException.conflict("Cannot close loan until the balance is zero.");
 

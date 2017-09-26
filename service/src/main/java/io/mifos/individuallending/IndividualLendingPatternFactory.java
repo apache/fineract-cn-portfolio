@@ -28,11 +28,13 @@ import io.mifos.individuallending.internal.repository.CaseCreditWorthinessFactor
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType;
+import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
 import io.mifos.individuallending.internal.service.costcomponent.*;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.DataContextService;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.service.ServiceConstants;
+import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.products.spi.PatternFactory;
 import io.mifos.products.spi.ProductCommandDispatcher;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -126,6 +128,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
   private final MarkLatePaymentBuilderService markLatePaymentBuilderService;
   private final WriteOffPaymentBuilderService writeOffPaymentBuilderService;
   private final RecoverPaymentBuilderService recoverPaymentBuilderService;
+  private final AccountingAdapter accountingAdapter;
   private final CustomerManager customerManager;
   private final IndividualLendingCommandDispatcher individualLendingCommandDispatcher;
   private final Gson gson;
@@ -144,7 +147,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
       final MarkLatePaymentBuilderService markLatePaymentBuilderService,
       final WriteOffPaymentBuilderService writeOffPaymentBuilderService,
       final RecoverPaymentBuilderService recoverPaymentBuilderService,
-      final CustomerManager customerManager,
+      AccountingAdapter accountingAdapter, final CustomerManager customerManager,
       final IndividualLendingCommandDispatcher individualLendingCommandDispatcher,
       @Qualifier(ServiceConstants.GSON_NAME) final Gson gson)
   {
@@ -160,6 +163,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     this.markLatePaymentBuilderService = markLatePaymentBuilderService;
     this.writeOffPaymentBuilderService = writeOffPaymentBuilderService;
     this.recoverPaymentBuilderService = recoverPaymentBuilderService;
+    this.accountingAdapter = accountingAdapter;
 
     this.customerManager = customerManager;
     this.individualLendingCommandDispatcher = individualLendingCommandDispatcher;
@@ -466,10 +470,17 @@ public class IndividualLendingPatternFactory implements PatternFactory {
         throw ServiceException.internalError("Invalid action: ''{0}''.", action.name());
     }
 
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        designatorToAccountIdentifierMapper);
+
     final PaymentBuilder paymentBuilder = paymentBuilderService.getPaymentBuilder(
         dataContextOfAction,
         forPaymentSize,
-        forDate);
+        forDate,
+        runningBalances);
 
     return paymentBuilder.buildPayment(action, forAccountDesignators);
   }

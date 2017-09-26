@@ -58,15 +58,16 @@ public class DisbursePaymentBuilderService implements PaymentBuilderService {
     this.accountingAdapter = accountingAdapter;
   }
 
+  @Override
   public PaymentBuilder getPaymentBuilder(
       final @Nonnull DataContextOfAction dataContextOfAction,
       final @Nullable BigDecimal requestedDisbursalSize,
-      final LocalDate forDate)
+      final LocalDate forDate,
+      final RunningBalances runningBalances)
   {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
-    final RealRunningBalances runningBalances = new RealRunningBalances(accountingAdapter, designatorToAccountIdentifierMapper);
     final BigDecimal currentBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
 
     if (requestedDisbursalSize != null &&

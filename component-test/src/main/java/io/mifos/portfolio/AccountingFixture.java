@@ -580,6 +580,8 @@ class AccountingFixture {
                              final Action action) {
     final Set<Debtor> filteredDebtors = debtors.stream().filter(x -> BigDecimal.valueOf(Double.valueOf(x.getAmount())).compareTo(BigDecimal.ZERO) != 0).collect(Collectors.toSet());
     final Set<Creditor> filteredCreditors = creditors.stream().filter(x -> BigDecimal.valueOf(Double.valueOf(x.getAmount())).compareTo(BigDecimal.ZERO) != 0).collect(Collectors.toSet());
+    if (filteredCreditors.size() == 0 && filteredDebtors.size() == 0)
+      return;
     final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(filteredDebtors, filteredCreditors, productIdentifier, caseIdentifier, action);
     Mockito.verify(ledgerManager, Mockito.atLeastOnce()).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
 

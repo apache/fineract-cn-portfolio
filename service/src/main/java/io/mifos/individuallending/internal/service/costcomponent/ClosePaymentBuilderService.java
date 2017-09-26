@@ -84,6 +84,7 @@ public class ClosePaymentBuilderService implements PaymentBuilderService {
                 chargeDefinition)));
 
     return CostComponentService.getCostComponentsForScheduledCharges(
+        Action.CLOSE,
         accruedCostComponents,
         chargesSplitIntoScheduledAndAccrued.get(false),
         caseParameters.getBalanceRangeMaximum(),

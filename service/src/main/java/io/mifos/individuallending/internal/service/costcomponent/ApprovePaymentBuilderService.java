@@ -58,6 +58,7 @@ public class ApprovePaymentBuilderService implements PaymentBuilderService {
         productIdentifier, scheduledActions);
 
     return CostComponentService.getCostComponentsForScheduledCharges(
+        Action.APPROVE,
         Collections.emptyMap(),
         scheduledCharges,
         caseParameters.getBalanceRangeMaximum(),

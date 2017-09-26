@@ -110,6 +110,7 @@ public class AcceptPaymentBuilderService implements PaymentBuilderService {
 
 
     return CostComponentService.getCostComponentsForScheduledCharges(
+        Action.ACCEPT_PAYMENT,
         accruedCostComponents,
         chargesSplitIntoScheduledAndAccrued.get(false),
         caseParameters.getBalanceRangeMaximum(),

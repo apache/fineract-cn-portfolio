@@ -82,6 +82,7 @@ public class MarkLatePaymentBuilderService implements PaymentBuilderService {
 
 
     return CostComponentService.getCostComponentsForScheduledCharges(
+        Action.MARK_LATE,
         accruedCostComponents,
         chargesSplitIntoScheduledAndAccrued.get(false),
         caseParameters.getBalanceRangeMaximum(),

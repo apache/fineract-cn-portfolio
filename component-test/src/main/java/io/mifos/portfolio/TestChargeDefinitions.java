@@ -56,7 +56,7 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
         .collect(Collectors.toSet());
 
     final Set<String> expectedReadOnlyChargeDefinitionIdentifiers = Stream.of(
-        ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID,
+        //ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID,
         ChargeIdentifiers.DISBURSE_PAYMENT_ID,
         ChargeIdentifiers.INTEREST_ID,
         ChargeIdentifiers.REPAY_PRINCIPAL_ID,
@@ -107,7 +107,7 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
   public void shouldNotDeleteReadOnlyChargeDefinition() throws InterruptedException {
     final Product product = createProduct();
 
-    portfolioManager.deleteChargeDefinition(product.getIdentifier(), ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID);
+    portfolioManager.deleteChargeDefinition(product.getIdentifier(), ChargeIdentifiers.INTEREST_ID);
   }
 
   @Test

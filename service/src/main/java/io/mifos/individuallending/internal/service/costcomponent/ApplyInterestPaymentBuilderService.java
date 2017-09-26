@@ -78,6 +78,7 @@ public class ApplyInterestPaymentBuilderService implements PaymentBuilderService
                 chargeDefinition)));
 
     return CostComponentService.getCostComponentsForScheduledCharges(
+        Action.APPLY_INTEREST,
         accruedCostComponents,
         chargesSplitIntoScheduledAndAccrued.get(false),
         caseParameters.getBalanceRangeMaximum(),

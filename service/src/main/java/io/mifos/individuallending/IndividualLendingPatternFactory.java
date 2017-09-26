@@ -198,14 +198,14 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     disbursePayment.setReadOnly(true);
 
     //TODO: Make multiple write off allowance charges.
-    final ChargeDefinition writeOffAllowanceCharge = charge(
+    /*final ChargeDefinition writeOffAllowanceCharge = charge(
         ALLOW_FOR_WRITE_OFF_NAME,
         Action.MARK_LATE,
         BigDecimal.valueOf(30),
         AccountDesignators.LOAN_FUNDS_SOURCE,
         AccountDesignators.ARREARS_ALLOWANCE);
     writeOffAllowanceCharge.setProportionalTo(ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue());
-    writeOffAllowanceCharge.setReadOnly(true);
+    writeOffAllowanceCharge.setReadOnly(true);*/
 
     final ChargeDefinition interestCharge = charge(
         INTEREST_NAME,
@@ -257,7 +257,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     customerPrincipalRepaymentCharge.setReadOnly(true);
 
     ret.add(disbursePayment);
-    ret.add(writeOffAllowanceCharge);
+    //ret.add(writeOffAllowanceCharge);
     ret.add(interestCharge);
     ret.add(customerPrincipalRepaymentCharge);
     ret.add(customerInterestRepaymentCharge);

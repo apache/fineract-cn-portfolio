@@ -109,6 +109,7 @@ public class DisbursePaymentBuilderService implements PaymentBuilderService {
                         chargeDefinition)))).orElse(Collections.emptyMap());
 
     return CostComponentService.getCostComponentsForScheduledCharges(
+        Action.DISBURSE,
         accruedCostComponents,
         chargesSplitIntoScheduledAndAccrued.get(false),
         caseParameters.getBalanceRangeMaximum(),

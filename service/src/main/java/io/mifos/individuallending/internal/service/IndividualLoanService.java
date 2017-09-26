@@ -153,6 +153,7 @@ public class IndividualLoanService {
       final SortedSet<ScheduledCharge> scheduledChargesInPeriod = orderedScheduledChargesGroupedByPeriod.get(repaymentPeriod);
       final PaymentBuilder paymentBuilder =
               CostComponentService.getCostComponentsForScheduledCharges(
+                  null, //Action doesn't matter because not using accrual accounting.
                   Collections.emptyMap(),
                   scheduledChargesInPeriod,
                   initialBalance,

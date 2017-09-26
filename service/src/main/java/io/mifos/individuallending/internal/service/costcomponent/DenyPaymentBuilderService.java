@@ -57,6 +57,7 @@ public class DenyPaymentBuilderService implements PaymentBuilderService {
         productIdentifier, scheduledActions);
 
     return CostComponentService.getCostComponentsForScheduledCharges(
+        Action.DENY,
         Collections.emptyMap(),
         scheduledCharges,
         caseParameters.getBalanceRangeMaximum(),

@@ -43,6 +43,7 @@ public class CostComponentService {
   private static final int RUNNING_CALCULATION_PRECISION = 8;
 
   public static PaymentBuilder getCostComponentsForScheduledCharges(
+      final Action action,
       final Map<ChargeDefinition, CostComponent> accruedCostComponents,
       final Collection<ScheduledCharge> scheduledCharges,
       final BigDecimal maximumBalance,
@@ -59,11 +60,7 @@ public class CostComponentService {
       final ChargeDefinition chargeDefinition = entry.getKey();
       final BigDecimal chargeAmount = entry.getValue().getAmount();
 
-      //TODO: This should adjust differently depending on accrual accounting.
-      // It can't be fixed until getAmountProportionalTo is fixed.
-      paymentBuilder.addToBalance(chargeDefinition.getFromAccountDesignator(), chargeAmount.negate());
-      paymentBuilder.addToBalance(chargeDefinition.getToAccountDesignator(), chargeAmount);
-      paymentBuilder.addToCostComponent(chargeDefinition, chargeAmount);
+      paymentBuilder.adjustBalances(action, chargeDefinition, chargeAmount);
     }
 
 
@@ -196,6 +193,7 @@ public class CostComponentService {
         .filter(x -> x.getScheduledAction().getAction().equals(Action.DISBURSE))
         .collect(Collectors.toList());
     final PaymentBuilder paymentBuilder = getCostComponentsForScheduledCharges(
+        null, //Action doesn't matter since there's nothing accrued.
         Collections.emptyMap(),
         disbursementFees,
         maximumBalanceSize,

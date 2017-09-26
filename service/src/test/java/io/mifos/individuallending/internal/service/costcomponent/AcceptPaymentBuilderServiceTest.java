@@ -17,6 +17,7 @@ public class AcceptPaymentBuilderServiceTest {
   public void getPaymentBuilder() throws Exception {
     final PaymentBuilderServiceTestCase testCase = new PaymentBuilderServiceTestCase("simple case");
     testCase.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.balance.negate());
+    testCase.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_INTEREST, testCase.accruedInterest.negate());
     testCase.runningBalances.adjustBalance(AccountDesignators.INTEREST_ACCRUAL, testCase.accruedInterest);
 
     final PaymentBuilder paymentBuilder = PaymentBuilderServiceTestHarness.constructCallToPaymentBuilder(

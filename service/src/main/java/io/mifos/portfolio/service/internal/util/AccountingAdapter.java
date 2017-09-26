@@ -167,7 +167,7 @@ public class AccountingAdapter {
   public BigDecimal getCurrentAccountBalance(final String accountIdentifier) {
     try {
       final Account account = ledgerManager.findAccount(accountIdentifier);
-      if (account == null)
+      if (account == null || account.getBalance() == null)
         throw ServiceException.internalError("Could not find the account with identifier ''{0}''", accountIdentifier);
       return BigDecimal.valueOf(account.getBalance());
     }

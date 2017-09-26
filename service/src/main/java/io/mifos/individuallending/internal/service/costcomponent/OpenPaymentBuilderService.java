@@ -56,6 +56,7 @@ public class OpenPaymentBuilderService implements PaymentBuilderService {
         productIdentifier, scheduledActions);
 
     return CostComponentService.getCostComponentsForScheduledCharges(
+        Action.OPEN,
         Collections.emptyMap(),
         scheduledCharges,
         caseParameters.getBalanceRangeMaximum(),

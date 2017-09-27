@@ -19,6 +19,7 @@ import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.costcomponent.CostComponentService;
 import io.mifos.individuallending.internal.service.costcomponent.PaymentBuilder;
@@ -142,7 +143,7 @@ public class IndividualLoanService {
       }
       else if (i == sortedRepaymentPeriods.size() - 1)
       { //Last repayment period: Fill the proposed payment out to the remaining balance of the loan.
-        requestedRepayment = loanPaymentSize; //TODO: wrong doesn't include last period of interest.
+        requestedRepayment = loanPaymentSize.multiply(BigDecimal.valueOf(2));
         requestedDisbursal = BigDecimal.ZERO;
       }
       else {

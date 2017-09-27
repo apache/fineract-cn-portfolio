@@ -22,7 +22,7 @@ public class ApplyInterestPaymentBuilderServiceTest {
     final PaymentBuilder paymentBuilder = PaymentBuilderServiceTestHarness.constructCallToPaymentBuilder(
         ApplyInterestPaymentBuilderService::new, testCase);
 
-    final Payment payment = paymentBuilder.buildPayment(Action.APPLY_INTEREST, Collections.emptySet());
+    final Payment payment = paymentBuilder.buildPayment(Action.APPLY_INTEREST, Collections.emptySet(), testCase.forDate);
     Assert.assertNotNull(payment);
     final Map<String, CostComponent> mappedCostComponents = payment.getCostComponents().stream()
         .collect(Collectors.toMap(CostComponent::getChargeIdentifier, x -> x));

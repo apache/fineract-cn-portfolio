@@ -16,6 +16,7 @@
 package io.mifos.individuallending.internal.service.costcomponent;
 
 import com.google.common.collect.Sets;
+import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
@@ -26,7 +27,9 @@ import io.mifos.portfolio.api.v1.domain.Payment;
 import io.mifos.portfolio.api.v1.domain.RequiredAccountAssignment;
 import io.mifos.portfolio.service.internal.util.ChargeInstance;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -48,8 +51,17 @@ public class PaymentBuilder {
     this.accrualAccounting = accrualAccounting;
   }
 
-  public Payment buildPayment(final Action action, final Set<String> forAccountDesignators) {
+  private Map<String, BigDecimal> copyBalanceAdjustments() {
+    return balanceAdjustments.entrySet().stream()
+        .filter(x -> x.getValue().compareTo(BigDecimal.ZERO) != 0)
+        .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+  }
 
+  public Payment buildPayment(
+      final Action action,
+      final Set<String> forAccountDesignators,
+      final @Nullable LocalDate forDate)
+  {
     if (!forAccountDesignators.isEmpty()) {
       final Stream<Map.Entry<ChargeDefinition, CostComponent>> costComponentStream = stream()
           .filter(costComponentEntry -> chargeReferencesAccountDesignators(
@@ -63,15 +75,17 @@ public class PaymentBuilder {
               costComponentEntry.getValue().getAmount()))
           .collect(Collectors.toList());
 
-      return new Payment(costComponentList, balanceAdjustments);
+      final Payment ret = new Payment(costComponentList, copyBalanceAdjustments());
+      ret.setDate(forDate == null ? null : DateConverter.toIsoString(forDate.atStartOfDay()));
+      return ret;
     }
     else {
-      return buildPayment();
+      return buildPayment(forDate);
     }
 
   }
 
-  private Payment buildPayment() {
+  private Payment buildPayment(final @Nullable LocalDate forDate) {
     final Stream<Map.Entry<ChargeDefinition, CostComponent>> costComponentStream  = stream();
 
     final List<CostComponent> costComponentList = costComponentStream
@@ -80,11 +94,15 @@ public class PaymentBuilder {
             costComponentEntry.getValue().getAmount()))
         .collect(Collectors.toList());
 
-    return new Payment(costComponentList, balanceAdjustments);
+    final Payment ret = new Payment(costComponentList, copyBalanceAdjustments());
+    ret.setDate(forDate == null ? null : DateConverter.toIsoString(forDate.atStartOfDay()));
+    return ret;
   }
 
-  public PlannedPayment accumulatePlannedPayment(final SimulatedRunningBalances balances) {
-    final Payment payment = buildPayment();
+  public PlannedPayment accumulatePlannedPayment(
+      final SimulatedRunningBalances balances,
+      final @Nullable LocalDate forDate) {
+    final Payment payment = buildPayment(forDate);
     balanceAdjustments.forEach(balances::adjustBalance);
     final Map<String, BigDecimal> balancesCopy = balances.snapshot();
 
@@ -101,7 +119,7 @@ public class PaymentBuilder {
         .collect(Collectors.toList());
   }
 
-  BigDecimal getBalanceAdjustment(final String... accountDesignators) {
+  public BigDecimal getBalanceAdjustment(final String... accountDesignators) {
     return Arrays.stream(accountDesignators)
         .map(accountDesignator -> balanceAdjustments.getOrDefault(accountDesignator, BigDecimal.ZERO))
         .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -154,7 +172,7 @@ public class PaymentBuilder {
     return chargeDefinition.getAccrualAccountDesignator() != null;
   }
 
-  void addToBalance(
+  private void addToBalance(
       final String accountDesignator,
       final BigDecimal chargeAmount) {
     final BigDecimal currentAdjustment = balanceAdjustments.getOrDefault(accountDesignator, BigDecimal.ZERO);
@@ -162,7 +180,7 @@ public class PaymentBuilder {
     balanceAdjustments.put(accountDesignator, newAdjustment);
   }
 
-  void addToCostComponent(
+  private void addToCostComponent(
       final ChargeDefinition chargeDefinition,
       final BigDecimal amount) {
     final CostComponent costComponent = costComponents

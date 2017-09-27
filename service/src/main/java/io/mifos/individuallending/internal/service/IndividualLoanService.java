@@ -165,7 +165,7 @@ public class IndividualLoanService {
                   minorCurrencyUnitDigits,
                   false);
 
-      plannedPayments.add(paymentBuilder.accumulatePlannedPayment(balances));
+      plannedPayments.add(paymentBuilder.accumulatePlannedPayment(balances, repaymentPeriod.getEndDate()));
     }
     return plannedPayments;
   }

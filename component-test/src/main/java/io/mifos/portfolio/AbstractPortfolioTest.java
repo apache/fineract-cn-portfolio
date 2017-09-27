@@ -267,24 +267,29 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     Assert.assertEquals(actionList, portfolioManager.getActionsForCase(productIdentifier, customerCaseIdentifier));
   }
 
-  void checkCostComponentForActionCorrect(final String productIdentifier,
-                                          final String customerCaseIdentifier,
-                                          final Action action,
-                                          final Set<String> accountDesignators,
-                                          final BigDecimal amount,
-                                          final CostComponent... expectedCostComponents) {
+  Payment checkCostComponentForActionCorrect(
+      final String productIdentifier,
+      final String customerCaseIdentifier,
+      final Action action,
+      final Set<String> accountDesignators,
+      final BigDecimal amount,
+      final LocalDateTime forDateTime,
+      final CostComponent... expectedCostComponents) {
     final Payment payment = portfolioManager.getCostComponentsForAction(
         productIdentifier,
         customerCaseIdentifier,
         action.name(),
         accountDesignators,
-        amount
+        amount,
+        DateConverter.toIsoString(forDateTime)
     );
     final Set<CostComponent> setOfCostComponents = new HashSet<>(payment.getCostComponents());
     final Set<CostComponent> setOfExpectedCostComponents = Stream.of(expectedCostComponents)
         .filter(x -> x.getAmount().compareTo(BigDecimal.ZERO) != 0)
         .collect(Collectors.toSet());
     Assert.assertEquals(setOfExpectedCostComponents, setOfCostComponents);
+
+    return payment;
   }
 
   void setFeeToFixedValue(final String productIdentifier,

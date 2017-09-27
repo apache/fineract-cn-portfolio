@@ -88,24 +88,15 @@ public class AcceptPaymentBuilderService implements PaymentBuilderService {
     final BigDecimal loanPaymentSize;
 
     if (requestedLoanPaymentSize != null) {
-      loanPaymentSize = requestedLoanPaymentSize;
+      loanPaymentSize = requestedLoanPaymentSize
+          .min(runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP));
+    }
+    else if (scheduledAction.getActionPeriod() != null && scheduledAction.getActionPeriod().isLastPeriod()) {
+      loanPaymentSize = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
     }
     else {
-      if (scheduledAction.getActionPeriod() != null && scheduledAction.getActionPeriod().isLastPeriod()) {
-        loanPaymentSize = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
-      }
-      else {
-        final BigDecimal paymentSizeBeforeOnTopCharges = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP)
-            .min(dataContextOfAction.getCaseParametersEntity().getPaymentSize());
-
-        @SuppressWarnings("UnnecessaryLocalVariable")
-        final BigDecimal paymentSizeIncludingOnTopCharges = accruedCostComponents.entrySet().stream()
-            .filter(entry -> entry.getKey().getChargeOnTop() != null && entry.getKey().getChargeOnTop())
-            .map(entry -> entry.getValue().getAmount())
-            .reduce(paymentSizeBeforeOnTopCharges, BigDecimal::add);
-
-        loanPaymentSize = paymentSizeIncludingOnTopCharges;
-      }
+      loanPaymentSize = dataContextOfAction.getCaseParametersEntity().getPaymentSize()
+          .min(runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP));
     }
 
 

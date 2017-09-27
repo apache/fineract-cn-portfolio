@@ -57,7 +57,7 @@ public class Period implements Comparable<Period> {
     return beginDate;
   }
 
-  LocalDate getEndDate() {
+  public LocalDate getEndDate() {
     return endDate;
   }
 

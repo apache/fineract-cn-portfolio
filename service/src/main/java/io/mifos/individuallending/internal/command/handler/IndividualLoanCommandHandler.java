@@ -320,13 +320,10 @@ public class IndividualLoanCommandHandler {
       customerCase.setCurrentState(Case.State.ACTIVE.name());
       caseRepository.save(customerCase);
     }
-    final String customerLoanPrinicipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
-    final String customerLoanInterestAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_INTEREST);
-    final String customerLoanFeesAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_FEES);
-    final BigDecimal currentBalance = accountingAdapter.getTotalOfCurrentAccountBalances(customerLoanPrinicipalAccountIdentifier, customerLoanInterestAccountIdentifier, customerLoanFeesAccountIdentifier);
+    final BigDecimal currentBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
 
     final BigDecimal newLoanPaymentSize = disbursePaymentBuilderService.getLoanPaymentSizeForSingleDisbursement(
-        currentBalance.add(disbursalAmount),
+        currentBalance.add(paymentBuilder.getBalanceAdjustment(AccountDesignators.ENTRY)),
         dataContextOfAction);
 
     dataContextOfAction.getCaseParametersEntity().setPaymentSize(newLoanPaymentSize);

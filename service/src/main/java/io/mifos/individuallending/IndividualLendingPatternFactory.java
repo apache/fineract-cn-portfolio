@@ -482,7 +482,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
         forDate,
         runningBalances);
 
-    return paymentBuilder.buildPayment(action, forAccountDesignators);
+    return paymentBuilder.buildPayment(action, forAccountDesignators, forDate);
   }
 
   public static void checkActionCanBeExecuted(final Case.State state, final Action action) {

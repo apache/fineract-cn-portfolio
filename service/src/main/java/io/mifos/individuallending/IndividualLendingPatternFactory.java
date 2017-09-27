@@ -216,7 +216,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     interestCharge.setForCycleSizeUnit(ChronoUnit.YEARS);
     interestCharge.setAccrueAction(Action.APPLY_INTEREST.name());
     interestCharge.setAccrualAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
-    interestCharge.setProportionalTo(ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue());
+    interestCharge.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_AND_INTEREST_DESIGNATOR.getValue());
     interestCharge.setChargeMethod(ChargeDefinition.ChargeMethod.INTEREST);
     interestCharge.setReadOnly(true);
 

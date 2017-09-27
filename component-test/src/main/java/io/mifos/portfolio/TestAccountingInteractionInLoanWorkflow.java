@@ -72,9 +72,10 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private String customerLoanInterestIdentifier = null;
   private String customerLoanFeeIdentifier = null;
 
-  private BigDecimal expectedCurrentPrincipal = null;
+  private BigDecimal expectedCurrentPrincipal = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
   private BigDecimal interestAccrued = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
   private BigDecimal nonLateFees = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
+  private BigDecimal lateFees = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
 
 
   @Before
@@ -185,7 +186,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     while (expectedCurrentPrincipal.compareTo(BigDecimal.ZERO) > 0) {
       logger.info("Simulating week {}. Expected current balance {}.", week, expectedCurrentPrincipal);
       step6CalculateInterestAndCheckForLatenessForWeek(today, week);
-      final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today, (week+1)*7, BigDecimal.ZERO);
+      final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today, (week+1)*7);
       repayments.add(nextRepaymentAmount);
       step7PaybackPartialAmount(nextRepaymentAmount, today, (week+1)*7, BigDecimal.ZERO);
       week++;
@@ -226,20 +227,20 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     while (expectedCurrentPrincipal.compareTo(BigDecimal.ZERO) > 0) {
       logger.info("Simulating week {}. Expected current balance {}.", week, expectedCurrentPrincipal);
       if (week == weekOfLateRepayment) {
-        final BigDecimal lateFee = BigDecimal.valueOf(31_18, MINOR_CURRENCY_UNIT_DIGITS);
+        final BigDecimal lateFee = BigDecimal.valueOf(17_31, MINOR_CURRENCY_UNIT_DIGITS); //??? TODO: check the late fee value.
         step6CalculateInterestAndCheckForLatenessForRangeOfDays(
             today,
             (week * 7) + 1,
             (week + 1) * 7 + 2,
             8,
             lateFee);
-        final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today, (week + 1) * 7 + 2, lateFee);
+        final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today, (week + 1) * 7 + 2);
         repayments.add(nextRepaymentAmount);
         step7PaybackPartialAmount(nextRepaymentAmount, today, (week + 1) * 7 + 2, lateFee);
       }
       else {
         step6CalculateInterestAndCheckForLatenessForWeek(today, week);
-        final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today, (week + 1) * 7, BigDecimal.ZERO);
+        final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today, (week + 1) * 7);
         repayments.add(nextRepaymentAmount);
         step7PaybackPartialAmount(nextRepaymentAmount, today, (week + 1) * 7, BigDecimal.ZERO);
       }
@@ -255,14 +256,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
   private BigDecimal findNextRepaymentAmount(
       final LocalDateTime referenceDate,
-      final int dayNumber,
-      final BigDecimal lateFee) {
-    AccountingFixture.mockBalance(customerLoanPrincipalIdentifier, expectedCurrentPrincipal);
-    AccountingFixture.mockBalance(customerLoanInterestIdentifier, interestAccrued);
-    AccountingFixture.mockBalance(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued);
-    AccountingFixture.mockBalance(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFee);
-    AccountingFixture.mockBalance(customerLoanFeeIdentifier, nonLateFees.add(lateFee));
-
+      final int dayNumber) {
     final Payment nextPayment = portfolioManager.getCostComponentsForAction(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -270,9 +264,10 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         null,
         null,
         DateConverter.toIsoString(referenceDate.plusDays(dayNumber)));
-    return nextPayment.getCostComponents().stream().filter(x -> x.getChargeIdentifier().equals(ChargeIdentifiers.REPAY_PRINCIPAL_ID)).findFirst()
-        .orElseThrow(() -> new IllegalArgumentException("return missing repayment charge."))
-        .getAmount();
+    final BigDecimal nextRepaymentAmount = nextPayment.getBalanceAdjustments()
+        .getOrDefault(AccountDesignators.ENTRY, BigDecimal.ZERO).negate();
+    Assert.assertTrue(nextRepaymentAmount.signum() != -1);
+    return nextRepaymentAmount;
   }
 
   //Create product and set charges to fixed fees.
@@ -416,6 +411,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     expectedCurrentPrincipal = BigDecimal.ZERO;
     interestAccrued = BigDecimal.ZERO;
     nonLateFees = BigDecimal.ZERO;
+    lateFees = BigDecimal.ZERO;
+    updateBalanceMock();
   }
 
   //Approve the case, accept a loan origination fee, and prepare to disburse the loan by earmarking the funds.
@@ -463,6 +460,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     expectedCurrentPrincipal = expectedCurrentPrincipal.add(amount);
     interestAccrued = BigDecimal.ZERO;
     nonLateFees = nonLateFees.add(disbursementFeeAmount);
+    lateFees = BigDecimal.ZERO;
+
+    updateBalanceMock();
   }
 
   private void step6CalculateInterestAndCheckForLatenessForWeek(
@@ -473,21 +473,22 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         (weekNumber * 7) + 1,
         (weekNumber + 1) * 7,
         -1,
-        null);
+        BigDecimal.ZERO);
   }
 
   private void step6CalculateInterestAndCheckForLatenessForRangeOfDays(
       final LocalDateTime referenceDate,
       final int startInclusive,
       final int endInclusive,
-      final int dayOfLateFee,
+      final int relativeDayOfLateFee,
       final BigDecimal calculatedLateFee) throws InterruptedException {
     try {
+      final LocalDateTime absoluteDayOfLateFee = referenceDate.plusDays(startInclusive + relativeDayOfLateFee);
       IntStream.rangeClosed(startInclusive, endInclusive)
           .mapToObj(referenceDate::plusDays)
           .forEach(day -> {
             try {
-              if (day.equals(referenceDate.plusDays(dayOfLateFee))) {
+              if (day.equals(absoluteDayOfLateFee)) {
                 step6CalculateInterestAccrualAndCheckForLateness(day, calculatedLateFee);
               }
               else {
@@ -511,14 +512,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private void step6CalculateInterestAccrualAndCheckForLateness(
       final LocalDateTime forTime,
       final BigDecimal calculatedLateFee) throws InterruptedException {
-    logger.info("step6CalculateInterestAccrualAndCheckForLateness  '{}', '{}'", forTime, calculatedLateFee);
+    logger.info("step6CalculateInterestAccrualAndCheckForLateness  '{}'", forTime);
     final String beatIdentifier = "alignment0";
     final String midnightTimeStamp = DateConverter.toIsoString(forTime);
-
-    final BigDecimal allFees = nonLateFees.add(calculatedLateFee);
-    AccountingFixture.mockBalance(customerLoanPrincipalIdentifier, expectedCurrentPrincipal);
-    AccountingFixture.mockBalance(customerLoanInterestIdentifier, interestAccrued);
-    AccountingFixture.mockBalance(customerLoanFeeIdentifier, allFees);
 
     final BigDecimal dailyInterestRate = Fixture.INTEREST_RATE
         .divide(BigDecimal.valueOf(100), 8, BigDecimal.ROUND_HALF_EVEN)
@@ -526,15 +522,11 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final BigDecimal calculatedInterest = expectedCurrentPrincipal
         .add(interestAccrued)
-        .add(allFees)
         .multiply(dailyInterestRate)
         .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
 
-    logger.info("currentPrincipal '{}'", expectedCurrentPrincipal);
-    logger.info("interestAccrued '{}'", interestAccrued);
-    logger.info("allFees '{}'", allFees);
-    logger.info("INTEREST_RATE '{}'", Fixture.INTEREST_RATE);
     logger.info("calculatedInterest '{}'", calculatedInterest);
+    logger.info("calculatedLateFee '{}'", calculatedLateFee);
 
 
     checkCostComponentForActionCorrect(
@@ -578,7 +570,12 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     creditors.add(new Creditor(
         AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER,
         calculatedInterest.toPlainString()));
-    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST);
+    AccountingFixture.verifyTransfer(
+        ledgerManager,
+        debtors,
+        creditors,
+        product.getIdentifier(),
+        customerCase.getIdentifier(), Action.APPLY_INTEREST);
 
 
     if (calculatedLateFee.compareTo(BigDecimal.ZERO) != 0) {
@@ -591,11 +588,19 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       lateFeeCreditors.add(new Creditor(
           AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER,
           calculatedLateFee.toPlainString()));
-      AccountingFixture.verifyTransfer(ledgerManager, lateFeeDebtors, lateFeeCreditors, product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST);
+      AccountingFixture.verifyTransfer(
+          ledgerManager,
+          lateFeeDebtors,
+          lateFeeCreditors,
+          product.getIdentifier(),
+          customerCase.getIdentifier(),
+          Action.MARK_LATE);
+      lateFees = lateFees.add(calculatedLateFee);
     }
     interestAccrued = interestAccrued.add(calculatedInterest);
+
+    updateBalanceMock();
     logger.info("Completed step6CalculateInterestAccrualAndCheckForLateness");
-    logger.info("interestAccrued '{}'", interestAccrued);
   }
 
   private void step7PaybackPartialAmount(
@@ -604,18 +609,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       final int dayNumber,
       final BigDecimal lateFee) throws InterruptedException {
     logger.info("step7PaybackPartialAmount '{}'", amount);
-
-    final BigDecimal allFees = lateFee.add(nonLateFees);
-    final BigDecimal principal = amount.subtract(interestAccrued).subtract(allFees);
-    AccountingFixture.mockBalance(customerLoanPrincipalIdentifier, expectedCurrentPrincipal);
-    AccountingFixture.mockBalance(customerLoanFeeIdentifier, allFees);
-    AccountingFixture.mockBalance(customerLoanInterestIdentifier, interestAccrued);
-    AccountingFixture.mockBalance(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued);
-    AccountingFixture.mockBalance(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFee);
-    logger.info("currentPrincipal '{}'", expectedCurrentPrincipal);
-    logger.info("interestAccrued '{}'", interestAccrued);
-    logger.info("allFees '{}'", allFees);
-    logger.info("lateFee '{}'", lateFee);
+    final BigDecimal principal = amount.subtract(interestAccrued).subtract(lateFee.add(nonLateFees));
 
     checkCostComponentForActionCorrect(
         product.getIdentifier(),
@@ -625,7 +619,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         amount,
         new CostComponent(ChargeIdentifiers.REPAY_PRINCIPAL_ID, principal),
         new CostComponent(ChargeIdentifiers.REPAY_INTEREST_ID, interestAccrued),
-        new CostComponent(ChargeIdentifiers.REPAY_FEES_ID, allFees),
+        new CostComponent(ChargeIdentifiers.REPAY_FEES_ID, lateFee.add(nonLateFees)),
         new CostComponent(ChargeIdentifiers.INTEREST_ID, interestAccrued),
         new CostComponent(ChargeIdentifiers.LATE_FEE_ID, lateFee));
     checkStateTransfer(
@@ -647,8 +641,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
       debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
     }
-    if (allFees.compareTo(BigDecimal.ZERO) != 0) {
-      debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, allFees.toPlainString()));
+    if (lateFee.add(nonLateFees).compareTo(BigDecimal.ZERO) != 0) {
+      debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, lateFee.add(nonLateFees).toPlainString()));
     }
     if (lateFee.compareTo(BigDecimal.ZERO) != 0) {
       debtors.add(new Debtor(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFee.toPlainString()));
@@ -660,8 +654,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       creditors.add(new Creditor(customerLoanInterestIdentifier, interestAccrued.toPlainString()));
       creditors.add(new Creditor(AccountingFixture.CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
     }
-    if (allFees.compareTo(BigDecimal.ZERO) != 0) {
-      creditors.add(new Creditor(customerLoanFeeIdentifier, allFees.toPlainString()));
+    if (lateFee.add(nonLateFees).compareTo(BigDecimal.ZERO) != 0) {
+      creditors.add(new Creditor(customerLoanFeeIdentifier, lateFee.add(nonLateFees).toPlainString()));
     }
     if (lateFee.compareTo(BigDecimal.ZERO) != 0) {
       creditors.add(new Creditor(AccountingFixture.LATE_FEE_INCOME_ACCOUNT_IDENTIFIER, lateFee.toPlainString()));
@@ -672,20 +666,14 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     expectedCurrentPrincipal = expectedCurrentPrincipal.subtract(principal);
     interestAccrued = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
     nonLateFees = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
+    lateFees = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
+
+    updateBalanceMock();
     logger.info("Completed step7PaybackPartialAmount");
-    logger.info("currentPrincipal '{}'", expectedCurrentPrincipal);
-    logger.info("interestAccrued '{}'", interestAccrued);
-    logger.info("nonLateFees '{}'", nonLateFees);
   }
 
   private void step8Close() throws InterruptedException {
     logger.info("step8Close");
-    logger.info("currentPrincipal '{}'", expectedCurrentPrincipal);
-    logger.info("interestAccrued '{}'", interestAccrued);
-    logger.info("nonLateFees '{}'", nonLateFees);
-    AccountingFixture.mockBalance(customerLoanPrincipalIdentifier, expectedCurrentPrincipal);
-    AccountingFixture.mockBalance(customerLoanInterestIdentifier, interestAccrued);
-    AccountingFixture.mockBalance(customerLoanFeeIdentifier, nonLateFees);
 
     checkCostComponentForActionCorrect(
         product.getIdentifier(),
@@ -702,5 +690,19 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Case.State.CLOSED); //Close has to be done explicitly.
 
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
+  }
+
+  private void updateBalanceMock() {
+    logger.info("Updating balance mocks");
+    final BigDecimal allFees = lateFees.add(nonLateFees);
+    AccountingFixture.mockBalance(customerLoanPrincipalIdentifier, expectedCurrentPrincipal);
+    AccountingFixture.mockBalance(customerLoanFeeIdentifier, allFees);
+    AccountingFixture.mockBalance(customerLoanInterestIdentifier, interestAccrued);
+    AccountingFixture.mockBalance(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued);
+    AccountingFixture.mockBalance(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFees);
+    logger.info("updated currentPrincipal '{}'", expectedCurrentPrincipal);
+    logger.info("updated interestAccrued '{}'", interestAccrued);
+    logger.info("updated nonLateFees '{}'", nonLateFees);
+    logger.info("updated lateFees '{}'", lateFees);
   }
 }

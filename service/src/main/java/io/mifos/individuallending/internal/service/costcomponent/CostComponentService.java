@@ -132,6 +132,11 @@ public class CostComponentService {
         final BigDecimal customerLoanRunningBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
         return customerLoanRunningBalance.subtract(paymentBuilder.getBalanceAdjustment(AccountDesignators.CUSTOMER_LOAN_GROUP));
       }
+      case PRINCIPAL_AND_INTEREST_DESIGNATOR: {
+        final BigDecimal customerLoanPrincipal = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+        final BigDecimal customerLoanInterest = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+        return customerLoanInterest.add(customerLoanPrincipal);
+      }
       case CONTRACTUAL_REPAYMENT_DESIGNATOR:
         return contractualRepayment;
       case REQUESTED_DISBURSEMENT_DESIGNATOR:

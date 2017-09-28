@@ -185,9 +185,9 @@ public class CostComponentService {
       final BigDecimal interest,
       final int minorCurrencyUnitDigits,
       final List<ScheduledCharge> scheduledCharges) {
-    final int precision = disbursementSize.precision() - 4 + minorCurrencyUnitDigits + EXTRA_PRECISION;
+    final int precision = disbursementSize.precision() - disbursementSize.scale() + minorCurrencyUnitDigits + EXTRA_PRECISION;
     final Map<Period, BigDecimal> accrualRatesByPeriod
-        = PeriodChargeCalculator.getPeriodAccrualInterestRate(interest, scheduledCharges, disbursementSize.precision());
+        = PeriodChargeCalculator.getPeriodAccrualInterestRate(interest, scheduledCharges, precision);
 
     final int periodCount = accrualRatesByPeriod.size();
     if (periodCount == 0)

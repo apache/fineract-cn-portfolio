@@ -7,19 +7,41 @@ import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Payment;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@RunWith(Parameterized.class)
 public class AcceptPaymentBuilderServiceTest {
-  @Test
-  public void getPaymentBuilder() throws Exception {
+
+  @Parameterized.Parameters
+  public static Collection testCases() {
+    final Collection<PaymentBuilderServiceTestCase> ret = new ArrayList<>();
+    ret.add(simpleCase());
+    return ret;
+  }
+
+  private static PaymentBuilderServiceTestCase simpleCase() {
     final PaymentBuilderServiceTestCase testCase = new PaymentBuilderServiceTestCase("simple case");
     testCase.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.balance.negate());
     testCase.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_INTEREST, testCase.accruedInterest.negate());
     testCase.runningBalances.adjustBalance(AccountDesignators.INTEREST_ACCRUAL, testCase.accruedInterest);
+    return testCase;
+  }
 
+  private final PaymentBuilderServiceTestCase testCase;
+
+  public AcceptPaymentBuilderServiceTest(final PaymentBuilderServiceTestCase testCase) {
+    this.testCase = testCase;
+  }
+
+  @Test
+  public void getPaymentBuilder() throws Exception {
     final PaymentBuilder paymentBuilder = PaymentBuilderServiceTestHarness.constructCallToPaymentBuilder(
         AcceptPaymentBuilderService::new, testCase);
 

@@ -6,9 +6,9 @@ import java.time.LocalDateTime;
 
 class PaymentBuilderServiceTestCase {
   private final String description;
-  private LocalDate startOfTerm = LocalDate.of(2015, 1, 15);
+  private LocalDateTime startOfTerm = LocalDateTime.of(2015, 1, 15, 0, 0);
   LocalDateTime endOfTerm = LocalDate.of(2015, 8, 15).atStartOfDay();
-  LocalDate forDate = startOfTerm.plusMonths(1);
+  LocalDateTime forDate = startOfTerm.plusMonths(1);
   BigDecimal paymentSize = BigDecimal.valueOf(100_00, 2);
   BigDecimal balance = BigDecimal.valueOf(2000_00, 2);
   BigDecimal balanceRangeMaximum = BigDecimal.valueOf(1000_00, 2);
@@ -26,7 +26,7 @@ class PaymentBuilderServiceTestCase {
     return this;
   }
 
-  PaymentBuilderServiceTestCase forDate(LocalDate forDate) {
+  PaymentBuilderServiceTestCase forDate(LocalDateTime forDate) {
     this.forDate = forDate;
     return this;
   }

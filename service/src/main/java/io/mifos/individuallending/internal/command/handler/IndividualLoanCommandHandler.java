@@ -29,9 +29,10 @@ import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.individuallending.internal.command.*;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
-import io.mifos.individuallending.internal.service.*;
-import io.mifos.individuallending.internal.service.costcomponent.*;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
+import io.mifos.individuallending.internal.service.DataContextService;
+import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
+import io.mifos.individuallending.internal.service.costcomponent.*;
 import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpers;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
@@ -42,7 +43,6 @@ import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.CaseRepository;
 import io.mifos.portfolio.service.internal.repository.TaskInstanceRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
-import io.mifos.portfolio.service.internal.util.ChargeInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -132,16 +132,15 @@ public class IndividualLoanCommandHandler {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final RealRunningBalances runningBalances = new RealRunningBalances(
         accountingAdapter,
-        designatorToAccountIdentifierMapper);
+        dataContextOfAction);
 
     final PaymentBuilder paymentBuilder
         = openPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
-    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.OPEN, designatorToAccountIdentifierMapper);
-
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.OPEN),
@@ -172,12 +171,10 @@ public class IndividualLoanCommandHandler {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final RealRunningBalances runningBalances = new RealRunningBalances(
         accountingAdapter,
-        designatorToAccountIdentifierMapper);
+        dataContextOfAction);
 
     final PaymentBuilder paymentBuilder
         = denyPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
-
-    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.DENY, designatorToAccountIdentifierMapper);
 
     final LocalDateTime today = today();
 
@@ -255,16 +252,15 @@ public class IndividualLoanCommandHandler {
 
     final RealRunningBalances runningBalances = new RealRunningBalances(
         accountingAdapter,
-        designatorToAccountIdentifierMapper);
+        dataContextOfAction);
 
     final PaymentBuilder paymentBuilder =
         approvePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
-    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.APPROVE, designatorToAccountIdentifierMapper);
-
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.APPROVE),
@@ -296,16 +292,15 @@ public class IndividualLoanCommandHandler {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final RealRunningBalances runningBalances = new RealRunningBalances(
         accountingAdapter,
-        designatorToAccountIdentifierMapper);
+        dataContextOfAction);
 
     final PaymentBuilder paymentBuilder =
         disbursePaymentBuilderService.getPaymentBuilder(dataContextOfAction, disbursalAmount, CostComponentService.today(), runningBalances);
 
-    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.DISBURSE, designatorToAccountIdentifierMapper);
-
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.DISBURSE),
@@ -352,14 +347,13 @@ public class IndividualLoanCommandHandler {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final RealRunningBalances runningBalances = new RealRunningBalances(
         accountingAdapter,
-        designatorToAccountIdentifierMapper);
+        dataContextOfAction);
 
     final PaymentBuilder paymentBuilder =
         applyInterestPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
-    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.APPLY_INTEREST, designatorToAccountIdentifierMapper);
-
-    accountingAdapter.bookCharges(charges,
+    accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         "Applied interest on " + command.getForTime(),
         command.getForTime(),
         dataContextOfAction.getMessageForCharge(Action.APPLY_INTEREST),
@@ -391,7 +385,7 @@ public class IndividualLoanCommandHandler {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final RealRunningBalances runningBalances = new RealRunningBalances(
         accountingAdapter,
-        designatorToAccountIdentifierMapper);
+        dataContextOfAction);
 
     final PaymentBuilder paymentBuilder =
         acceptPaymentBuilderService.getPaymentBuilder(
@@ -399,11 +393,10 @@ public class IndividualLoanCommandHandler {
             command.getCommand().getPaymentSize(),
             DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate(), runningBalances);
 
-    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.ACCEPT_PAYMENT, designatorToAccountIdentifierMapper);
-
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT),
@@ -434,17 +427,16 @@ public class IndividualLoanCommandHandler {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final RealRunningBalances runningBalances = new RealRunningBalances(
         accountingAdapter,
-        designatorToAccountIdentifierMapper);
+        dataContextOfAction);
 
     final PaymentBuilder paymentBuilder =
         markLatePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, DateConverter.fromIsoString(command.getForTime()).toLocalDate(),
             runningBalances);
 
-    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.MARK_LATE, designatorToAccountIdentifierMapper);
-
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         "Marked late on " + command.getForTime(),
         command.getForTime(),
         dataContextOfAction.getMessageForCharge(Action.MARK_LATE),
@@ -490,16 +482,15 @@ public class IndividualLoanCommandHandler {
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final RealRunningBalances runningBalances = new RealRunningBalances(
         accountingAdapter,
-        designatorToAccountIdentifierMapper);
+        dataContextOfAction);
 
     final PaymentBuilder paymentBuilder =
         closePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
-    final List<ChargeInstance> charges = paymentBuilder.buildCharges(Action.CLOSE, designatorToAccountIdentifierMapper);
-
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.CLOSE),

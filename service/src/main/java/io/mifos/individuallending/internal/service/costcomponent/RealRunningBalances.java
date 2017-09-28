@@ -15,7 +15,6 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
@@ -35,15 +34,20 @@ import java.util.concurrent.TimeUnit;
  * @author Myrle Krantz
  */
 public class RealRunningBalances implements RunningBalances {
-  private final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper;
   private final AccountingAdapter accountingAdapter;
+  private final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper;
+  private final DataContextOfAction dataContextOfAction;
   private final ExpiringMap<String, BigDecimal> realAccountBalanceCache;
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+  private Optional<LocalDateTime> startOfTerm;
 
   public RealRunningBalances(
       final AccountingAdapter accountingAdapter,
-      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
+      final DataContextOfAction dataContextOfAction) {
     this.accountingAdapter = accountingAdapter;
-    this.designatorToAccountIdentifierMapper = designatorToAccountIdentifierMapper;
+    this.designatorToAccountIdentifierMapper =
+        new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    this.dataContextOfAction = dataContextOfAction;
     this.realAccountBalanceCache = ExpiringMap.builder()
         .maxSize(20)
         .expirationPolicy(ExpirationPolicy.CREATED)
@@ -59,6 +63,7 @@ public class RealRunningBalances implements RunningBalances {
           return accountIdentifier.map(accountingAdapter::getCurrentAccountBalance).orElse(BigDecimal.ZERO);
         })
         .build();
+    this.startOfTerm = Optional.empty();
   }
 
   @Override
@@ -67,35 +72,32 @@ public class RealRunningBalances implements RunningBalances {
   }
 
   @Override
-  public BigDecimal getAccruedBalanceForCharge(
-      final DataContextOfAction dataContextOfAction,
-      final LocalDate startOfTerm,
-      final ChargeDefinition chargeDefinition) {
+  public BigDecimal getAccruedBalanceForCharge(final ChargeDefinition chargeDefinition) {
     final String accrualAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator());
+
+    final LocalDate startOfTermLocalDate = getStartOfTermOrThrow(dataContextOfAction).toLocalDate();
 
     final BigDecimal amountAccrued = accountingAdapter.sumMatchingEntriesSinceDate(
         accrualAccountIdentifier,
-        startOfTerm,
+        startOfTermLocalDate,
         dataContextOfAction.getMessageForCharge(Action.valueOf(chargeDefinition.getAccrueAction())));
     final BigDecimal amountApplied = accountingAdapter.sumMatchingEntriesSinceDate(
         accrualAccountIdentifier,
-        startOfTerm,
+        startOfTermLocalDate,
         dataContextOfAction.getMessageForCharge(Action.valueOf(chargeDefinition.getChargeAction())));
     return amountAccrued.subtract(amountApplied);
   }
 
   @Override
-  public LocalDate getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction) {
+  public Optional<LocalDateTime> getStartOfTerm(final DataContextOfAction dataContextOfAction) {
+     if (!startOfTerm.isPresent()) {
+       final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
 
-    final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+       this.startOfTerm = accountingAdapter.getDateOfOldestEntryContainingMessage(
+           customerLoanPrincipalAccountIdentifier,
+           dataContextOfAction.getMessageForCharge(Action.DISBURSE));
+     }
 
-    final Optional<LocalDateTime> firstDisbursalDateTime = accountingAdapter.getDateOfOldestEntryContainingMessage(
-        customerLoanPrincipalAccountIdentifier,
-        dataContextOfAction.getMessageForCharge(Action.DISBURSE));
-
-    return firstDisbursalDateTime.map(LocalDateTime::toLocalDate)
-        .orElseThrow(() -> ServiceException.internalError(
-            "Start of term for loan ''{0}'' could not be acquired from accounting.",
-            dataContextOfAction.getCompoundIdentifer()));
+    return this.startOfTerm;
   }
 }

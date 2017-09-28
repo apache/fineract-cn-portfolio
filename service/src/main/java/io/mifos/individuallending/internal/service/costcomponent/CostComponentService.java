@@ -23,7 +23,6 @@ import io.mifos.individuallending.internal.service.RateCollectors;
 import io.mifos.individuallending.internal.service.schedule.Period;
 import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.api.v1.domain.CostComponent;
 import org.javamoney.calc.common.Rate;
 import org.javamoney.moneta.Money;
 
@@ -31,7 +30,10 @@ import javax.money.MonetaryAmount;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -43,8 +45,6 @@ public class CostComponentService {
   private static final int RUNNING_CALCULATION_PRECISION = 8;
 
   public static PaymentBuilder getCostComponentsForScheduledCharges(
-      final Action action,
-      final Map<ChargeDefinition, CostComponent> accruedCostComponents,
       final Collection<ScheduledCharge> scheduledCharges,
       final BigDecimal maximumBalance,
       final RunningBalances preChargeBalances,
@@ -56,31 +56,33 @@ public class CostComponentService {
       final boolean accrualAccounting) {
     final PaymentBuilder paymentBuilder = new PaymentBuilder(preChargeBalances, accrualAccounting);
 
-    for (Map.Entry<ChargeDefinition, CostComponent> entry : accruedCostComponents.entrySet()) {
-      final ChargeDefinition chargeDefinition = entry.getKey();
-      final BigDecimal chargeAmount = entry.getValue().getAmount();
-
-      paymentBuilder.adjustBalances(action, chargeDefinition, chargeAmount);
-    }
-
-
     for (final ScheduledCharge scheduledCharge : scheduledCharges) {
       if (accrualAccounting || !isAccrualChargeForAction(scheduledCharge.getChargeDefinition(), scheduledCharge.getScheduledAction().getAction())) {
-        final BigDecimal amountProportionalTo = getAmountProportionalTo(
-            scheduledCharge,
-            maximumBalance,
-            preChargeBalances,
-            contractualRepayment,
-            requestedDisbursement,
-            requestedRepayment,
-            paymentBuilder);
-        if (scheduledCharge.getChargeRange().map(x ->
-            !x.amountIsWithinRange(amountProportionalTo)).orElse(false))
-          continue;
+        final BigDecimal chargeAmount;
+        if (!isIncurralActionForAccruedCharge(scheduledCharge.getChargeDefinition(), scheduledCharge.getScheduledAction().getAction()))
+        {
+          final BigDecimal amountProportionalTo = getAmountProportionalTo(
+              scheduledCharge,
+              maximumBalance,
+              preChargeBalances,
+              contractualRepayment,
+              requestedDisbursement,
+              requestedRepayment,
+              paymentBuilder);
+          if (scheduledCharge.getChargeRange().map(x ->
+              !x.amountIsWithinRange(amountProportionalTo)).orElse(false))
+            continue;
 
-        final BigDecimal chargeAmount = howToApplyScheduledChargeToAmount(scheduledCharge, interest)
-            .apply(amountProportionalTo)
-            .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
+          chargeAmount = howToApplyScheduledChargeToAmount(scheduledCharge, interest)
+              .apply(amountProportionalTo)
+              .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
+        }
+        else
+        {
+          chargeAmount = preChargeBalances.getAccruedBalanceForCharge(scheduledCharge.getChargeDefinition())
+              .add(paymentBuilder.getBalanceAdjustment(scheduledCharge.getChargeDefinition().getAccrualAccountDesignator()));
+        }
+
         paymentBuilder.adjustBalances(
             scheduledCharge.getScheduledAction().getAction(),
             scheduledCharge.getChargeDefinition(),
@@ -198,8 +200,6 @@ public class CostComponentService {
         .filter(x -> x.getScheduledAction().getAction().equals(Action.DISBURSE))
         .collect(Collectors.toList());
     final PaymentBuilder paymentBuilder = getCostComponentsForScheduledCharges(
-        null, //Action doesn't matter since there's nothing accrued.
-        Collections.emptyMap(),
         disbursementFees,
         maximumBalanceSize,
         new SimulatedRunningBalances(),
@@ -221,7 +221,7 @@ public class CostComponentService {
     return BigDecimal.valueOf(presentValue.getNumber().doubleValueExact()).setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
   }
 
-  static boolean isAccruedChargeForAction(final ChargeDefinition chargeDefinition, final Action action) {
+  private static boolean isIncurralActionForAccruedCharge(final ChargeDefinition chargeDefinition, final Action action) {
     return chargeDefinition.getAccrueAction() != null &&
         chargeDefinition.getChargeAction().equals(action.name());
   }

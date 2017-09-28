@@ -59,6 +59,9 @@ public final class AnnuityPayment implements MonetaryOperator {
   {
     Objects.requireNonNull(amount, "Amount required");
     Objects.requireNonNull(rate, "Rate required");
+    if (rate.get().compareTo(BigDecimal.ZERO) == 0)
+      return amount.divide(periods);
+
     // AP(m) = m*r / [ (1-((1 + r).pow(-n))) ]
 
     return amount.multiply(rate.get()).divide(

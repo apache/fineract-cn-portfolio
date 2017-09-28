@@ -28,10 +28,9 @@ import io.mifos.individuallending.internal.repository.CaseCreditWorthinessFactor
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType;
-import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
-import io.mifos.individuallending.internal.service.costcomponent.*;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.DataContextService;
+import io.mifos.individuallending.internal.service.costcomponent.*;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.service.ServiceConstants;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
@@ -470,11 +469,9 @@ public class IndividualLendingPatternFactory implements PatternFactory {
         throw ServiceException.internalError("Invalid action: ''{0}''.", action.name());
     }
 
-    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
-        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final RealRunningBalances runningBalances = new RealRunningBalances(
         accountingAdapter,
-        designatorToAccountIdentifierMapper);
+        dataContextOfAction);
 
     final PaymentBuilder paymentBuilder = paymentBuilderService.getPaymentBuilder(
         dataContextOfAction,

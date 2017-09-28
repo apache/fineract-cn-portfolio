@@ -20,12 +20,10 @@ import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
-import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Payment;
 import io.mifos.portfolio.api.v1.domain.RequiredAccountAssignment;
-import io.mifos.portfolio.service.internal.util.ChargeInstance;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
@@ -40,6 +38,7 @@ import java.util.stream.Stream;
 public class PaymentBuilder {
   private final RunningBalances prePaymentBalances;
   private final Map<ChargeDefinition, CostComponent> costComponents;
+
   private final Map<String, BigDecimal> balanceAdjustments;
   private final boolean accrualAccounting;
 
@@ -109,14 +108,8 @@ public class PaymentBuilder {
     return new PlannedPayment(payment, balancesCopy);
   }
 
-  public List<ChargeInstance> buildCharges(
-      final Action action,
-      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
-    return stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(action, entry, designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+  public Map<String, BigDecimal> getBalanceAdjustments() {
+    return balanceAdjustments;
   }
 
   public BigDecimal getBalanceAdjustment(final String... accountDesignators) {
@@ -129,7 +122,7 @@ public class PaymentBuilder {
       final Action action,
       final ChargeDefinition chargeDefinition,
       final BigDecimal chargeAmount) {
-    BigDecimal adjustedChargeAmount = BigDecimal.ZERO;
+    BigDecimal adjustedChargeAmount;
     if (this.accrualAccounting && chargeIsAccrued(chargeDefinition)) {
       if (Action.valueOf(chargeDefinition.getAccrueAction()) == action) {
         adjustedChargeAmount = getMaxCharge(chargeDefinition.getFromAccountDesignator(), chargeDefinition.getAccrualAccountDesignator(), chargeAmount);
@@ -141,6 +134,8 @@ public class PaymentBuilder {
 
         this.addToBalance(chargeDefinition.getAccrualAccountDesignator(), adjustedChargeAmount.negate());
         this.addToBalance(chargeDefinition.getToAccountDesignator(), adjustedChargeAmount);
+
+        addToCostComponent(chargeDefinition, adjustedChargeAmount);
       }
     }
     else if (Action.valueOf(chargeDefinition.getChargeAction()) == action) {
@@ -148,23 +143,24 @@ public class PaymentBuilder {
 
       this.addToBalance(chargeDefinition.getFromAccountDesignator(), adjustedChargeAmount.negate());
       this.addToBalance(chargeDefinition.getToAccountDesignator(), adjustedChargeAmount);
+
+      addToCostComponent(chargeDefinition, adjustedChargeAmount);
     }
-
-
-    addToCostComponent(chargeDefinition, adjustedChargeAmount);
   }
 
   private BigDecimal getMaxCharge(
       final String fromAccountDesignator,
       final String toAccountDesignator,
       final BigDecimal plannedCharge) {
-    final BigDecimal expectedImpactOnDebitAccount = plannedCharge.add(this.getBalanceAdjustment(fromAccountDesignator));
+    final BigDecimal expectedImpactOnDebitAccount = plannedCharge.subtract(this.getBalanceAdjustment(fromAccountDesignator));
     final BigDecimal maxImpactOnDebitAccount = prePaymentBalances.getMaxDebit(fromAccountDesignator, expectedImpactOnDebitAccount);
-    final BigDecimal maxDebit = maxImpactOnDebitAccount.subtract(this.getBalanceAdjustment(fromAccountDesignator));
+    final BigDecimal maxDebit = maxImpactOnDebitAccount.add(this.getBalanceAdjustment(fromAccountDesignator))
+        .max(BigDecimal.ZERO);
 
     final BigDecimal expectedImpactOnCreditAccount = plannedCharge.add(this.getBalanceAdjustment(toAccountDesignator));
     final BigDecimal maxImpactOnCreditAccount = prePaymentBalances.getMaxCredit(toAccountDesignator, expectedImpactOnCreditAccount);
-    final BigDecimal maxCredit = maxImpactOnCreditAccount.subtract(this.getBalanceAdjustment(toAccountDesignator));
+    final BigDecimal maxCredit = maxImpactOnCreditAccount.subtract(this.getBalanceAdjustment(toAccountDesignator))
+        .max(BigDecimal.ZERO);
     return maxCredit.min(maxDebit);
   }
 
@@ -235,35 +231,5 @@ public class PaymentBuilder {
     ret.setChargeIdentifier(chargeDefinition.getIdentifier());
     ret.setAmount(BigDecimal.ZERO);
     return ret;
-  }
-
-  private static Optional<ChargeInstance> mapCostComponentEntryToChargeInstance(
-      final Action action,
-      final Map.Entry<ChargeDefinition, CostComponent> costComponentEntry,
-      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
-    final ChargeDefinition chargeDefinition = costComponentEntry.getKey();
-    final BigDecimal chargeAmount = costComponentEntry.getValue().getAmount();
-
-    if (chargeIsAccrued(chargeDefinition)) {
-      if (Action.valueOf(chargeDefinition.getAccrueAction()) == action)
-        return Optional.of(new ChargeInstance(
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            chargeAmount));
-      else if (Action.valueOf(chargeDefinition.getChargeAction()) == action)
-        return Optional.of(new ChargeInstance(
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
-            chargeAmount));
-      else
-        return Optional.empty();
-    }
-    else if (Action.valueOf(chargeDefinition.getChargeAction()) == action)
-      return Optional.of(new ChargeInstance(
-          designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
-          designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
-          chargeAmount));
-    else
-      return Optional.empty();
   }
 }

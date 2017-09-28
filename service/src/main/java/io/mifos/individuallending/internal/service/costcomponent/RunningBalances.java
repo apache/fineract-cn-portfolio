@@ -15,6 +15,7 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
+import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
@@ -23,9 +24,10 @@ import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.portfolio.api.v1.domain.RequiredAccountAssignment;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * @author Myrle Krantz
@@ -53,11 +55,16 @@ public interface RunningBalances {
   BigDecimal getAccountBalance(final String accountDesignator);
 
   BigDecimal getAccruedBalanceForCharge(
-      final DataContextOfAction dataContextOfAction,
-      final LocalDate startOfTerm,
       final ChargeDefinition chargeDefinition);
 
-  LocalDate getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction);
+  Optional<LocalDateTime> getStartOfTerm(final DataContextOfAction dataContextOfAction);
+
+  default LocalDateTime getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction) {
+    return this.getStartOfTerm(dataContextOfAction)
+        .orElseThrow(() -> ServiceException.internalError(
+            "Start of term for loan ''{0}'' could not be acquired from accounting.",
+            dataContextOfAction.getCompoundIdentifer()));
+  }
 
   default BigDecimal getLedgerBalance(final String ledgerDesignator) {
     final Pattern individualLendingPattern = IndividualLendingPatternFactory.individualLendingPattern();

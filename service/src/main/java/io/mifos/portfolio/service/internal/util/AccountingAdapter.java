@@ -25,6 +25,7 @@ import io.mifos.core.lang.DateConverter;
 import io.mifos.core.lang.DateRange;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.core.lang.listening.EventExpectation;
+import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.service.ServiceConstants;
@@ -68,21 +69,36 @@ public class AccountingAdapter {
     this.logger = logger;
   }
 
-  public void bookCharges(final List<ChargeInstance> costComponents,
+  public void bookCharges(final Map<String, BigDecimal> balanceAdjustments,
+                          final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
                           final String note,
                           final String transactionDate,
                           final String message,
                           final String transactionType) {
-    final Set<Creditor> creditors = costComponents.stream()
-            .map(AccountingAdapter::mapToCreditor)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .collect(Collectors.toSet());
-    final Set<Debtor> debtors = costComponents.stream()
-            .map(AccountingAdapter::mapToDebtor)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .collect(Collectors.toSet());
+    final JournalEntry journalEntry = new JournalEntry();
+    final Set<Creditor> creditors = new HashSet<>();
+    journalEntry.setCreditors(creditors);
+    final Set<Debtor> debtors = new HashSet<>();
+    journalEntry.setDebtors(debtors);
+    balanceAdjustments.forEach((accountDesignator, balanceAdjustment) -> {
+      final int sign = balanceAdjustment.compareTo(BigDecimal.ZERO);
+      if (sign == 0)
+        return;
+
+      final String accountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(accountDesignator);
+
+      if (sign < 0) {
+        final Debtor debtor = new Debtor();
+        debtor.setAccountNumber(accountIdentifier);
+        debtor.setAmount(balanceAdjustment.negate().toPlainString());
+        debtors.add(debtor);
+      } else {
+        final Creditor creditor = new Creditor();
+        creditor.setAccountNumber(accountIdentifier);
+        creditor.setAmount(balanceAdjustment.toPlainString());
+        creditors.add(creditor);
+      }
+    });
 
     if (creditors.isEmpty() && !debtors.isEmpty() ||
         debtors.isEmpty() && !creditors.isEmpty())
@@ -92,7 +108,6 @@ public class AccountingAdapter {
     if (creditors.isEmpty() && debtors.isEmpty())
       return;
 
-    final JournalEntry journalEntry = new JournalEntry();
     journalEntry.setCreditors(creditors);
     journalEntry.setDebtors(debtors);
     journalEntry.setClerk(UserContextHolder.checkedGetUser());
@@ -138,30 +153,6 @@ public class AccountingAdapter {
     return accountEntriesStream
         .map(AccountEntry::getAmount)
         .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
-  }
-
-  private static Optional<Debtor> mapToDebtor(final ChargeInstance chargeInstance) {
-    if (chargeInstance.getAmount().compareTo(BigDecimal.ZERO) == 0)
-      return Optional.empty();
-
-    final Debtor ret = new Debtor();
-    ret.setAccountNumber(chargeInstance.getFromAccount());
-    ret.setAmount(chargeInstance.getAmount().toPlainString());
-    return Optional.of(ret);
-  }
-
-  private static Optional<Creditor> mapToCreditor(final ChargeInstance chargeInstance) {
-    if (chargeInstance.getAmount().compareTo(BigDecimal.ZERO) == 0)
-      return Optional.empty();
-
-    final Creditor ret = new Creditor();
-    ret.setAccountNumber(chargeInstance.getToAccount());
-    ret.setAmount(chargeInstance.getAmount().toPlainString());
-    return Optional.of(ret);
-  }
-
-  public BigDecimal getTotalOfCurrentAccountBalances(final String... accountIdentifiers) {
-    return Arrays.stream(accountIdentifiers).map(this::getCurrentAccountBalance).reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 
   public BigDecimal getCurrentAccountBalance(final String accountIdentifier) {

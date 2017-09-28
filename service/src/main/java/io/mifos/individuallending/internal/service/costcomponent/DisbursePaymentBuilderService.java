@@ -20,14 +20,10 @@ import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
-import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
 import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
 import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpers;
 import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
 import io.mifos.individuallending.internal.service.schedule.ScheduledChargesService;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -35,12 +31,8 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * @author Myrle Krantz
@@ -48,14 +40,11 @@ import java.util.stream.Collectors;
 @Service
 public class DisbursePaymentBuilderService implements PaymentBuilderService {
   private final ScheduledChargesService scheduledChargesService;
-  private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public DisbursePaymentBuilderService(
-      final ScheduledChargesService scheduledChargesService,
-      final AccountingAdapter accountingAdapter) {
+      final ScheduledChargesService scheduledChargesService) {
     this.scheduledChargesService = scheduledChargesService;
-    this.accountingAdapter = accountingAdapter;
   }
 
   @Override
@@ -65,9 +54,6 @@ public class DisbursePaymentBuilderService implements PaymentBuilderService {
       final LocalDate forDate,
       final RunningBalances runningBalances)
   {
-    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
-        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
-    final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
     final BigDecimal currentBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
 
     if (requestedDisbursalSize != null &&
@@ -75,9 +61,6 @@ public class DisbursePaymentBuilderService implements PaymentBuilderService {
             currentBalance.add(requestedDisbursalSize)) < 0)
       throw ServiceException.conflict("Cannot disburse over the maximum balance.");
 
-    final Optional<LocalDateTime> optionalStartOfTerm = accountingAdapter.getDateOfOldestEntryContainingMessage(
-        customerLoanPrincipalAccountIdentifier,
-        dataContextOfAction.getMessageForCharge(Action.DISBURSE));
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
     final int minorCurrencyUnitDigits = dataContextOfAction.getProductEntity().getMinorCurrencyUnitDigits();
@@ -93,25 +76,8 @@ public class DisbursePaymentBuilderService implements PaymentBuilderService {
         productIdentifier, scheduledActions);
 
 
-    final Map<Boolean, List<ScheduledCharge>> chargesSplitIntoScheduledAndAccrued = scheduledCharges.stream()
-        .collect(Collectors.partitioningBy(x -> CostComponentService.isAccruedChargeForAction(x.getChargeDefinition(), Action.DISBURSE)));
-
-    final Map<ChargeDefinition, CostComponent> accruedCostComponents =
-        optionalStartOfTerm.map(startOfTerm ->
-            chargesSplitIntoScheduledAndAccrued.get(true)
-                .stream()
-                .map(ScheduledCharge::getChargeDefinition)
-                .collect(Collectors.toMap(chargeDefinition -> chargeDefinition,
-                    chargeDefinition -> PaymentBuilderService.getAccruedCostComponentToApply(
-                        runningBalances,
-                        dataContextOfAction,
-                        startOfTerm.toLocalDate(),
-                        chargeDefinition)))).orElse(Collections.emptyMap());
-
     return CostComponentService.getCostComponentsForScheduledCharges(
-        Action.DISBURSE,
-        accruedCostComponents,
-        chargesSplitIntoScheduledAndAccrued.get(false),
+        scheduledCharges,
         caseParameters.getBalanceRangeMaximum(),
         runningBalances,
         dataContextOfAction.getCaseParametersEntity().getPaymentSize(),

@@ -23,7 +23,7 @@ public class AcceptPaymentBuilderServiceTest {
     final PaymentBuilder paymentBuilder = PaymentBuilderServiceTestHarness.constructCallToPaymentBuilder(
         AcceptPaymentBuilderService::new, testCase);
 
-    final Payment payment = paymentBuilder.buildPayment(Action.ACCEPT_PAYMENT, Collections.emptySet(), testCase.forDate);
+    final Payment payment = paymentBuilder.buildPayment(Action.ACCEPT_PAYMENT, Collections.emptySet(), testCase.forDate.toLocalDate());
     Assert.assertNotNull(payment);
     final Map<String, CostComponent> mappedCostComponents = payment.getCostComponents().stream()
         .collect(Collectors.toMap(CostComponent::getChargeIdentifier, x -> x));

@@ -109,7 +109,7 @@ public class IndividualLoanServiceTest {
         LATE_FEE_ID
         ));
     private Map<ActionDatePair, List<ChargeDefinition>> chargeDefinitionsForActions = new HashMap<>();
-    //This is an abuse of the ChargeInstance since everywhere else it's intended to contain account identifiers and not
+    //This is an abuse of the ChargeDefinition since everywhere else it's intended to contain account identifiers and not
     //account designators.  Don't copy the code around charge instances in this test without thinking about what you're
     //doing carefully first.
 
@@ -303,10 +303,21 @@ public class IndividualLoanServiceTest {
               .map(CostComponent::getAmount)
               .reduce(BigDecimal::add)
               .orElse(BigDecimal.ZERO);
+          final BigDecimal valueOfInterestCostComponent = allPlannedPayments.get(x).getPayment().getCostComponents().stream()
+              .filter(costComponent -> costComponent.getChargeIdentifier().equals(ChargeIdentifiers.INTEREST_ID))
+              .map(CostComponent::getAmount)
+              .reduce(BigDecimal::add)
+              .orElse(BigDecimal.ZERO);
+
+          final BigDecimal interestAccrualBalance = allPlannedPayments.get(x).getPayment().getBalanceAdjustments().getOrDefault(AccountDesignators.INTEREST_ACCRUAL, BigDecimal.ZERO);
+          final BigDecimal lateFeeAccrualBalance = allPlannedPayments.get(x).getPayment().getBalanceAdjustments().getOrDefault(AccountDesignators.LATE_FEE_ACCRUAL, BigDecimal.ZERO);
           final BigDecimal principalDifference =
               getBalanceForPayment(allPlannedPayments, AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, x - 1)
                   .subtract(
                       getBalanceForPayment(allPlannedPayments, AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, x));
+          Assert.assertEquals(valueOfRepayInterestCostComponent, valueOfInterestCostComponent);
+          Assert.assertEquals(BigDecimal.ZERO, interestAccrualBalance);
+          Assert.assertEquals(BigDecimal.ZERO, lateFeeAccrualBalance);
           Assert.assertEquals("Checking payment " + x, valueOfRepayPrincipalCostComponent, principalDifference);
           Assert.assertNotEquals("Remaining principle should always be positive or zero.",
               getBalanceForPayment(allPlannedPayments, AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, x).signum(), -1);

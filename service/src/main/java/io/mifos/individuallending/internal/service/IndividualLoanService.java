@@ -19,7 +19,6 @@ import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
-import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.costcomponent.CostComponentService;
 import io.mifos.individuallending.internal.service.costcomponent.PaymentBuilder;
@@ -154,8 +153,6 @@ public class IndividualLoanService {
       final SortedSet<ScheduledCharge> scheduledChargesInPeriod = orderedScheduledChargesGroupedByPeriod.get(repaymentPeriod);
       final PaymentBuilder paymentBuilder =
               CostComponentService.getCostComponentsForScheduledCharges(
-                  null, //Action doesn't matter because not using accrual accounting.
-                  Collections.emptyMap(),
                   scheduledChargesInPeriod,
                   initialBalance,
                   balances,
@@ -164,7 +161,7 @@ public class IndividualLoanService {
                   requestedRepayment,
                   interest,
                   minorCurrencyUnitDigits,
-                  false);
+                  true);
 
       plannedPayments.add(paymentBuilder.accumulatePlannedPayment(balances, repaymentPeriod.getEndDate()));
     }

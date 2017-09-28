@@ -16,24 +16,20 @@
 package io.mifos.individuallending.internal.service.costcomponent;
 
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
-import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
 import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpers;
 import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
 import io.mifos.individuallending.internal.service.schedule.ScheduledChargesService;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.api.v1.domain.CostComponent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @author Myrle Krantz
@@ -54,14 +50,14 @@ public class AcceptPaymentBuilderService implements PaymentBuilderService {
       final BigDecimal requestedLoanPaymentSize,
       final LocalDate forDate,
       final RunningBalances runningBalances) {
-    final LocalDate startOfTerm = runningBalances.getStartOfTermOrThrow(dataContextOfAction);
+    final LocalDateTime startOfTerm = runningBalances.getStartOfTermOrThrow(dataContextOfAction);
 
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
     final int minorCurrencyUnitDigits = dataContextOfAction.getProductEntity().getMinorCurrencyUnitDigits();
     final ScheduledAction scheduledAction
         = ScheduledActionHelpers.getNextScheduledPayment(
-        startOfTerm,
+        startOfTerm.toLocalDate(),
         forDate,
         dataContextOfAction.getCustomerCaseEntity().getEndOfTerm().toLocalDate(),
         dataContextOfAction.getCaseParameters()
@@ -70,20 +66,6 @@ public class AcceptPaymentBuilderService implements PaymentBuilderService {
     final List<ScheduledCharge> scheduledChargesForThisAction = scheduledChargesService.getScheduledCharges(
         productIdentifier,
         Collections.singletonList(scheduledAction));
-
-    final Map<Boolean, List<ScheduledCharge>> chargesSplitIntoScheduledAndAccrued = scheduledChargesForThisAction.stream()
-        .collect(Collectors.partitioningBy(x -> CostComponentService.isAccruedChargeForAction(x.getChargeDefinition(), Action.ACCEPT_PAYMENT)));
-
-    final Map<ChargeDefinition, CostComponent> accruedCostComponents = chargesSplitIntoScheduledAndAccrued.get(true)
-        .stream()
-        .map(ScheduledCharge::getChargeDefinition)
-        .collect(Collectors.toMap(chargeDefinition -> chargeDefinition,
-            chargeDefinition -> PaymentBuilderService.getAccruedCostComponentToApply(
-                runningBalances,
-                dataContextOfAction,
-                startOfTerm,
-                chargeDefinition)));
-
 
     final BigDecimal loanPaymentSize;
 
@@ -101,9 +83,7 @@ public class AcceptPaymentBuilderService implements PaymentBuilderService {
 
 
     return CostComponentService.getCostComponentsForScheduledCharges(
-        Action.ACCEPT_PAYMENT,
-        accruedCostComponents,
-        chargesSplitIntoScheduledAndAccrued.get(false),
+        scheduledChargesForThisAction,
         caseParameters.getBalanceRangeMaximum(),
         runningBalances,
         dataContextOfAction.getCaseParametersEntity().getPaymentSize(),

@@ -203,8 +203,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       step6CalculateInterestAndCheckForLatenessForWeek(today, week);
       final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today.plusDays((week+1)*7));
       final Payment payment = step7PaybackPartialAmount(nextRepaymentAmount, today.plusDays((week + 1) * 7), BigDecimal.ZERO);
-      payment.getBalanceAdjustments().remove(AccountDesignators.INTEREST_ACCRUAL);
-      payment.getBalanceAdjustments().remove(AccountDesignators.LATE_FEE_ACCRUAL); //Remove accrual accounts for comparison.
+      final BigDecimal interestAccrual = payment.getBalanceAdjustments().remove(AccountDesignators.INTEREST_ACCRUAL); //Don't compare these with planned payment.
+      final BigDecimal customerLoanInterest = payment.getBalanceAdjustments().remove(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+      Assert.assertEquals(interestAccrual.negate(), customerLoanInterest);
       Assert.assertEquals(plannedPayments.get(week+1).getPayment(), payment);
       week++;
     }
@@ -251,8 +252,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         step6CalculateInterestAndCheckForLatenessForWeek(today, week);
         final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today.plusDays((week + 1) * 7));
         final Payment payment = step7PaybackPartialAmount(nextRepaymentAmount, today.plusDays((week + 1) * 7), BigDecimal.ZERO);
-        payment.getBalanceAdjustments().remove(AccountDesignators.INTEREST_ACCRUAL);
-        payment.getBalanceAdjustments().remove(AccountDesignators.CUSTOMER_LOAN_INTEREST); //Remove accrual accounting components for comparison, since planned payments are done without accrual accounting.
+        final BigDecimal interestAccrual = payment.getBalanceAdjustments().remove(AccountDesignators.INTEREST_ACCRUAL); //Don't compare these with planned payment.
+        final BigDecimal customerLoanInterest = payment.getBalanceAdjustments().remove(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+        Assert.assertEquals(interestAccrual.negate(), customerLoanInterest);
         Assert.assertEquals(plannedPayments.get(week+1).getPayment(), payment);
       }
       week++;
@@ -456,9 +458,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(customerLoanPrincipalIdentifier, amount.toPlainString()));
-    debtors.add(new Debtor(customerLoanFeeIdentifier, PROCESSING_FEE_AMOUNT.toPlainString()));
-    debtors.add(new Debtor(customerLoanFeeIdentifier, disbursementFeeAmount.toPlainString()));
-    debtors.add(new Debtor(customerLoanFeeIdentifier, LOAN_ORIGINATION_FEE_AMOUNT.toPlainString()));
+    debtors.add(new Debtor(customerLoanFeeIdentifier, PROCESSING_FEE_AMOUNT.add(disbursementFeeAmount).add(LOAN_ORIGINATION_FEE_AMOUNT).toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toString()));
@@ -545,8 +545,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Action.APPLY_INTEREST,
         null,
         null,
-        forDateTime,
-        new CostComponent(ChargeIdentifiers.INTEREST_ID, calculatedInterest));
+        forDateTime);
 
     if (calculatedLateFee.compareTo(BigDecimal.ZERO) != 0) {
       checkCostComponentForActionCorrect(
@@ -555,8 +554,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
           Action.MARK_LATE,
           null,
           null,
-          forDateTime,
-          new CostComponent(ChargeIdentifiers.LATE_FEE_ID, calculatedLateFee));
+          forDateTime);
     }
     final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
     portfolioBeatListener.publishBeat(interestBeat);
@@ -648,17 +646,18 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
 
     final Set<Debtor> debtors = new HashSet<>();
-    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, principal.toPlainString()));
+    BigDecimal tellerOneDebit = principal;
     if (interestAccrued.compareTo(BigDecimal.ZERO) != 0) {
-      debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
+      tellerOneDebit = tellerOneDebit.add(interestAccrued);
       debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
     }
     if (lateFee.add(nonLateFees).compareTo(BigDecimal.ZERO) != 0) {
-      debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, lateFee.add(nonLateFees).toPlainString()));
+      tellerOneDebit = tellerOneDebit.add(lateFee.add(nonLateFees));
     }
     if (lateFee.compareTo(BigDecimal.ZERO) != 0) {
       debtors.add(new Debtor(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFee.toPlainString()));
     }
+    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, tellerOneDebit.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(customerLoanPrincipalIdentifier, principal.toPlainString()));

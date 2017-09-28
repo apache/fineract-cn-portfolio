@@ -44,7 +44,7 @@ class PaymentBuilderServiceTestHarness {
     return testSubject.getPaymentBuilder(
         dataContextOfAction,
         testCase.paymentSize,
-        testCase.forDate,
+        testCase.forDate.toLocalDate(),
         testCase.runningBalances);
   }
 }

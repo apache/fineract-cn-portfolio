@@ -21,51 +21,24 @@ import io.mifos.portfolio.service.internal.repository.ChargeDefinitionRepository
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Nonnull;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
  */
 @Service
-public class ChargeDefinitionService {
+public class ConfigurableChargeDefinitionService {
   private final ChargeDefinitionRepository chargeDefinitionRepository;
 
   @Autowired
-  public ChargeDefinitionService(final ChargeDefinitionRepository chargeDefinitionRepository) {
+  public ConfigurableChargeDefinitionService(final ChargeDefinitionRepository chargeDefinitionRepository) {
     this.chargeDefinitionRepository = chargeDefinitionRepository;
   }
 
-  public List<ChargeDefinition> findAllEntities(final String productIdentifier) {
-    return chargeDefinitionRepository.findByProductId(productIdentifier).stream()
-            .map(ChargeDefinitionMapper::map)
-            .collect(Collectors.toList());
-  }
-
-  @Nonnull
-  public Map<String, List<ChargeDefinition>> getChargeDefinitionsMappedByChargeAction(
-          final String productIdentifier)
-  {
-    final List<ChargeDefinition> chargeDefinitions = findAllEntities(productIdentifier);
-
-    return chargeDefinitions.stream()
-            .collect(Collectors.groupingBy(ChargeDefinition::getChargeAction,
-                    Collectors.mapping(x -> x, Collectors.toList())));
-  }
-
-  @Nonnull
-  public Map<String, List<ChargeDefinition>> getChargeDefinitionsMappedByAccrueAction(
-          final String productIdentifier)
-  {
-    final List<ChargeDefinition> chargeDefinitions = findAllEntities(productIdentifier);
-
-    return chargeDefinitions.stream()
-            .filter(x -> x.getAccrueAction() != null)
-            .collect(Collectors.groupingBy(ChargeDefinition::getAccrueAction,
-                    Collectors.mapping(x -> x, Collectors.toList())));
+  public Stream<ChargeDefinition> findAllEntities(final String productIdentifier) {
+    return chargeDefinitionRepository.findByProductId(productIdentifier)
+            .map(ChargeDefinitionMapper::map);
   }
 
   public Optional<ChargeDefinition> findByIdentifier(final String productIdentifier, final String identifier) {

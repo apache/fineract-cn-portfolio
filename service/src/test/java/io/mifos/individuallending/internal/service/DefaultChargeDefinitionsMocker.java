@@ -1,19 +1,17 @@
 package io.mifos.individuallending.internal.service;
 
-import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
 import org.mockito.Mockito;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DefaultChargeDefinitionsMocker {
-  private static List<ChargeDefinition> charges() {
-    final List<ChargeDefinition> ret = IndividualLendingPatternFactory.requiredIndividualLoanCharges();
-    ret.addAll(IndividualLendingPatternFactory.defaultIndividualLoanCharges());
-    return ret;
+  private static Stream<ChargeDefinition> charges() {
+    return Stream.concat(ChargeDefinitionService.defaultConfigurableIndividualLoanCharges(),
+        ChargeDefinitionService.individualLoanChargesDerivedFromConfiguration());
   }
 
   public static ChargeDefinitionService getChargeDefinitionService(final List<ChargeDefinition> changedCharges) {
@@ -21,11 +19,11 @@ public class DefaultChargeDefinitionsMocker {
         .collect(Collectors.toMap(ChargeDefinition::getIdentifier, x -> x));
 
     final List<ChargeDefinition> defaultChargesWithFeesReplaced =
-        charges().stream().map(x -> changedChargesMap.getOrDefault(x.getIdentifier(), x))
+        charges().map(x -> changedChargesMap.getOrDefault(x.getIdentifier(), x))
             .collect(Collectors.toList());
 
 
-    final ChargeDefinitionService chargeDefinitionServiceMock = Mockito.mock(ChargeDefinitionService.class);
+    final ChargeDefinitionService configurableChargeDefinitionServiceMock = Mockito.mock(ChargeDefinitionService.class);
     final Map<String, List<ChargeDefinition>> chargeDefinitionsByChargeAction = defaultChargesWithFeesReplaced.stream()
         .collect(Collectors.groupingBy(ChargeDefinition::getChargeAction,
             Collectors.mapping(x -> x, Collectors.toList())));
@@ -33,9 +31,9 @@ public class DefaultChargeDefinitionsMocker {
         .filter(x -> x.getAccrueAction() != null)
         .collect(Collectors.groupingBy(ChargeDefinition::getAccrueAction,
             Collectors.mapping(x -> x, Collectors.toList())));
-    Mockito.doReturn(chargeDefinitionsByChargeAction).when(chargeDefinitionServiceMock).getChargeDefinitionsMappedByChargeAction(Mockito.any());
-    Mockito.doReturn(chargeDefinitionsByAccrueAction).when(chargeDefinitionServiceMock).getChargeDefinitionsMappedByAccrueAction(Mockito.any());
+    Mockito.doReturn(chargeDefinitionsByChargeAction).when(configurableChargeDefinitionServiceMock).getChargeDefinitionsMappedByChargeAction(Mockito.any());
+    Mockito.doReturn(chargeDefinitionsByAccrueAction).when(configurableChargeDefinitionServiceMock).getChargeDefinitionsMappedByAccrueAction(Mockito.any());
 
-    return chargeDefinitionServiceMock;
+    return configurableChargeDefinitionServiceMock;
   }
 }

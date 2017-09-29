@@ -17,14 +17,15 @@ package io.mifos.portfolio.service.rest;
 
 import io.mifos.anubis.annotation.AcceptedTokenType;
 import io.mifos.anubis.annotation.Permittable;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.portfolio.service.internal.service.PatternService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
@@ -52,20 +53,5 @@ public class PatternRestController {
   @ResponseBody
   List<Pattern> getAllPatterns() {
     return this.patternService.findAllEntities();
-  }
-
-  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
-  @RequestMapping(
-          value = "/{patternpackage}/charges/",
-          method = RequestMethod.GET,
-          consumes = MediaType.ALL_VALUE,
-          produces = MediaType.APPLICATION_JSON_VALUE
-  )
-  public
-  @ResponseBody
-  List<ChargeDefinition> getAllDefaultChargeDefinitionsForPattern(@PathVariable("patternpackage") final String patternPackage) {
-    final Pattern pattern = this.patternService.findByIdentifier(patternPackage)
-            .orElseThrow(() -> ServiceException.notFound("Pattern with package " + patternPackage + " doesn't exist."));
-    return this.patternService.findDefaultChargeDefinitions(patternPackage);
   }
 }

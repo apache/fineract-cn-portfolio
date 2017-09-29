@@ -23,7 +23,7 @@ import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.service.internal.command.ChangeChargeDefinitionCommand;
 import io.mifos.portfolio.service.internal.command.CreateChargeDefinitionCommand;
 import io.mifos.portfolio.service.internal.command.DeleteProductChargeDefinitionCommand;
-import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
+import io.mifos.portfolio.service.internal.service.ConfigurableChargeDefinitionService;
 import io.mifos.portfolio.service.internal.service.ProductService;
 import io.mifos.core.command.gateway.CommandGateway;
 import io.mifos.core.lang.ServiceException;
@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author Myrle Krantz
@@ -44,15 +45,15 @@ import java.util.List;
 @RequestMapping("/products/{productidentifier}/charges/")
 public class ChargeDefinitionRestController {
   private final CommandGateway commandGateway;
-  private final ChargeDefinitionService chargeDefinitionService;
+  private final ConfigurableChargeDefinitionService configurableChargeDefinitionService;
   private final ProductService productService;
 
   @Autowired
   public ChargeDefinitionRestController(
-          final CommandGateway commandGateway,
-          final ChargeDefinitionService chargeDefinitionService, final ProductService productService) {
+      final CommandGateway commandGateway,
+      final ConfigurableChargeDefinitionService configurableChargeDefinitionService, final ProductService productService) {
     this.commandGateway = commandGateway;
-    this.chargeDefinitionService = chargeDefinitionService;
+    this.configurableChargeDefinitionService = configurableChargeDefinitionService;
     this.productService = productService;
   }
 
@@ -68,7 +69,8 @@ public class ChargeDefinitionRestController {
   {
     checkProductExists(productIdentifier);
 
-    return chargeDefinitionService.findAllEntities(productIdentifier);
+    return configurableChargeDefinitionService.findAllEntities(productIdentifier)
+        .collect(Collectors.toList());
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.PRODUCT_MANAGEMENT)
@@ -87,7 +89,7 @@ public class ChargeDefinitionRestController {
     if (instance.isReadOnly())
       throw ServiceException.badRequest("Created charges cannot be read only.");
 
-    chargeDefinitionService.findByIdentifier(productIdentifier, instance.getIdentifier())
+    configurableChargeDefinitionService.findByIdentifier(productIdentifier, instance.getIdentifier())
         .ifPresent(taskDefinition -> {throw ServiceException.conflict("Duplicate identifier: " + taskDefinition.getIdentifier());});
 
     this.commandGateway.process(new CreateChargeDefinitionCommand(productIdentifier, instance));
@@ -107,7 +109,7 @@ public class ChargeDefinitionRestController {
   {
     checkProductExists(productIdentifier);
 
-    return chargeDefinitionService.findByIdentifier(productIdentifier, chargeDefinitionIdentifier).orElseThrow(
+    return configurableChargeDefinitionService.findByIdentifier(productIdentifier, chargeDefinitionIdentifier).orElseThrow(
         () -> ServiceException.notFound("No charge definition with the identifier '" + chargeDefinitionIdentifier  + "' found."));
   }
 
@@ -123,7 +125,7 @@ public class ChargeDefinitionRestController {
           @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier,
           @RequestBody @Valid final ChargeDefinition instance)
   {
-    checkChargeExistsInProductAndIsNotReadOnly(productIdentifier, chargeDefinitionIdentifier);
+    checkChargeExistsInProduct(productIdentifier, chargeDefinitionIdentifier);
 
     if (instance.isReadOnly())
       throw ServiceException.badRequest("Created charges cannot be read only.");
@@ -147,23 +149,18 @@ public class ChargeDefinitionRestController {
           @PathVariable("productidentifier") final String productIdentifier,
           @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier)
   {
-    checkChargeExistsInProductAndIsNotReadOnly(productIdentifier, chargeDefinitionIdentifier);
+    checkChargeExistsInProduct(productIdentifier, chargeDefinitionIdentifier);
 
     commandGateway.process(new DeleteProductChargeDefinitionCommand(productIdentifier, chargeDefinitionIdentifier));
 
     return ResponseEntity.accepted().build();
   }
 
-  private void checkChargeExistsInProductAndIsNotReadOnly(final String productIdentifier,
-                                                          final String chargeDefinitionIdentifier) {
-    final boolean readOnly = chargeDefinitionService.findByIdentifier(productIdentifier, chargeDefinitionIdentifier)
+  private void checkChargeExistsInProduct(final String productIdentifier,
+                                          final String chargeDefinitionIdentifier) {
+    configurableChargeDefinitionService.findByIdentifier(productIdentifier, chargeDefinitionIdentifier)
         .orElseThrow(() -> ServiceException.notFound("No charge definition ''{0}.{1}'' found.",
-            productIdentifier, chargeDefinitionIdentifier))
-        .isReadOnly();
-
-    if (readOnly)
-      throw ServiceException.conflict("Charge definition is read only ''{0}.{1}''",
-          productIdentifier, chargeDefinitionIdentifier);
+            productIdentifier, chargeDefinitionIdentifier));
   }
 
   private void checkProductExists(final String productIdentifier) {

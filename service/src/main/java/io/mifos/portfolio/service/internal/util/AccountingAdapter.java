@@ -252,7 +252,7 @@ public class AccountingAdapter {
 
   public static Set<String> accountAssignmentsRequiredButNotProvided(
           final Set<AccountAssignment> accountAssignments,
-          final List<ChargeDefinition> chargeDefinitionEntities) {
+          final Stream<ChargeDefinition> chargeDefinitionEntities) {
     final Set<String> allAccountDesignatorsRequired = getRequiredAccountDesignators(chargeDefinitionEntities);
     final Set<String> allAccountDesignatorsDefined = accountAssignments.stream().map(AccountAssignment::getDesignator)
             .collect(Collectors.toSet());
@@ -264,8 +264,8 @@ public class AccountingAdapter {
     }
   }
 
-  public static Set<String> getRequiredAccountDesignators(final Collection<ChargeDefinition> chargeDefinitionEntities) {
-    return chargeDefinitionEntities.stream()
+  public static Set<String> getRequiredAccountDesignators(final Stream<ChargeDefinition> chargeDefinitionEntities) {
+    return chargeDefinitionEntities
             .flatMap(AccountingAdapter::getAutomaticActionAccountDesignators)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());

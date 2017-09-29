@@ -21,13 +21,13 @@ import io.mifos.core.lang.ServiceException;
 import io.mifos.customer.api.v1.client.CustomerManager;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
-import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
 import io.mifos.individuallending.internal.repository.CaseCreditWorthinessFactorEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType;
+import io.mifos.individuallending.internal.service.ChargeDefinitionService;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.DataContextService;
 import io.mifos.individuallending.internal.service.costcomponent.*;
@@ -44,11 +44,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.*;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -175,142 +173,8 @@ public class IndividualLendingPatternFactory implements PatternFactory {
   }
 
   @Override
-  public List<ChargeDefinition> charges() {
-    final List<ChargeDefinition> ret = defaultIndividualLoanCharges();
-    ret.addAll(requiredIndividualLoanCharges());
-    return ret;
-  }
-
-  public static List<ChargeDefinition> requiredIndividualLoanCharges() {
-    final List<ChargeDefinition> ret = new ArrayList<>();
-
-    final ChargeDefinition disbursePayment = new ChargeDefinition();
-    disbursePayment.setChargeAction(Action.DISBURSE.name());
-    disbursePayment.setIdentifier(DISBURSE_PAYMENT_ID);
-    disbursePayment.setName(DISBURSE_PAYMENT_NAME);
-    disbursePayment.setDescription(DISBURSE_PAYMENT_NAME);
-    disbursePayment.setFromAccountDesignator(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
-    disbursePayment.setToAccountDesignator(AccountDesignators.ENTRY);
-    disbursePayment.setProportionalTo(ChargeProportionalDesignator.REQUESTED_DISBURSEMENT_DESIGNATOR.getValue());
-    disbursePayment.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    disbursePayment.setAmount(BigDecimal.valueOf(100));
-    disbursePayment.setReadOnly(true);
-
-    //TODO: Make multiple write off allowance charges.
-    /*final ChargeDefinition writeOffAllowanceCharge = charge(
-        ALLOW_FOR_WRITE_OFF_NAME,
-        Action.MARK_LATE,
-        BigDecimal.valueOf(30),
-        AccountDesignators.LOAN_FUNDS_SOURCE,
-        AccountDesignators.ARREARS_ALLOWANCE);
-    writeOffAllowanceCharge.setProportionalTo(ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue());
-    writeOffAllowanceCharge.setReadOnly(true);*/
-
-    final ChargeDefinition interestCharge = charge(
-        INTEREST_NAME,
-        Action.ACCEPT_PAYMENT,
-        BigDecimal.valueOf(100),
-        AccountDesignators.CUSTOMER_LOAN_INTEREST,
-        AccountDesignators.INTEREST_INCOME);
-    interestCharge.setForCycleSizeUnit(ChronoUnit.YEARS);
-    interestCharge.setAccrueAction(Action.APPLY_INTEREST.name());
-    interestCharge.setAccrualAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
-    interestCharge.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_AND_INTEREST_DESIGNATOR.getValue());
-    interestCharge.setChargeMethod(ChargeDefinition.ChargeMethod.INTEREST);
-    interestCharge.setReadOnly(true);
-
-    final ChargeDefinition customerFeeRepaymentCharge = new ChargeDefinition();
-    customerFeeRepaymentCharge.setChargeAction(Action.ACCEPT_PAYMENT.name());
-    customerFeeRepaymentCharge.setIdentifier(REPAY_FEES_ID);
-    customerFeeRepaymentCharge.setName(REPAY_FEES_NAME);
-    customerFeeRepaymentCharge.setDescription(REPAY_FEES_NAME);
-    customerFeeRepaymentCharge.setFromAccountDesignator(AccountDesignators.ENTRY);
-    customerFeeRepaymentCharge.setToAccountDesignator(AccountDesignators.CUSTOMER_LOAN_FEES);
-    customerFeeRepaymentCharge.setProportionalTo(ChargeProportionalDesignator.TO_ACCOUNT_DESIGNATOR.getValue());
-    customerFeeRepaymentCharge.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    customerFeeRepaymentCharge.setAmount(BigDecimal.valueOf(100));
-    customerFeeRepaymentCharge.setReadOnly(true);
-
-    final ChargeDefinition customerInterestRepaymentCharge = new ChargeDefinition();
-    customerInterestRepaymentCharge.setChargeAction(Action.ACCEPT_PAYMENT.name());
-    customerInterestRepaymentCharge.setIdentifier(REPAY_INTEREST_ID);
-    customerInterestRepaymentCharge.setName(REPAY_INTEREST_NAME);
-    customerInterestRepaymentCharge.setDescription(REPAY_INTEREST_NAME);
-    customerInterestRepaymentCharge.setFromAccountDesignator(AccountDesignators.ENTRY);
-    customerInterestRepaymentCharge.setToAccountDesignator(AccountDesignators.CUSTOMER_LOAN_INTEREST);
-    customerInterestRepaymentCharge.setProportionalTo(ChargeProportionalDesignator.TO_ACCOUNT_DESIGNATOR.getValue());
-    customerInterestRepaymentCharge.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    customerInterestRepaymentCharge.setAmount(BigDecimal.valueOf(100));
-    customerInterestRepaymentCharge.setReadOnly(true);
-
-    final ChargeDefinition customerPrincipalRepaymentCharge = new ChargeDefinition();
-    customerPrincipalRepaymentCharge.setChargeAction(Action.ACCEPT_PAYMENT.name());
-    customerPrincipalRepaymentCharge.setIdentifier(REPAY_PRINCIPAL_ID);
-    customerPrincipalRepaymentCharge.setName(REPAY_PRINCIPAL_NAME);
-    customerPrincipalRepaymentCharge.setDescription(REPAY_PRINCIPAL_NAME);
-    customerPrincipalRepaymentCharge.setFromAccountDesignator(AccountDesignators.ENTRY);
-    customerPrincipalRepaymentCharge.setToAccountDesignator(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
-    customerPrincipalRepaymentCharge.setProportionalTo(ChargeProportionalDesignator.REQUESTED_REPAYMENT_DESIGNATOR.getValue());
-    customerPrincipalRepaymentCharge.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    customerPrincipalRepaymentCharge.setAmount(BigDecimal.valueOf(100));
-    customerPrincipalRepaymentCharge.setReadOnly(true);
-
-    ret.add(disbursePayment);
-    //ret.add(writeOffAllowanceCharge);
-    ret.add(interestCharge);
-    ret.add(customerPrincipalRepaymentCharge);
-    ret.add(customerInterestRepaymentCharge);
-    ret.add(customerFeeRepaymentCharge);
-
-    return ret;
-
-  }
-
-  public static List<ChargeDefinition> defaultIndividualLoanCharges() {
-    final List<ChargeDefinition> ret = new ArrayList<>();
-    final ChargeDefinition processingFee = charge(
-        PROCESSING_FEE_NAME,
-        Action.DISBURSE,
-        BigDecimal.ONE,
-        AccountDesignators.CUSTOMER_LOAN_FEES,
-        AccountDesignators.PROCESSING_FEE_INCOME);
-    processingFee.setReadOnly(false);
-
-    final ChargeDefinition loanOriginationFee = charge(
-        LOAN_ORIGINATION_FEE_NAME,
-        Action.DISBURSE,
-        BigDecimal.ONE,
-        AccountDesignators.CUSTOMER_LOAN_FEES,
-        AccountDesignators.ORIGINATION_FEE_INCOME);
-    loanOriginationFee.setReadOnly(false);
-
-    final ChargeDefinition disbursementFee = charge(
-        DISBURSEMENT_FEE_NAME,
-        Action.DISBURSE,
-        BigDecimal.valueOf(0.1),
-        AccountDesignators.CUSTOMER_LOAN_FEES,
-        AccountDesignators.DISBURSEMENT_FEE_INCOME);
-    disbursementFee.setProportionalTo(ChargeProportionalDesignator.REQUESTED_DISBURSEMENT_DESIGNATOR.getValue());
-    disbursementFee.setReadOnly(false);
-
-    final ChargeDefinition lateFee = charge(
-        LATE_FEE_NAME,
-        Action.ACCEPT_PAYMENT,
-        BigDecimal.TEN,
-        AccountDesignators.CUSTOMER_LOAN_FEES,
-        AccountDesignators.LATE_FEE_INCOME);
-    lateFee.setAccrueAction(Action.MARK_LATE.name());
-    lateFee.setAccrualAccountDesignator(AccountDesignators.LATE_FEE_ACCRUAL);
-    lateFee.setProportionalTo(ChargeProportionalDesignator.CONTRACTUAL_REPAYMENT_DESIGNATOR.getValue());
-    lateFee.setChargeOnTop(true);
-    lateFee.setReadOnly(false);
-
-    ret.add(processingFee);
-    ret.add(loanOriginationFee);
-    ret.add(disbursementFee);
-    ret.add(lateFee);
-
-    return ret;
+  public Stream<ChargeDefinition> defaultConfigurableCharges() {
+    return ChargeDefinitionService.defaultConfigurableIndividualLoanCharges();
   }
 
   @Override
@@ -508,27 +372,5 @@ public class IndividualLendingPatternFactory implements PatternFactory {
 
   public ProductCommandDispatcher getIndividualLendingCommandDispatcher() {
     return this.individualLendingCommandDispatcher;
-  }
-
-  private static ChargeDefinition charge(
-          final String name,
-          final Action action,
-          final BigDecimal defaultAmount,
-          final String fromAccount,
-          final String toAccount)
-  {
-    final ChargeDefinition ret = new ChargeDefinition();
-
-    ret.setIdentifier(name.toLowerCase(Locale.US).replace(" ", "-"));
-    ret.setName(name);
-    ret.setDescription(name);
-    ret.setChargeAction(action.name());
-    ret.setAmount(defaultAmount);
-    ret.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    ret.setProportionalTo(ChargeProportionalDesignator.MAXIMUM_BALANCE_DESIGNATOR.getValue());
-    ret.setFromAccountDesignator(fromAccount);
-    ret.setToAccountDesignator(toAccount);
-
-    return ret;
   }
 }

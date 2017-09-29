@@ -1,13 +1,13 @@
 package io.mifos.individuallending.internal.service.costcomponent;
 
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
+import io.mifos.individuallending.internal.service.ChargeDefinitionService;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.DefaultChargeDefinitionsMocker;
 import io.mifos.individuallending.internal.service.schedule.ScheduledChargesService;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
-import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
 import org.mockito.Mockito;
 
 import java.time.temporal.ChronoUnit;

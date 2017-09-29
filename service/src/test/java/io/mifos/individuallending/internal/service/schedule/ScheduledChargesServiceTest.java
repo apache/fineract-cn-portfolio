@@ -15,10 +15,10 @@
  */
 package io.mifos.individuallending.internal.service.schedule;
 
+import io.mifos.individuallending.internal.service.ChargeDefinitionService;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentEntity;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
-import io.mifos.portfolio.service.internal.service.ChargeDefinitionService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

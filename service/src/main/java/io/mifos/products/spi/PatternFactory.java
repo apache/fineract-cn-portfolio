@@ -16,20 +16,23 @@
 package io.mifos.products.spi;
 
 
-import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.api.v1.domain.Pattern;
+import io.mifos.portfolio.api.v1.domain.Payment;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
  */
 public interface PatternFactory {
   Pattern pattern();
-  List<ChargeDefinition> charges();
+  Stream<ChargeDefinition> defaultConfigurableCharges();
   void checkParameters(String parameters);
   void persistParameters(Long caseId, String parameters);
   void changeParameters(Long caseId, String parameters);

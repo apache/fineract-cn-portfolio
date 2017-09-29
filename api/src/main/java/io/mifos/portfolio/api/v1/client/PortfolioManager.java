@@ -49,15 +49,6 @@ public interface PortfolioManager {
   List<Pattern> getAllPatterns();
 
   @RequestMapping(
-      value = "/patterns/{patternpackage}/charges/",
-      method = RequestMethod.GET,
-      produces = MediaType.ALL_VALUE,
-      consumes = MediaType.APPLICATION_JSON_VALUE
-  )
-  List<ChargeDefinition> getAllDefaultChargeDefinitionsForPattern(
-      @PathVariable("patternpackage") final String patternPackage);
-
-  @RequestMapping(
       value = "/products/",
       method = RequestMethod.GET,
       produces = MediaType.ALL_VALUE,
@@ -269,7 +260,6 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  @ThrowsException(status = HttpStatus.CONFLICT, exception = ChargeDefinitionIsReadOnly.class)
   void changeChargeDefinition(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier,
@@ -281,7 +271,6 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  @ThrowsException(status = HttpStatus.CONFLICT, exception = ChargeDefinitionIsReadOnly.class)
   void deleteChargeDefinition(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier);

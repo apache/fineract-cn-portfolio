@@ -34,6 +34,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -42,16 +43,16 @@ import java.util.stream.Collectors;
 public class ProductService {
 
   private final ProductRepository productRepository;
-  private final ChargeDefinitionService chargeDefinitionService;
+  private final ConfigurableChargeDefinitionService configurableChargeDefinitionService;
   private final AccountingAdapter accountingAdapter;
 
   @Autowired
   public ProductService(final ProductRepository productRepository,
-                        final ChargeDefinitionService chargeDefinitionService,
+                        final ConfigurableChargeDefinitionService configurableChargeDefinitionService,
                         final AccountingAdapter accountingAdapter) {
     super();
     this.productRepository = productRepository;
-    this.chargeDefinitionService = chargeDefinitionService;
+    this.configurableChargeDefinitionService = configurableChargeDefinitionService;
     this.accountingAdapter = accountingAdapter;
   }
 
@@ -120,12 +121,12 @@ public class ProductService {
       return false;
     final Product product = maybeProduct.get();
     final Set<AccountAssignment> accountAssignments = product.getAccountAssignments();
-    final List<ChargeDefinition> chargeDefinitions = chargeDefinitionService.findAllEntities(identifier);
+    final Stream<ChargeDefinition> chargeDefinitions = configurableChargeDefinitionService.findAllEntities(identifier);
     return AccountingAdapter.accountAssignmentsRequiredButNotProvided(accountAssignments, chargeDefinitions).isEmpty();
   }
 
   public Set<AccountAssignment> getIncompleteAccountAssignments(final String identifier) {
-    final Set<String> requiredAccountDesignators = AccountingAdapter.getRequiredAccountDesignators(chargeDefinitionService.findAllEntities(identifier));
+    final Set<String> requiredAccountDesignators = AccountingAdapter.getRequiredAccountDesignators(configurableChargeDefinitionService.findAllEntities(identifier));
 
     final AccountAssignmentValidator accountAssignmentValidator
             = new AccountAssignmentValidator(findByIdentifier(identifier)

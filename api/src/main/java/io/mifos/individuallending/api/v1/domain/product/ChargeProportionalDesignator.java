@@ -25,7 +25,7 @@ public enum ChargeProportionalDesignator {
   NOT_PROPORTIONAL("{notproportional}", 0),
   MAXIMUM_BALANCE_DESIGNATOR("{maximumbalance}", 1),
   RUNNING_BALANCE_DESIGNATOR("{runningbalance}", 2),
-  PRINCIPAL_AND_INTEREST_DESIGNATOR("{principalandinterest}", 3),
+  PRINCIPAL_DESIGNATOR("{principal}", 3),
   REQUESTED_DISBURSEMENT_DESIGNATOR("{requesteddisbursement}", 4),
   TO_ACCOUNT_DESIGNATOR("{toAccount}", 5),
   FROM_ACCOUNT_DESIGNATOR("{fromAccount}", 6),

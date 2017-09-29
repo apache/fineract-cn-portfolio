@@ -210,7 +210,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       final BigDecimal customerLoanInterest = payment.getBalanceAdjustments().remove(AccountDesignators.CUSTOMER_LOAN_INTEREST);
       Assert.assertEquals("week " + week, interestAccrual.negate(), customerLoanInterest);
       Assert.assertEquals("week " + week, interestAccruedBeforePayment, customerLoanInterest);
-      //Assert.assertEquals("week " + week, plannedPayments.get(week+1).getPayment(), payment);
+      Assert.assertEquals("week " + week, plannedPayments.get(week+1).getPayment(), payment);
       week++;
     }
 
@@ -535,7 +535,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         .divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN);
 
     final BigDecimal calculatedInterest = expectedCurrentPrincipal
-        .add(interestAccrued)
         .multiply(dailyInterestRate)
         .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
 

@@ -41,9 +41,19 @@ class PeriodChargeCalculator {
       final List<ScheduledCharge> scheduledCharges,
       final int precision) {
     return scheduledCharges.stream()
-            .filter(PeriodChargeCalculator::accruedInterestCharge)
-            .collect(Collectors.groupingBy(scheduledCharge -> scheduledCharge.getScheduledAction().getRepaymentPeriod(),
-                    Collectors.mapping(x -> chargeAmountPerPeriod(x, interest, precision), RateCollectors.compound(precision))));
+        .filter(PeriodChargeCalculator::accruedInterestCharge)
+        .collect(Collectors.groupingBy(scheduledCharge -> scheduledCharge.getScheduledAction().getRepaymentPeriod(),
+            Collectors.mapping(x -> chargeAmountPerPeriod(x, interest, precision), Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))));
+  }
+
+  static Map<Period, BigDecimal> getPeriodAccrualCompoundedInterestRate(
+      final BigDecimal interest,
+      final List<ScheduledCharge> scheduledCharges,
+      final int precision) {
+    return scheduledCharges.stream()
+        .filter(PeriodChargeCalculator::accruedInterestCharge)
+        .collect(Collectors.groupingBy(scheduledCharge -> scheduledCharge.getScheduledAction().getRepaymentPeriod(),
+            Collectors.mapping(x -> chargeAmountPerPeriod(x, interest, precision), RateCollectors.compound(precision))));
   }
 
   private static boolean accruedInterestCharge(final ScheduledCharge scheduledCharge)

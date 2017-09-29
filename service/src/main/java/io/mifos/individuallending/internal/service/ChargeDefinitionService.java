@@ -72,7 +72,7 @@ public class ChargeDefinitionService {
     return ret.stream();
   }
 
-  public static Stream<ChargeDefinition> individualLoanChargesDerivedFromConfiguration() {
+  static Stream<ChargeDefinition> individualLoanChargesDerivedFromConfiguration() {
     final List<ChargeDefinition> ret = new ArrayList<>();
 
     final ChargeDefinition disbursePayment = new ChargeDefinition();
@@ -106,7 +106,7 @@ public class ChargeDefinitionService {
     interestCharge.setForCycleSizeUnit(ChronoUnit.YEARS);
     interestCharge.setAccrueAction(Action.APPLY_INTEREST.name());
     interestCharge.setAccrualAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
-    interestCharge.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_AND_INTEREST_DESIGNATOR.getValue());
+    interestCharge.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_DESIGNATOR.getValue());
     interestCharge.setChargeMethod(ChargeDefinition.ChargeMethod.INTEREST);
     interestCharge.setReadOnly(true);
 

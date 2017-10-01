@@ -242,7 +242,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     while (expectedCurrentPrincipal.compareTo(BigDecimal.ZERO) > 0) {
       logger.info("Simulating week {}. Expected current balance {}.", week, expectedCurrentPrincipal);
       if (week == weekOfLateRepayment) {
-        final BigDecimal lateFee = BigDecimal.valueOf(16_53, MINOR_CURRENCY_UNIT_DIGITS); //??? TODO: check the late fee value.
+        final BigDecimal lateFee = BigDecimal.valueOf(15_36, MINOR_CURRENCY_UNIT_DIGITS); //??? TODO: check the late fee value.
         step6CalculateInterestAndCheckForLatenessForRangeOfDays(
             today,
             (week * 7) + 1,

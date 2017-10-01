@@ -69,12 +69,13 @@ public class AccountingAdapter {
     this.logger = logger;
   }
 
-  public void bookCharges(final Map<String, BigDecimal> balanceAdjustments,
-                          final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
-                          final String note,
-                          final String transactionDate,
-                          final String message,
-                          final String transactionType) {
+  public Optional<String> bookCharges(
+      final Map<String, BigDecimal> balanceAdjustments,
+      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
+      final String note,
+      final String transactionDate,
+      final String message,
+      final String transactionType) {
     final JournalEntry journalEntry = new JournalEntry();
     final Set<Creditor> creditors = new HashSet<>();
     journalEntry.setCreditors(creditors);
@@ -106,8 +107,10 @@ public class AccountingAdapter {
 
     //noinspection ConstantConditions
     if (creditors.isEmpty() && debtors.isEmpty())
-      return;
+      return Optional.empty();
 
+    final String transactionUniqueifier = RandomStringUtils.random(26, true, true);
+    final String transactionIdentifier = "portfolio." + message + "." + transactionUniqueifier;
     journalEntry.setCreditors(creditors);
     journalEntry.setDebtors(debtors);
     journalEntry.setClerk(UserContextHolder.checkedGetUser());
@@ -115,9 +118,10 @@ public class AccountingAdapter {
     journalEntry.setMessage(message);
     journalEntry.setTransactionType(transactionType);
     journalEntry.setNote(note);
-    journalEntry.setTransactionIdentifier("portfolio." + message + "." + RandomStringUtils.random(26, true, true));
+    journalEntry.setTransactionIdentifier(transactionIdentifier);
 
     ledgerManager.createJournalEntry(journalEntry);
+    return Optional.of(transactionUniqueifier);
   }
 
   public Optional<LocalDateTime> getDateOfOldestEntryContainingMessage(final String accountIdentifier,

@@ -37,6 +37,8 @@ import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpe
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.service.config.PortfolioProperties;
 import io.mifos.portfolio.service.internal.command.CreateBeatPublishCommand;
+import io.mifos.portfolio.service.internal.repository.CaseCommandEntity;
+import io.mifos.portfolio.service.internal.repository.CaseCommandRepository;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.CaseRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
@@ -44,6 +46,10 @@ import io.mifos.rhythm.spi.v1.domain.BeatPublish;
 import io.mifos.rhythm.spi.v1.events.BeatPublishEvent;
 import io.mifos.rhythm.spi.v1.events.EventConstants;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -61,6 +67,7 @@ import java.util.stream.Stream;
 @Aggregate
 public class BeatPublishCommandHandler {
   private final CaseRepository caseRepository;
+  private final CaseCommandRepository caseCommandRepository;
   private final PortfolioProperties portfolioProperties;
   private final DataContextService dataContextService;
   private final ApplicationName applicationName;
@@ -70,12 +77,14 @@ public class BeatPublishCommandHandler {
   @Autowired
   public BeatPublishCommandHandler(
       final CaseRepository caseRepository,
+      final CaseCommandRepository caseCommandRepository,
       final PortfolioProperties portfolioProperties,
       final DataContextService dataContextService,
       final ApplicationName applicationName,
       final CommandBus commandBus,
       final AccountingAdapter accountingAdapter) {
     this.caseRepository = caseRepository;
+    this.caseCommandRepository = caseCommandRepository;
     this.portfolioProperties = portfolioProperties;
     this.dataContextService = dataContextService;
     this.applicationName = applicationName;
@@ -131,6 +140,7 @@ public class BeatPublishCommandHandler {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+    final String customerLoanInterestAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_INTEREST);
     final String lateFeeAccrualAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.LATE_FEE_ACCRUAL);
 
     final BigDecimal currentBalance = accountingAdapter.getCurrentAccountBalance(customerLoanPrincipalAccountIdentifier);
@@ -157,18 +167,23 @@ public class BeatPublishCommandHandler {
         .getPaymentSize()
         .multiply(BigDecimal.valueOf(repaymentPeriodsBetweenBeginningAndToday));
 
-    final BigDecimal paymentsSum = accountingAdapter.sumMatchingEntriesSinceDate(
+    final BigDecimal principalSum = accountingAdapter.sumMatchingEntriesSinceDate(
         customerLoanPrincipalAccountIdentifier,
         dateOfMostRecentDisbursement.toLocalDate(),
         dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT));
+    final BigDecimal interestSum = accountingAdapter.sumMatchingEntriesSinceDate(
+        customerLoanInterestAccountIdentifier,
+        dateOfMostRecentDisbursement.toLocalDate(),
+        dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT));
+    final BigDecimal paymentsSum = principalSum.add(interestSum);
 
     final BigDecimal lateFeesAccrued = accountingAdapter.sumMatchingEntriesSinceDate(
         lateFeeAccrualAccountIdentifier,
         dateOfMostRecentDisbursement.toLocalDate(),
         dataContextOfAction.getMessageForCharge(Action.MARK_LATE));
 
-    if (paymentsSum.compareTo(expectedPaymentSum.add(lateFeesAccrued)) < 0) {
-      final Optional<LocalDateTime> dateOfMostRecentLateFee = accountingAdapter.getDateOfMostRecentEntryContainingMessage(customerLoanPrincipalAccountIdentifier, dataContextOfAction.getMessageForCharge(Action.MARK_LATE));
+    if (paymentsSum.compareTo(expectedPaymentSum) < 0) {
+      final Optional<LocalDateTime> dateOfMostRecentLateFee = dateOfMostRecentMarkLate(dataContextOfAction.getCustomerCaseEntity().getId());
       if (!dateOfMostRecentLateFee.isPresent() ||
           mostRecentLateFeeIsBeforeMostRecentRepaymentPeriod(repaymentPeriods, dateOfMostRecentLateFee.get())) {
         commandBus.dispatch(new MarkLateCommand(productIdentifier, caseIdentifier, command.getForTime()));
@@ -176,6 +191,16 @@ public class BeatPublishCommandHandler {
     }
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
+  }
+
+  private Optional<LocalDateTime> dateOfMostRecentMarkLate(final Long caseId) {
+    final Pageable pageRequest = new PageRequest(0, 10, Sort.Direction.DESC, "createdOn");
+    final Page<CaseCommandEntity> page = caseCommandRepository.findByCaseIdAndActionName(
+        caseId,
+        Action.MARK_LATE.name(),
+        pageRequest);
+
+    return page.getContent().stream().findFirst().map(CaseCommandEntity::getCreatedOn);
   }
 
   private boolean mostRecentLateFeeIsBeforeMostRecentRepaymentPeriod(

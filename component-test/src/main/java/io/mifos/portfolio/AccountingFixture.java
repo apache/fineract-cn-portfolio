@@ -65,7 +65,9 @@ class AccountingFixture {
   static final String CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER = "1103";
   static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "1311";
   static final String LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER = "7840";
-  static final String ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER = "3010";
+  static final String PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER = "7353.0";
+  static final String GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER = "3010";
+  static final String GENERAL_EXPENSE_ACCOUNT_IDENTIFIER = "3011";
 
   static final Map<String, AccountData> accountMap = new HashMap<>();
 
@@ -240,11 +242,24 @@ class AccountingFixture {
     return ret;
   }
 
-  private static Account arrearsAllowanceAccount() {
+  private static Account productLossAllowanceAccount() {
     final Account ret = new Account();
-    ret.setIdentifier(ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER);
-    //ret.setGroup(LOAN_INCOME_LEDGER_IDENTIFIER); //TODO: ??
-    ret.setType(AccountType.LIABILITY.name()); //TODO: ??
+    ret.setIdentifier(PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER);
+    ret.setType(AccountType.ASSET.name());
+    return ret;
+  }
+
+  private static Account generalLossAllowanceAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER);
+    ret.setType(AccountType.EXPENSE.name());
+    return ret;
+  }
+
+  private static Account generalExpenseAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(GENERAL_EXPENSE_ACCOUNT_IDENTIFIER);
+    ret.setType(AccountType.EXPENSE.name());
     return ret;
   }
 
@@ -531,7 +546,9 @@ class AccountingFixture {
     makeAccountResponsive(consumerLoanInterestAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(lateFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(lateFeeAccrualAccount(), universalCreationDate, ledgerManagerMock);
-    makeAccountResponsive(arrearsAllowanceAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(productLossAllowanceAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(generalLossAllowanceAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(generalExpenseAccount(), universalCreationDate, ledgerManagerMock);
 
     Mockito.doReturn(incomeLedger()).when(ledgerManagerMock).findLedger(INCOME_LEDGER_IDENTIFIER);
     Mockito.doReturn(feesAndChargesLedger()).when(ledgerManagerMock).findLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);

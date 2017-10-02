@@ -29,7 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
-import java.util.Optional;
 
 /**
  * @author Myrle Krantz
@@ -56,16 +55,30 @@ public class CaseChecker {
     caseService.findByIdentifier(productIdentifier, instance.getIdentifier())
         .ifPresent(x -> {throw ServiceException.conflict("Duplicate identifier: " + productIdentifier + "." + x.getIdentifier());});
 
-    final Optional<Boolean> productEnabled = productService.findEnabledByIdentifier(productIdentifier);
-    if (!productEnabled.orElseThrow(() -> ServiceException.internalError("Product should exist, but doesn't"))) {
+    final Product product = productService.findByIdentifier(productIdentifier)
+        .orElseThrow(() -> ServiceException.badRequest("Product must exist ''{0}''.", productIdentifier));
+    final Boolean productEnabled = product.isEnabled();
+    if (!productEnabled) {
       throw ServiceException.badRequest("Product must be enabled before cases for it can be created: " + productIdentifier);}
 
-    checkForChange(productIdentifier, instance);
+    validateParameters(productIdentifier, instance, product);
   }
 
   public void checkForChange(final String productIdentifier, final Case instance) {
     final Product product = productService.findByIdentifier(productIdentifier)
         .orElseThrow(() -> ServiceException.badRequest("Product must exist ''{0}''.", productIdentifier));
+
+    final Case.State currentState = Case.State.valueOf(instance.getCurrentState());
+    if (currentState.equals(Case.State.ACTIVE) || currentState.equals(Case.State.CLOSED) || currentState.equals(Case.State.APPROVED))
+      throw ServiceException.badRequest("You may not change a case after it has been approved or closed.");
+
+    validateParameters(productIdentifier, instance, product);
+  }
+
+  private void validateParameters(
+      final String productIdentifier,
+      final Case instance,
+      final Product product) {
     final InterestRange interestRange = product.getInterestRange();
 
     final BigDecimal interest = instance.getInterest();

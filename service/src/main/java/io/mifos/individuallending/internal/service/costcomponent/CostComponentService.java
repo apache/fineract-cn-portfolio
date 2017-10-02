@@ -152,7 +152,6 @@ public class CostComponentService {
       default:
         return BigDecimal.ZERO;
     }
-//TODO: correctly implement charges which are proportional to other charges.
   }
 
   private static Function<BigDecimal, BigDecimal> howToApplyScheduledChargeToAmount(

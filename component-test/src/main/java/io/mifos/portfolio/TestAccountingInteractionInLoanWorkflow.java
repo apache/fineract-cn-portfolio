@@ -95,6 +95,43 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   @Test
+  public void cantChangeDeniedCase() throws InterruptedException {
+    final LocalDateTime today = midnightToday();
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase(today);
+    step4DenyCase(today);
+
+    try {
+      customerCase.setInterest(BigDecimal.ONE);
+      portfolioManager.changeCase(product.getIdentifier(), customerCase.getIdentifier(), customerCase);
+      Assert.fail("Changing a denied case should fail.");
+    }
+    catch (IllegalArgumentException ignored) {
+
+    }
+  }
+
+  @Test
+  public void cantChangeApprovedCase() throws InterruptedException {
+    final LocalDateTime today = midnightToday();
+
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase(today);
+    step4ApproveCase(today);
+
+    try {
+      customerCase.setInterest(BigDecimal.ONE);
+      portfolioManager.changeCase(product.getIdentifier(), customerCase.getIdentifier(), customerCase);
+      Assert.fail("Changing a denied case should fail.");
+    }
+    catch (IllegalArgumentException ignored) {
+
+    }
+  }
+
+  @Test
   public void workflowTerminatingInEarlyLoanPayoff() throws InterruptedException {
     final LocalDateTime today = midnightToday();
 

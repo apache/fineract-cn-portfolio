@@ -18,14 +18,13 @@ package io.mifos.individuallending.api.v1.client;
 import io.mifos.core.api.util.CustomFeignClientsConfiguration;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
+import io.mifos.individuallending.api.v1.domain.product.LossProvisionStep;
 import io.mifos.portfolio.api.v1.domain.CasePage;
 import org.springframework.cloud.netflix.feign.FeignClient;
 import org.springframework.http.MediaType;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -34,6 +33,35 @@ import java.util.stream.Stream;
 @SuppressWarnings("unused")
 @FeignClient (value = "portfolio-v1", path = "/portfolio/v1", configuration = CustomFeignClientsConfiguration.class)
 public interface IndividualLending {
+  @RequestMapping(
+      value = "/individuallending/products/{productidentifier}/lossprovisionsteps/{dayslate}",
+      method = RequestMethod.DELETE,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  void deleteLossProvisionStep(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("dayslate") final String daysLate);
+
+  @RequestMapping(
+      value = "/individuallending/products/{productidentifier}/lossprovisionsteps/",
+      method = RequestMethod.PUT,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  void setLossProvisionSteps(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @RequestBody List<LossProvisionStep> lossProvisionSteps);
+
+  @RequestMapping(
+      value = "/individuallending/products/{productidentifier}/lossprovisionsteps",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  List<LossProvisionStep> getAllLossProvisionSteps(
+      @PathVariable("productidentifier") final String productIdentifier);
+
   @RequestMapping(
           value = "/individuallending/products/{productidentifier}/cases/{caseidentifier}/plannedpayments",
           method = RequestMethod.GET,

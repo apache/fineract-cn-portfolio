@@ -51,7 +51,7 @@ public class CostComponentService {
       final BigDecimal contractualRepayment,
       final BigDecimal requestedDisbursement,
       final BigDecimal requestedRepayment,
-      final BigDecimal interest,
+      final BigDecimal percentPoints,
       final int minorCurrencyUnitDigits,
       final boolean accrualAccounting) {
     final PaymentBuilder paymentBuilder = new PaymentBuilder(preChargeBalances, accrualAccounting);
@@ -73,7 +73,7 @@ public class CostComponentService {
               !x.amountIsWithinRange(amountProportionalTo)).orElse(false))
             continue;
 
-          chargeAmount = howToApplyScheduledChargeToAmount(scheduledCharge, interest)
+          chargeAmount = howToApplyScheduledChargeToAmount(scheduledCharge, percentPoints)
               .apply(amountProportionalTo)
               .setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
         }
@@ -156,7 +156,7 @@ public class CostComponentService {
   }
 
   private static Function<BigDecimal, BigDecimal> howToApplyScheduledChargeToAmount(
-      final ScheduledCharge scheduledCharge, final BigDecimal interest)
+      final ScheduledCharge scheduledCharge, final BigDecimal percentPoints)
   {
     switch (scheduledCharge.getChargeDefinition().getChargeMethod())
     {
@@ -168,7 +168,7 @@ public class CostComponentService {
         return chargeAmountPerPeriod::multiply;
       }
       case INTEREST: {
-        final BigDecimal chargeAmountPerPeriod = PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, interest, RUNNING_CALCULATION_PRECISION);
+        final BigDecimal chargeAmountPerPeriod = PeriodChargeCalculator.chargeAmountPerPeriod(scheduledCharge, percentPoints, RUNNING_CALCULATION_PRECISION);
         return chargeAmountPerPeriod::multiply;
       }
       default: {

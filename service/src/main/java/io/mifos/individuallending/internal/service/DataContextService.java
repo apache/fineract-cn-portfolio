@@ -19,10 +19,7 @@ import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
-import io.mifos.portfolio.service.internal.repository.CaseEntity;
-import io.mifos.portfolio.service.internal.repository.CaseRepository;
-import io.mifos.portfolio.service.internal.repository.ProductEntity;
-import io.mifos.portfolio.service.internal.repository.ProductRepository;
+import io.mifos.portfolio.service.internal.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -37,15 +34,18 @@ public class DataContextService {
   private final ProductRepository productRepository;
   private final CaseRepository caseRepository;
   private final CaseParametersRepository caseParametersRepository;
+  private final ProductArrearsConfigurationRepository productArrearsConfigurationRepository;
 
   @Autowired
   public DataContextService(
       final ProductRepository productRepository,
       final CaseRepository caseRepository,
-      final CaseParametersRepository caseParametersRepository) {
+      final CaseParametersRepository caseParametersRepository,
+      final ProductArrearsConfigurationRepository productArrearsConfigurationRepository) {
     this.productRepository = productRepository;
     this.caseRepository = caseRepository;
     this.caseParametersRepository = caseParametersRepository;
+    this.productArrearsConfigurationRepository = productArrearsConfigurationRepository;
   }
 
   public DataContextOfAction checkedGetDataContext(
@@ -66,6 +66,14 @@ public class DataContextService {
                 "Individual loan not found ''{0}.{1}''.",
                 productIdentifier, caseIdentifier));
 
-    return new DataContextOfAction(product, customerCase, caseParameters, oneTimeAccountAssignments);
+    final List<ProductArrearsConfigurationEntity> productArrearsConfigurationEntities
+        = productArrearsConfigurationRepository.findByProductId(product.getId());
+
+    return new DataContextOfAction(
+        product,
+        customerCase,
+        caseParameters,
+        productArrearsConfigurationEntities,
+        oneTimeAccountAssignments);
   }
 }

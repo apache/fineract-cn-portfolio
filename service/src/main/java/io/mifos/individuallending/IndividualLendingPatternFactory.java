@@ -100,8 +100,14 @@ public class IndividualLendingPatternFactory implements PatternFactory {
         AccountDesignators.LATE_FEE_ACCRUAL,
         AccountType.REVENUE.name()));
     individualLendingRequiredAccounts.add(new RequiredAccountAssignment(
-        AccountDesignators.ARREARS_ALLOWANCE,
-        AccountType.LIABILITY.name())); //TODO: type?
+        AccountDesignators.PRODUCT_LOSS_ALLOWANCE,
+        AccountType.ASSET.name()));
+    individualLendingRequiredAccounts.add(new RequiredAccountAssignment(
+        AccountDesignators.GENERAL_LOSS_ALLOWANCE,
+        AccountType.EXPENSE.name()));
+    individualLendingRequiredAccounts.add(new RequiredAccountAssignment(
+        AccountDesignators.GENERAL_EXPENSE,
+        AccountType.EXPENSE.name()));
     individualLendingRequiredAccounts.add(new RequiredAccountAssignment(
         AccountDesignators.ENTRY,
         AccountType.LIABILITY.name()));

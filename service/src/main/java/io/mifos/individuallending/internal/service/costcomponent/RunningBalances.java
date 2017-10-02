@@ -48,8 +48,11 @@ public interface RunningBalances {
     this.put(AccountDesignators.INTEREST_ACCRUAL, positive);
     this.put(AccountDesignators.LATE_FEE_INCOME, positive);
     this.put(AccountDesignators.LATE_FEE_ACCRUAL, positive);
-    this.put(AccountDesignators.ARREARS_ALLOWANCE, positive);
+    this.put(AccountDesignators.PRODUCT_LOSS_ALLOWANCE, negative);
+    this.put(AccountDesignators.GENERAL_LOSS_ALLOWANCE, negative);
+    this.put(AccountDesignators.GENERAL_EXPENSE, negative);
     this.put(AccountDesignators.ENTRY, positive);
+    //TODO: derive signs from IndividualLendingPatternFactory.individualLendingRequiredAccounts instead.
   }};
 
   BigDecimal getAccountBalance(final String accountDesignator);

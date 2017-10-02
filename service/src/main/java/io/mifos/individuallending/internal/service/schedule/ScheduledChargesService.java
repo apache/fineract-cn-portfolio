@@ -147,13 +147,13 @@ public class ScheduledChargesService {
       final Map<String, List<ChargeDefinition>> chargeDefinitionsMappedByAccrueAction,
       final ScheduledAction scheduledAction) {
     final List<ChargeDefinition> chargeMappingList = chargeDefinitionsMappedByChargeAction
-        .get(scheduledAction.action.name());
+        .get(scheduledAction.getAction().name());
     Stream<ChargeDefinition> chargeMapping = chargeMappingList == null ? Stream.empty() : chargeMappingList.stream();
     if (chargeMapping == null)
       chargeMapping = Stream.empty();
 
     final List<ChargeDefinition> accrueMappingList = chargeDefinitionsMappedByAccrueAction
-        .get(scheduledAction.action.name());
+        .get(scheduledAction.getAction().name());
     Stream<ChargeDefinition> accrueMapping = accrueMappingList == null ? Stream.empty() : accrueMappingList.stream();
     if (accrueMapping == null)
       accrueMapping = Stream.empty();

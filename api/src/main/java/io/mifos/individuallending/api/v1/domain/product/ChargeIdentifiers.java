@@ -42,6 +42,8 @@ public interface ChargeIdentifiers {
   String REPAY_INTEREST_ID = "repay-interest";
   String REPAY_FEES_NAME = "Repay fees";
   String REPAY_FEES_ID = "repay-fees";
+  String PROVISION_FOR_LOSSES_NAME = "Provision for losses";
+  String PROVISION_FOR_LOSSES_ID = "loss-provisioning";
 
   static String nameToIdentifier(String name) {
     return name.toLowerCase(Locale.US).replace(" ", "-");

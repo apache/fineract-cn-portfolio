@@ -75,7 +75,7 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
     chargeDefinitionToDelete.setDescription("blah blah blah");
     chargeDefinitionToDelete.setChargeAction(Action.APPROVE.name());
     chargeDefinitionToDelete.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
-    chargeDefinitionToDelete.setToAccountDesignator(AccountDesignators.ARREARS_ALLOWANCE);
+    chargeDefinitionToDelete.setToAccountDesignator(AccountDesignators.GENERAL_LOSS_ALLOWANCE);
     chargeDefinitionToDelete.setFromAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
     portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinitionToDelete);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CHARGE_DEFINITION,

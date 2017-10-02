@@ -55,6 +55,7 @@ class PaymentBuilderServiceTestHarness {
         product,
         customerCase,
         caseParameters,
+        Collections.emptyList(),
         Collections.emptyList());
     return testSubject.getPaymentBuilder(
         dataContextOfAction,

@@ -33,11 +33,11 @@ public class ScheduledChargeComparator implements Comparator<ScheduledCharge>
   }
 
   static int compareScheduledCharges(ScheduledCharge o1, ScheduledCharge o2) {
-    int ret = o1.getScheduledAction().when.compareTo(o2.getScheduledAction().when);
+    int ret = o1.getScheduledAction().getWhen().compareTo(o2.getScheduledAction().getWhen());
     if (ret != 0)
       return ret;
 
-    ret = o1.getScheduledAction().action.compareTo(o2.getScheduledAction().action);
+    ret = o1.getScheduledAction().getAction().compareTo(o2.getScheduledAction().getAction());
     if (ret != 0)
       return ret;
 

@@ -26,3 +26,14 @@ CREATE TABLE bastet_case_commands (
   CONSTRAINT bastet_case_commands_uq UNIQUE (thoth_transaction_uq, action_name, case_id),
   CONSTRAINT bastet_case_commands_fk FOREIGN KEY (case_id) REFERENCES bastet_cases (id)
 );
+
+CREATE TABLE bastet_p_arrears_config (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  product_id               BIGINT         NOT NULL,
+  days_late                INT            NOT NULL,
+  percent_provision        DECIMAL(5,2)   NOT NULL,
+
+  CONSTRAINT bastet_p_arrears_config_pk PRIMARY KEY (id),
+  CONSTRAINT bastet_p_arrears_config_uq UNIQUE (product_id, days_late),
+  CONSTRAINT bastet_p_arrears_config_fk FOREIGN KEY (product_id) REFERENCES bastet_products (id)
+);

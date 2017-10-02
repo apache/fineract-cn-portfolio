@@ -61,7 +61,7 @@ public class ScheduledActionHelpers {
     final LocalDate effectiveEndOfTerm = fromDate.isAfter(endOfTerm) ? fromDate : endOfTerm;
 
     return getHypotheticalScheduledActionsForDisbursedLoan(startOfTerm, effectiveEndOfTerm, caseParameters)
-        .filter(x -> x.action.equals(Action.ACCEPT_PAYMENT))
+        .filter(x -> x.getAction().equals(Action.ACCEPT_PAYMENT))
         .filter(x -> x.actionIsOnOrAfter(fromDate))
         .findFirst()
         .orElseGet(() -> new ScheduledAction(Action.ACCEPT_PAYMENT, fromDate));

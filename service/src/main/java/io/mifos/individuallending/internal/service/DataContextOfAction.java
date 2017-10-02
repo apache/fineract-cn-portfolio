@@ -21,6 +21,7 @@ import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
+import io.mifos.portfolio.service.internal.repository.ProductArrearsConfigurationEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 
 import javax.annotation.Nonnull;
@@ -36,15 +37,20 @@ public class DataContextOfAction {
   private final ProductEntity product;
   private final CaseEntity customerCase;
   private final CaseParametersEntity caseParameters;
+  private final List<ProductArrearsConfigurationEntity> productArrearsConfigurationEntities;
   private final List<AccountAssignment> oneTimeAccountAssignments;
 
-  public DataContextOfAction(final @Nonnull ProductEntity product,
-                             final @Nonnull CaseEntity customerCase,
-                             final @Nonnull CaseParametersEntity caseParameters,
-                             final @Nullable List<AccountAssignment> oneTimeAccountAssignments) {
+  public DataContextOfAction(
+      final @Nonnull ProductEntity product,
+      final @Nonnull CaseEntity customerCase,
+      final @Nonnull CaseParametersEntity caseParameters,
+      final List<ProductArrearsConfigurationEntity> productArrearsConfigurationEntities,
+      final @Nullable List<AccountAssignment> oneTimeAccountAssignments)
+  {
     this.product = product;
     this.customerCase = customerCase;
     this.caseParameters = caseParameters;
+    this.productArrearsConfigurationEntities = productArrearsConfigurationEntities;
     this.oneTimeAccountAssignments = oneTimeAccountAssignments == null ? Collections.emptyList() : oneTimeAccountAssignments;
   }
 
@@ -62,6 +68,10 @@ public class DataContextOfAction {
 
   public @Nonnull CaseParameters getCaseParameters() {
     return CaseParametersMapper.mapEntity(caseParameters, product.getMinorCurrencyUnitDigits());
+  }
+
+  public @Nonnull List<ProductArrearsConfigurationEntity> getProductArrearsConfigurationEntities() {
+    return productArrearsConfigurationEntities;
   }
 
   @Nonnull List<AccountAssignment> getOneTimeAccountAssignments() {

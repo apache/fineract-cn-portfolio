@@ -20,10 +20,7 @@ import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
-import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
-import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpers;
-import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
-import io.mifos.individuallending.internal.service.schedule.ScheduledChargesService;
+import io.mifos.individuallending.internal.service.schedule.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -33,6 +30,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Myrle Krantz
@@ -40,11 +38,14 @@ import java.util.List;
 @Service
 public class DisbursePaymentBuilderService implements PaymentBuilderService {
   private final ScheduledChargesService scheduledChargesService;
+  private final LossProvisioningService lossProvisioningService;
 
   @Autowired
   public DisbursePaymentBuilderService(
-      final ScheduledChargesService scheduledChargesService) {
+      final ScheduledChargesService scheduledChargesService,
+      final LossProvisioningService lossProvisioningService) {
     this.scheduledChargesService = scheduledChargesService;
+    this.lossProvisioningService = lossProvisioningService;
   }
 
   @Override
@@ -74,7 +75,9 @@ public class DisbursePaymentBuilderService implements PaymentBuilderService {
 
     final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(
         productIdentifier, scheduledActions);
-
+    final Optional<ScheduledCharge> initialLossProvisionCharge = lossProvisioningService.getScheduledChargeForDisbursement(
+        dataContextOfAction, forDate);
+    initialLossProvisionCharge.ifPresent(scheduledCharges::add);
 
     return CostComponentService.getCostComponentsForScheduledCharges(
         scheduledCharges,

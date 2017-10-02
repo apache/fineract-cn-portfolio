@@ -157,7 +157,12 @@ public class IndividualLoanServiceTest {
       final CaseEntity customerCase = new CaseEntity();
       customerCase.setInterest(interest);
 
-      return new DataContextOfAction(product, customerCase, CaseParametersMapper.map(1L, caseParameters), Collections.emptyList());
+      return new DataContextOfAction(
+          product,
+          customerCase,
+          CaseParametersMapper.map(1L, caseParameters),
+          Collections.emptyList(),
+          Collections.emptyList());
     }
 
     @Override

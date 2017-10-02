@@ -26,32 +26,35 @@ import java.util.Objects;
  * @author Myrle Krantz
  */
 public class ScheduledAction {
-  final Action action;
-  final LocalDate when;
+  private final Action action;
+  private final LocalDate when;
   private final @Nullable Period actionPeriod;
   private final @Nullable Period repaymentPeriod;
 
-  public ScheduledAction(@Nonnull final Action action,
-                         @Nonnull final LocalDate when,
-                         @Nonnull final Period actionPeriod,
-                         @Nonnull final Period repaymentPeriod) {
+  public ScheduledAction(
+      @Nonnull final Action action,
+      @Nonnull final LocalDate when,
+      @Nonnull final Period actionPeriod,
+      @Nonnull final Period repaymentPeriod) {
     this.action = action;
     this.when = when;
     this.actionPeriod = actionPeriod;
     this.repaymentPeriod = repaymentPeriod;
   }
 
-  public ScheduledAction(@Nonnull final Action action,
-                  @Nonnull final LocalDate when,
-                  @Nonnull final Period actionPeriod) {
+  public ScheduledAction(
+      @Nonnull final Action action,
+      @Nonnull final LocalDate when,
+      @Nonnull final Period actionPeriod) {
     this.action = action;
     this.when = when;
     this.actionPeriod = actionPeriod;
     this.repaymentPeriod = null;
   }
 
-  public ScheduledAction(@Nonnull final Action action,
-                  @Nonnull final LocalDate when) {
+  public ScheduledAction(
+      @Nonnull final Action action,
+      @Nonnull final LocalDate when) {
     this.action = action;
     this.when = when;
     this.actionPeriod = null;

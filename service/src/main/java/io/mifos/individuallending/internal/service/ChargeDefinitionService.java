@@ -102,22 +102,14 @@ public class ChargeDefinitionService {
     disbursePayment.setAmount(BigDecimal.valueOf(100));
     disbursePayment.setReadOnly(true);
 
-    //TODO: Make multiple write off allowance defaultCharges.
-    /*final ChargeDefinition writeOffAllowanceCharge = charge(
-        ALLOW_FOR_WRITE_OFF_NAME,
-        Action.MARK_LATE,
-        BigDecimal.valueOf(30),
-        AccountDesignators.LOAN_FUNDS_SOURCE,
-        AccountDesignators.ARREARS_ALLOWANCE);
-    writeOffAllowanceCharge.setProportionalTo(ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue());
-    writeOffAllowanceCharge.setReadOnly(true);*/
-
-    final ChargeDefinition interestCharge = charge(
-        INTEREST_NAME,
-        Action.ACCEPT_PAYMENT,
-        BigDecimal.valueOf(100),
-        AccountDesignators.CUSTOMER_LOAN_INTEREST,
-        AccountDesignators.INTEREST_INCOME);
+    final ChargeDefinition interestCharge = new ChargeDefinition();
+    interestCharge.setIdentifier(INTEREST_ID);
+    interestCharge.setName(INTEREST_NAME);
+    interestCharge.setDescription(INTEREST_NAME);
+    interestCharge.setChargeAction(Action.ACCEPT_PAYMENT.name());
+    interestCharge.setAmount(BigDecimal.valueOf(100));
+    interestCharge.setFromAccountDesignator(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+    interestCharge.setToAccountDesignator(AccountDesignators.INTEREST_INCOME);
     interestCharge.setForCycleSizeUnit(ChronoUnit.YEARS);
     interestCharge.setAccrueAction(Action.APPLY_INTEREST.name());
     interestCharge.setAccrualAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
@@ -162,7 +154,6 @@ public class ChargeDefinitionService {
     customerPrincipalRepaymentCharge.setReadOnly(true);
 
     ret.add(disbursePayment);
-    //ret.add(writeOffAllowanceCharge);
     ret.add(interestCharge);
     ret.add(customerPrincipalRepaymentCharge);
     ret.add(customerInterestRepaymentCharge);

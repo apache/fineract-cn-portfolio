@@ -18,13 +18,12 @@ package io.mifos.individuallending.api.v1.client;
 import io.mifos.core.api.util.CustomFeignClientsConfiguration;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
-import io.mifos.individuallending.api.v1.domain.product.LossProvisionStep;
+import io.mifos.individuallending.api.v1.domain.product.LossProvisionConfiguration;
 import io.mifos.portfolio.api.v1.domain.CasePage;
 import org.springframework.cloud.netflix.feign.FeignClient;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -35,22 +34,22 @@ import java.util.stream.Stream;
 public interface IndividualLending {
 
   @RequestMapping(
-      value = "/individuallending/products/{productidentifier}/lossprovisionsteps",
+      value = "/individuallending/products/{productidentifier}/lossprovisionconfiguration",
       method = RequestMethod.PUT,
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  void setLossProvisionSteps(
+  void changeLossProvisionConfiguration(
       @PathVariable("productidentifier") final String productIdentifier,
-      @RequestBody List<LossProvisionStep> lossProvisionSteps);
+      @RequestBody LossProvisionConfiguration lossProvisionConfiguration);
 
   @RequestMapping(
-      value = "/individuallending/products/{productidentifier}/lossprovisionsteps",
+      value = "/individuallending/products/{productidentifier}/lossprovisionconfiguration",
       method = RequestMethod.GET,
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<LossProvisionStep> getAllLossProvisionSteps(
+  LossProvisionConfiguration getLossProvisionConfiguration(
       @PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(

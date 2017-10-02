@@ -19,7 +19,7 @@ import io.mifos.anubis.annotation.AcceptedTokenType;
 import io.mifos.anubis.annotation.Permittable;
 import io.mifos.core.command.gateway.CommandGateway;
 import io.mifos.core.lang.ServiceException;
-import io.mifos.individuallending.api.v1.domain.product.LossProvisionStep;
+import io.mifos.individuallending.api.v1.domain.product.LossProvisionConfiguration;
 import io.mifos.individuallending.internal.command.ChangeLossProvisionSteps;
 import io.mifos.individuallending.internal.service.LossProvisionStepService;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
@@ -31,13 +31,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
-import java.util.List;
 
 /**
  * @author Myrle Krantz
  */
 @RestController
-@RequestMapping("/individuallending/products/{productidentifier}/cases/lossprovisionsteps")
+@RequestMapping("/individuallending/products/{productidentifier}/lossprovisionconfiguration")
 public class LossProvisionStepRestController {
   private final CommandGateway commandGateway;
   private final ProductService productService;
@@ -60,12 +59,12 @@ public class LossProvisionStepRestController {
       produces = MediaType.APPLICATION_JSON_VALUE)
   public @ResponseBody
   ResponseEntity<Void>
-  setLossProvisionSteps(
+  changeLossProvisionConfiguration(
       @PathVariable("productidentifier") final String productIdentifier,
-      @RequestBody @Valid List<LossProvisionStep> lossProvisionSteps) {
+      @RequestBody @Valid LossProvisionConfiguration lossProvisionConfiguration) {
     checkProductExists(productIdentifier);
 
-    commandGateway.process(new ChangeLossProvisionSteps(productIdentifier, lossProvisionSteps));
+    commandGateway.process(new ChangeLossProvisionSteps(productIdentifier, lossProvisionConfiguration));
 
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
   }
@@ -77,12 +76,12 @@ public class LossProvisionStepRestController {
       produces = MediaType.APPLICATION_JSON_VALUE
   )
   public @ResponseBody
-  List<LossProvisionStep>
-  getAllLossProvisionSteps(
+  LossProvisionConfiguration
+  getLossProvisionConfiguration(
       @PathVariable("productidentifier") final String productIdentifier) {
     checkProductExists(productIdentifier);
 
-    return lossProvisionStepService.findByProductIdentifier(productIdentifier);
+    return new LossProvisionConfiguration(lossProvisionStepService.findByProductIdentifier(productIdentifier));
   }
 
   private void checkProductExists(@PathVariable("productidentifier") String productIdentifier) {

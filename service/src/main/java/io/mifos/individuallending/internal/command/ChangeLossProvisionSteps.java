@@ -15,19 +15,33 @@
  */
 package io.mifos.individuallending.internal.command;
 
-import io.mifos.individuallending.api.v1.domain.product.LossProvisionStep;
-
-import java.util.List;
+import io.mifos.individuallending.api.v1.domain.product.LossProvisionConfiguration;
 
 /**
  * @author Myrle Krantz
  */
 public class ChangeLossProvisionSteps {
   private final String productIdentifier;
-  private final List<LossProvisionStep> lossProvisionSteps;
+  private final LossProvisionConfiguration lossProvisionConfiguration;
 
-  public ChangeLossProvisionSteps(String productIdentifier, List<LossProvisionStep> lossProvisionSteps) {
+  public ChangeLossProvisionSteps(String productIdentifier, LossProvisionConfiguration lossProvisionConfiguration) {
     this.productIdentifier = productIdentifier;
-    this.lossProvisionSteps = lossProvisionSteps;
+    this.lossProvisionConfiguration = lossProvisionConfiguration;
+  }
+
+  public String getProductIdentifier() {
+    return productIdentifier;
+  }
+
+  public LossProvisionConfiguration getLossProvisionConfiguration() {
+    return lossProvisionConfiguration;
+  }
+
+  @Override
+  public String toString() {
+    return "ChangeLossProvisionSteps{" +
+        "productIdentifier='" + productIdentifier + '\'' +
+        ", lossProvisionConfiguration=" + lossProvisionConfiguration +
+        '}';
   }
 }

@@ -191,7 +191,7 @@ public class AccountingAdapter {
     logger.info("Creating ledger with identifier '{}'", ledgerIdentifer);
 
     final EventExpectation expectation = accountingListener.expectLedgerCreation(generatedLedger.getIdentifier());
-    ledgerManager.createLedger(generatedLedger);
+    ledgerManager.addSubLedger(parentLedger, generatedLedger);
     final boolean ledgerCreationDetected = expectation.waitForOccurrence(5, TimeUnit.SECONDS);
     if (!ledgerCreationDetected)
       logger.warn("Waited 5 seconds for creation of ledger '{}', but it was not detected. This could cause subsequent " +

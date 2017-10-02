@@ -502,7 +502,7 @@ class AccountingFixture {
 
     @Override
     public Void answer(final InvocationOnMock invocation) throws Throwable {
-      final Ledger ledger = invocation.getArgumentAt(0, Ledger.class);
+      final Ledger ledger = invocation.getArgumentAt(1, Ledger.class);
       makeLedgerResponsive(ledger, (LedgerManager) invocation.getMock());
       accountingListener.onPostLedger(TenantContextHolder.checkedGetIdentifier(), ledger.getIdentifier());
       return null;
@@ -562,7 +562,7 @@ class AccountingFixture {
     Mockito.doAnswer(new FindAccountAnswer()).when(ledgerManagerMock).findAccount(Matchers.anyString());
     Mockito.doAnswer(new CreateAccountAnswer()).when(ledgerManagerMock).createAccount(Matchers.any());
     Mockito.doAnswer(new CreateJournalEntryAnswer()).when(ledgerManagerMock).createJournalEntry(Matchers.any(JournalEntry.class));
-    Mockito.doAnswer(new CreateLedgerAnswer(accountingListener)).when(ledgerManagerMock).createLedger(Matchers.any(Ledger.class));
+    Mockito.doAnswer(new CreateLedgerAnswer(accountingListener)).when(ledgerManagerMock).addSubLedger(Matchers.anyString(), Matchers.any(Ledger.class));
   }
 
   static void mockBalance(final String accountIdentifier, final BigDecimal balance) {
@@ -584,7 +584,7 @@ class AccountingFixture {
       final String ledgerIdentifier,
       final AccountType type) {
     final LedgerMatcher specifiesCorrectLedger = new LedgerMatcher(ledgerIdentifier, type);
-    Mockito.verify(ledgerManager).createLedger(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectLedger)));
+    Mockito.verify(ledgerManager).addSubLedger(Matchers.anyString(), AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectLedger)));
     makeLedgerResponsive(specifiesCorrectLedger.getMatchedArgument(), ledgerManager);
     return specifiesCorrectLedger.getMatchedArgument().getIdentifier();
   }

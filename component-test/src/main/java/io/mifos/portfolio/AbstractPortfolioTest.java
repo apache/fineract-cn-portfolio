@@ -274,6 +274,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
       final Set<String> accountDesignators,
       final BigDecimal amount,
       final LocalDateTime forDateTime,
+      final int minorCurrencyUnits,
       final CostComponent... expectedCostComponents) {
     final Payment payment = portfolioManager.getCostComponentsForAction(
         productIdentifier,
@@ -283,6 +284,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
         amount,
         DateConverter.toIsoString(forDateTime)
     );
+    payment.getCostComponents().forEach(x -> x.setAmount(x.getAmount().setScale(minorCurrencyUnits, BigDecimal.ROUND_HALF_EVEN)));
     final Set<CostComponent> setOfCostComponents = new HashSet<>(payment.getCostComponents());
     final Set<CostComponent> setOfExpectedCostComponents = Stream.of(expectedCostComponents)
         .filter(x -> x.getAmount().compareTo(BigDecimal.ZERO) != 0)

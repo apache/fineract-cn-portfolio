@@ -69,6 +69,24 @@ public class AccountingAdapter {
     this.logger = logger;
   }
 
+  private static class BalanceAdjustment {
+    final private String accountIdentifier; //*Not* designator.
+    final private BigDecimal adjustment;
+
+    BalanceAdjustment(String accountIdentifier, BigDecimal adjustment) {
+      this.accountIdentifier = accountIdentifier;
+      this.adjustment = adjustment;
+    }
+
+    String getAccountIdentifier() {
+      return accountIdentifier;
+    }
+
+    BigDecimal getAdjustment() {
+      return adjustment;
+    }
+  }
+
   public Optional<String> bookCharges(
       final Map<String, BigDecimal> balanceAdjustments,
       final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
@@ -76,17 +94,52 @@ public class AccountingAdapter {
       final String transactionDate,
       final String message,
       final String transactionType) {
+    final String transactionUniqueifier = RandomStringUtils.random(26, true, true);
+    final JournalEntry journalEntry = getJournalEntry(
+        balanceAdjustments,
+        designatorToAccountIdentifierMapper,
+        note,
+        transactionDate,
+        message,
+        transactionType,
+        transactionUniqueifier,
+        UserContextHolder.checkedGetUser());
+
+    //noinspection ConstantConditions
+    if (journalEntry.getCreditors().isEmpty() && journalEntry.getDebtors().isEmpty())
+      return Optional.empty();
+
+    ledgerManager.createJournalEntry(journalEntry);
+    return Optional.of(transactionUniqueifier);
+  }
+
+  static JournalEntry getJournalEntry(
+      final Map<String, BigDecimal> balanceAdjustments,
+      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
+      final String note,
+      final String transactionDate,
+      final String message,
+      final String transactionType,
+      final String transactionUniqueifier,
+      final String user) {
     final JournalEntry journalEntry = new JournalEntry();
     final Set<Creditor> creditors = new HashSet<>();
     journalEntry.setCreditors(creditors);
     final Set<Debtor> debtors = new HashSet<>();
     journalEntry.setDebtors(debtors);
-    balanceAdjustments.forEach((accountDesignator, balanceAdjustment) -> {
+    final Map<String, BigDecimal> summedBalanceAdjustments = balanceAdjustments.entrySet().stream()
+        .map(entry -> {
+          final String accountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(entry.getKey());
+          return new BalanceAdjustment(accountIdentifier, entry.getValue());
+        })
+        .collect(Collectors.groupingBy(BalanceAdjustment::getAccountIdentifier,
+            Collectors.mapping(BalanceAdjustment::getAdjustment,
+                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))));
+
+    summedBalanceAdjustments.forEach((accountIdentifier, balanceAdjustment) -> {
       final int sign = balanceAdjustment.compareTo(BigDecimal.ZERO);
       if (sign == 0)
         return;
-
-      final String accountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(accountDesignator);
 
       if (sign < 0) {
         final Debtor debtor = new Debtor();
@@ -105,23 +158,17 @@ public class AccountingAdapter {
         debtors.isEmpty() && !creditors.isEmpty())
       throw ServiceException.internalError("either only creditors or only debtors were provided.");
 
-    //noinspection ConstantConditions
-    if (creditors.isEmpty() && debtors.isEmpty())
-      return Optional.empty();
 
-    final String transactionUniqueifier = RandomStringUtils.random(26, true, true);
     final String transactionIdentifier = "portfolio." + message + "." + transactionUniqueifier;
     journalEntry.setCreditors(creditors);
     journalEntry.setDebtors(debtors);
-    journalEntry.setClerk(UserContextHolder.checkedGetUser());
+    journalEntry.setClerk(user);
     journalEntry.setTransactionDate(transactionDate);
     journalEntry.setMessage(message);
     journalEntry.setTransactionType(transactionType);
     journalEntry.setNote(note);
     journalEntry.setTransactionIdentifier(transactionIdentifier);
-
-    ledgerManager.createJournalEntry(journalEntry);
-    return Optional.of(transactionUniqueifier);
+    return journalEntry;
   }
 
   public Optional<LocalDateTime> getDateOfOldestEntryContainingMessage(final String accountIdentifier,

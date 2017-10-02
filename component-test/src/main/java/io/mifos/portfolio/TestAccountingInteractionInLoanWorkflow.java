@@ -393,7 +393,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Action.OPEN,
         null,
         null,
-        forDateTime);
+        forDateTime,
+        MINOR_CURRENCY_UNIT_DIGITS);
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -413,7 +414,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         customerCase.getIdentifier(),
         Action.DENY,
         null,
-        null, forDateTime);
+        null,
+        forDateTime,
+        MINOR_CURRENCY_UNIT_DIGITS);
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -437,7 +440,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         customerCase.getIdentifier(),
         Action.APPROVE,
         null,
-        null, forDateTime);
+        null,
+        forDateTime,
+        MINOR_CURRENCY_UNIT_DIGITS);
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -480,6 +485,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Sets.newLinkedHashSet(AccountDesignators.ENTRY, AccountDesignators.CUSTOMER_LOAN_GROUP),
         amount,
         forDateTime,
+        MINOR_CURRENCY_UNIT_DIGITS,
         new CostComponent(whichDisbursementFee, disbursementFeeAmount),
         new CostComponent(ChargeIdentifiers.LOAN_ORIGINATION_FEE_ID, LOAN_ORIGINATION_FEE_AMOUNT),
         new CostComponent(ChargeIdentifiers.PROCESSING_FEE_ID, PROCESSING_FEE_AMOUNT),
@@ -585,7 +591,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Action.APPLY_INTEREST,
         null,
         null,
-        forDateTime);
+        forDateTime,
+        MINOR_CURRENCY_UNIT_DIGITS);
 
     if (calculatedLateFee.compareTo(BigDecimal.ZERO) != 0) {
       checkCostComponentForActionCorrect(
@@ -594,7 +601,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
           Action.MARK_LATE,
           null,
           null,
-          forDateTime);
+          forDateTime,
+          MINOR_CURRENCY_UNIT_DIGITS);
     }
     final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
     portfolioBeatListener.publishBeat(interestBeat);
@@ -667,6 +675,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         new HashSet<>(Arrays.asList(AccountDesignators.ENTRY, AccountDesignators.CUSTOMER_LOAN_GROUP, AccountDesignators.LOAN_FUNDS_SOURCE)),
         amount,
         forDateTime,
+        MINOR_CURRENCY_UNIT_DIGITS,
         new CostComponent(ChargeIdentifiers.REPAY_PRINCIPAL_ID, principal),
         new CostComponent(ChargeIdentifiers.REPAY_INTEREST_ID, interestAccrued),
         new CostComponent(ChargeIdentifiers.REPAY_FEES_ID, lateFee.add(nonLateFees)),
@@ -735,7 +744,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Action.CLOSE,
         null,
         null,
-        forDateTime);
+        forDateTime,
+        MINOR_CURRENCY_UNIT_DIGITS);
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),

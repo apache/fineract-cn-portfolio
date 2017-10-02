@@ -468,6 +468,22 @@ class AccountingFixture {
               journalEntry.getMessage(),
               journalEntry.getTransactionDate(),
               Double.valueOf(debtor.getAmount())));
+
+      final BigDecimal creditorSum = journalEntry.getCreditors().stream()
+          .map(Creditor::getAmount)
+          .map(Double::valueOf)
+          .map(BigDecimal::valueOf)
+          .map(x -> x.setScale(4, BigDecimal.ROUND_HALF_EVEN))
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+      final BigDecimal debtorSum = journalEntry.getDebtors().stream()
+          .map(Debtor::getAmount)
+          .map(Double::valueOf)
+          .map(BigDecimal::valueOf)
+          .map(x -> x.setScale(4, BigDecimal.ROUND_HALF_EVEN))
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+      Assert.assertEquals(creditorSum, debtorSum);
       return null;
     }
   }

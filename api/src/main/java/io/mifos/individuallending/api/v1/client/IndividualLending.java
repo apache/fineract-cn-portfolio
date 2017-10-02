@@ -33,18 +33,9 @@ import java.util.stream.Stream;
 @SuppressWarnings("unused")
 @FeignClient (value = "portfolio-v1", path = "/portfolio/v1", configuration = CustomFeignClientsConfiguration.class)
 public interface IndividualLending {
-  @RequestMapping(
-      value = "/individuallending/products/{productidentifier}/lossprovisionsteps/{dayslate}",
-      method = RequestMethod.DELETE,
-      produces = MediaType.ALL_VALUE,
-      consumes = MediaType.APPLICATION_JSON_VALUE
-  )
-  void deleteLossProvisionStep(
-      @PathVariable("productidentifier") final String productIdentifier,
-      @PathVariable("dayslate") final String daysLate);
 
   @RequestMapping(
-      value = "/individuallending/products/{productidentifier}/lossprovisionsteps/",
+      value = "/individuallending/products/{productidentifier}/lossprovisionsteps",
       method = RequestMethod.PUT,
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE

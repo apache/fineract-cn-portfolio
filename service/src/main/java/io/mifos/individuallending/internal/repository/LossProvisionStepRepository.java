@@ -13,17 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio.service.internal.repository;
+package io.mifos.individuallending.internal.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
  */
 @Repository
-public interface ProductArrearsConfigurationRepository extends JpaRepository<ProductArrearsConfigurationEntity, Long> {
-  List<ProductArrearsConfigurationEntity> findByProductId(Long id);
+public interface LossProvisionStepRepository extends JpaRepository<LossProvisionStepEntity, Long> {
+  Stream<LossProvisionStepEntity> findByProductId(Long id);
+
+  Optional<LossProvisionStepEntity> findByProductIdAndDaysLate(Long id, int daysLate);
 }

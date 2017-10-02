@@ -15,20 +15,19 @@
  */
 package io.mifos.individuallending.internal.service.schedule;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
+import io.mifos.individuallending.api.v1.domain.product.LossProvisionStep;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
+import io.mifos.individuallending.internal.service.LossProvisionStepService;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
-import io.mifos.portfolio.service.internal.repository.ProductArrearsConfigurationEntity;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PROVISION_FOR_LOSSES_ID;
 import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PROVISION_FOR_LOSSES_NAME;
@@ -37,7 +36,15 @@ import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers
  * @author Myrle Krantz
  */
 @Service
-public class LossProvisioningService {
+public class LossProvisionChargesService {
+  private final LossProvisionStepService lossProvisionStepService;
+
+  @Autowired
+  public LossProvisionChargesService(
+      final LossProvisionStepService lossProvisionStepService) {
+    this.lossProvisionStepService = lossProvisionStepService;
+  }
+
   public Optional<ScheduledCharge> getScheduledChargeForMarkLate(
       final DataContextOfAction dataContextOfAction,
       final LocalDate forDate,
@@ -59,7 +66,7 @@ public class LossProvisioningService {
       final LocalDate forDate,
       final int daysLate, Action action) {
     final Optional<ChargeDefinition> optionalChargeDefinition = percentProvision(dataContextOfAction, daysLate)
-        .map(this::getLossProvisionCharge);
+        .map(percentProvision -> getLossProvisionCharge(percentProvision, action));
 
     return optionalChargeDefinition.map(chargeDefinition -> {
       final ScheduledAction scheduledAction = new ScheduledAction(action, forDate);
@@ -71,22 +78,15 @@ public class LossProvisioningService {
       final DataContextOfAction dataContextOfAction,
       final int daysLate)
   {
-    final List<ProductArrearsConfigurationEntity> arrearsConfigurationForGivenDaysLate =
-        dataContextOfAction.getProductArrearsConfigurationEntities().stream()
-            .filter(x -> x.getDaysLate() == daysLate)
-            .collect(Collectors.toList());
-
-    if (arrearsConfigurationForGivenDaysLate.size() > 1)
-      throw ServiceException.internalError("There should not be more than one arrears allocation for given # of days late.");
-    if (arrearsConfigurationForGivenDaysLate.size() == 0)
-      return Optional.empty(); //None
-
-    return Optional.of(arrearsConfigurationForGivenDaysLate.get(0).getPercentProvision());
+    return lossProvisionStepService.findByProductIdAndDaysLate(dataContextOfAction.getProductEntity().getId(), daysLate)
+        .map(LossProvisionStep::getPercentProvision);
   }
 
-  private ChargeDefinition getLossProvisionCharge(final BigDecimal percentProvision) {
+  private ChargeDefinition getLossProvisionCharge(
+      final BigDecimal percentProvision,
+      final Action action) {
     final ChargeDefinition ret = new ChargeDefinition();
-    ret.setChargeAction(Action.MARK_LATE.name());
+    ret.setChargeAction(action.name());
     ret.setIdentifier(PROVISION_FOR_LOSSES_ID);
     ret.setName(PROVISION_FOR_LOSSES_NAME);
     ret.setDescription(PROVISION_FOR_LOSSES_NAME);

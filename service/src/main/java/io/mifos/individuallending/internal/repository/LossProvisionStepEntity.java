@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio.service.internal.repository;
+package io.mifos.individuallending.internal.repository;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
@@ -25,7 +25,7 @@ import java.util.Objects;
 @SuppressWarnings("unused")
 @Entity
 @Table(name = "bastet_p_arrears_config")
-public class ProductArrearsConfigurationEntity {
+public class LossProvisionStepEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   @Column(name = "id")
@@ -76,7 +76,7 @@ public class ProductArrearsConfigurationEntity {
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
-    ProductArrearsConfigurationEntity that = (ProductArrearsConfigurationEntity) o;
+    LossProvisionStepEntity that = (LossProvisionStepEntity) o;
     return Objects.equals(productId, that.productId) &&
         Objects.equals(daysLate, that.daysLate);
   }

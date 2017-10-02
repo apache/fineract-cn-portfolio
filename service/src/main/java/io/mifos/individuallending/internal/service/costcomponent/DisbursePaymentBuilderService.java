@@ -38,14 +38,14 @@ import java.util.Optional;
 @Service
 public class DisbursePaymentBuilderService implements PaymentBuilderService {
   private final ScheduledChargesService scheduledChargesService;
-  private final LossProvisioningService lossProvisioningService;
+  private final LossProvisionChargesService lossProvisionChargesService;
 
   @Autowired
   public DisbursePaymentBuilderService(
       final ScheduledChargesService scheduledChargesService,
-      final LossProvisioningService lossProvisioningService) {
+      final LossProvisionChargesService lossProvisionChargesService) {
     this.scheduledChargesService = scheduledChargesService;
-    this.lossProvisioningService = lossProvisioningService;
+    this.lossProvisionChargesService = lossProvisionChargesService;
   }
 
   @Override
@@ -75,7 +75,7 @@ public class DisbursePaymentBuilderService implements PaymentBuilderService {
 
     final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(
         productIdentifier, scheduledActions);
-    final Optional<ScheduledCharge> initialLossProvisionCharge = lossProvisioningService.getScheduledChargeForDisbursement(
+    final Optional<ScheduledCharge> initialLossProvisionCharge = lossProvisionChargesService.getScheduledChargeForDisbursement(
         dataContextOfAction, forDate);
     initialLossProvisionCharge.ifPresent(scheduledCharges::add);
 

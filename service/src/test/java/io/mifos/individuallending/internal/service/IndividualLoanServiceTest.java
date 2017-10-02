@@ -161,7 +161,6 @@ public class IndividualLoanServiceTest {
           product,
           customerCase,
           CaseParametersMapper.map(1L, caseParameters),
-          Collections.emptyList(),
           Collections.emptyList());
     }
 

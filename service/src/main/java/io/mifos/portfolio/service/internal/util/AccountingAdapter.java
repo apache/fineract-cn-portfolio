@@ -15,10 +15,7 @@
  */
 package io.mifos.portfolio.service.internal.util;
 
-import io.mifos.accounting.api.v1.client.AccountAlreadyExistsException;
-import io.mifos.accounting.api.v1.client.AccountNotFoundException;
-import io.mifos.accounting.api.v1.client.LedgerManager;
-import io.mifos.accounting.api.v1.client.LedgerNotFoundException;
+import io.mifos.accounting.api.v1.client.*;
 import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.lang.DateConverter;
@@ -221,8 +218,7 @@ public class AccountingAdapter {
   public String createLedger(
       final String customerIdentifier,
       final String groupName,
-      final String parentLedger) throws InterruptedException
-  {
+      final String parentLedger) throws InterruptedException {
     final Ledger ledger = ledgerManager.findLedger(parentLedger);
     final List<Ledger> subLedgers = ledger.getSubLedgers() == null ? Collections.emptyList() : ledger.getSubLedgers();
 
@@ -230,21 +226,31 @@ public class AccountingAdapter {
     generatedLedger.setShowAccountsInChart(true);
     generatedLedger.setParentLedgerIdentifier(parentLedger);
     generatedLedger.setType(ledger.getType());
-    final String ledgerIdentifer = createLedgerIdentifier(customerIdentifier, groupName, subLedgers);
-    generatedLedger.setIdentifier(ledgerIdentifer);
+    final IdentiferWithIndex ledgerIdentifer = createLedgerIdentifier(customerIdentifier, groupName, subLedgers);
+    generatedLedger.setIdentifier(ledgerIdentifer.getIdentifier());
     generatedLedger.setDescription("Individual loan case specific ledger");
-    generatedLedger.setName(ledgerIdentifer);
+    generatedLedger.setName(ledgerIdentifer.getIdentifier());
 
-    logger.info("Creating ledger with identifier '{}'", ledgerIdentifer);
 
     final EventExpectation expectation = accountingListener.expectLedgerCreation(generatedLedger.getIdentifier());
-    ledgerManager.addSubLedger(parentLedger, generatedLedger);
+    boolean created = false;
+    while (!created) {
+      try {
+        logger.info("Attempting to create ledger with identifier '{}'", ledgerIdentifer.getIdentifier());
+        ledgerManager.addSubLedger(parentLedger, generatedLedger);
+        created = true;
+      } catch (final LedgerAlreadyExistsException e) {
+        ledgerIdentifer.incrementIndex();
+        generatedLedger.setIdentifier(ledgerIdentifer.getIdentifier());
+        generatedLedger.setName(ledgerIdentifer.getIdentifier());
+      }
+    }
     final boolean ledgerCreationDetected = expectation.waitForOccurrence(5, TimeUnit.SECONDS);
     if (!ledgerCreationDetected)
       logger.warn("Waited 5 seconds for creation of ledger '{}', but it was not detected. This could cause subsequent " +
               "account creations to fail. Is there something wrong with the accounting service? Is ActiveMQ setup properly?",
           generatedLedger.getIdentifier());
-    return ledgerIdentifer;
+    return ledgerIdentifer.getIdentifier();
   }
 
   public String createAccountForLedgerAssignment(final String customerIdentifier, final AccountAssignment ledgerAssignment) {
@@ -279,19 +285,37 @@ public class AccountingAdapter {
             customerIdentifier, ledgerAssignment.getDesignator(), ledgerAssignment.getLedgerIdentifier()));
   }
 
-  private String createLedgerIdentifier(
+  private static class IdentiferWithIndex {
+    private long index;
+    private final String prefix;
+
+    IdentiferWithIndex(long index, String prefix) {
+      this.index = index;
+      this.prefix = prefix;
+    }
+
+    String getIdentifier() {
+      return prefix + String.format("%05d", index);
+    }
+
+    void incrementIndex() {
+      index++;
+    }
+  }
+
+  private IdentiferWithIndex createLedgerIdentifier(
       final String customerIdentifier,
       final String groupName,
       final List<Ledger> subLedgers) {
     final String partialCustomerIdentifer = StringUtils.left(customerIdentifier, 22);
     final String partialGroupName = StringUtils.left(groupName, 3);
     final Set<String> subLedgerIdentifiers = subLedgers.stream().map(Ledger::getIdentifier).collect(Collectors.toSet());
-    long index = 0;
+    final String generatedIdentifierPrefix = partialCustomerIdentifer + "." + partialGroupName + ".";
+    final IdentiferWithIndex ret = new IdentiferWithIndex(0, generatedIdentifierPrefix);
     while (true) {
-      index++;
-      final String generatedIdentifier = partialCustomerIdentifer + "." + partialGroupName + "." + String.format("%05d", index);
-      if (!subLedgerIdentifiers.contains(generatedIdentifier))
-        return generatedIdentifier;
+      ret.incrementIndex();
+      if (!subLedgerIdentifiers.contains(ret.getIdentifier()))
+        return ret;
     }
   }
 

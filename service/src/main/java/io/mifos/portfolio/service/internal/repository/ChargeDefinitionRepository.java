@@ -20,8 +20,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -30,7 +30,7 @@ import java.util.Optional;
 public interface ChargeDefinitionRepository extends JpaRepository<ChargeDefinitionEntity, Long> {
   @SuppressWarnings("JpaQlInspection")
   @Query("SELECT t FROM ChargeDefinitionEntity t WHERE t.product.identifier = :productIdentifier")
-  List<ChargeDefinitionEntity> findByProductId(@Param("productIdentifier") String productId);
+  Stream<ChargeDefinitionEntity> findByProductId(@Param("productIdentifier") String productId);
 
   @SuppressWarnings("JpaQlInspection")
   @Query("SELECT t FROM ChargeDefinitionEntity t WHERE t.product.identifier = :productIdentifier AND t.identifier = :chargeDefinitionIdentifier")

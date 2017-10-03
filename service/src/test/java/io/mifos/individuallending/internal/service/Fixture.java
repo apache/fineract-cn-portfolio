@@ -18,6 +18,9 @@ package io.mifos.individuallending.internal.service;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.service.schedule.Period;
+import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
+import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.PaymentCycle;
 import io.mifos.portfolio.api.v1.domain.TermRange;
@@ -36,11 +39,11 @@ import static java.math.BigDecimal.ROUND_HALF_EVEN;
 /**
  * @author Myrle Krantz
  */
-class Fixture {
+public class Fixture {
 
-  static CaseParameters getTestCaseParameters()
+  public static CaseParameters getTestCaseParameters()
   {
-    final CaseParameters ret = new CaseParameters(generateRandomIdentifier("fred"));
+    final CaseParameters ret = new CaseParameters(generateRandomIdentifier());
 
     ret.setMaximumBalance(fixScale(BigDecimal.valueOf(2000L)));
     ret.setTermRange(new TermRange(ChronoUnit.DAYS, 2));
@@ -49,9 +52,9 @@ class Fixture {
     return ret;
   }
 
-  private static String generateRandomIdentifier(final String prefix) {
+  private static String generateRandomIdentifier() {
     //prefix followed by a random positive number with less than 4 digits.
-    return prefix + Math.floorMod(Math.abs(new Random().nextInt()), 1000);
+    return "fred" + Math.floorMod(Math.abs(new Random().nextInt()), 1000);
   }
   private static BigDecimal fixScale(final BigDecimal bigDecimal)
   {
@@ -59,10 +62,10 @@ class Fixture {
   }
 
 
-  static ScheduledAction scheduledInterestAction(
-          final LocalDate initialDisbursementDate,
-          final int daysIn,
-          final Period repaymentPeriod)
+  public static ScheduledAction scheduledInterestAction(
+      final LocalDate initialDisbursementDate,
+      final int daysIn,
+      final Period repaymentPeriod)
   {
     Assert.assertTrue(daysIn >= 1);
     final LocalDate when = initialDisbursementDate.plusDays(daysIn);
@@ -70,7 +73,7 @@ class Fixture {
     return new ScheduledAction(Action.APPLY_INTEREST, when, actionPeriod, repaymentPeriod);
   }
 
-  static List<ScheduledAction> scheduledRepaymentActions(final LocalDate initial, final LocalDate... paymentDates)
+  public static List<ScheduledAction> scheduledRepaymentActions(final LocalDate initial, final LocalDate... paymentDates)
   {
     final List<ScheduledAction> ret = new ArrayList<>();
     LocalDate begin = initial;
@@ -86,7 +89,7 @@ class Fixture {
     return new ScheduledAction(Action.ACCEPT_PAYMENT, to, repaymentPeriod, repaymentPeriod);
   }
 
-  static ScheduledCharge scheduledInterestBookingCharge(
+  public static ScheduledCharge scheduledInterestBookingCharge(
       final LocalDate initialDate,
       final int chargeDateDelta,
       final int periodBeginDelta,
@@ -105,13 +108,13 @@ class Fixture {
     chargeDefinition.setAccrueAction(Action.APPLY_INTEREST.name());
     chargeDefinition.setChargeAction(Action.ACCEPT_PAYMENT.name());
     chargeDefinition.setAmount(BigDecimal.ONE);
-    chargeDefinition.setFromAccountDesignator(AccountDesignators.CUSTOMER_LOAN);
+    chargeDefinition.setFromAccountDesignator(AccountDesignators.CUSTOMER_LOAN_INTEREST);
     chargeDefinition.setAccrualAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
     chargeDefinition.setToAccountDesignator(AccountDesignators.INTEREST_INCOME);
     return new ScheduledCharge(scheduledAction, chargeDefinition, Optional.empty());
   }
 
-  static Period getPeriod(final LocalDate initialDate, final int periodBeginDelta, final int periodLength) {
+  public static Period getPeriod(final LocalDate initialDate, final int periodBeginDelta, final int periodLength) {
     return new Period(initialDate.plusDays(periodBeginDelta), periodLength);
   }
 }

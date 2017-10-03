@@ -20,6 +20,10 @@ import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.service.costcomponent.CostComponentService;
+import io.mifos.individuallending.internal.service.costcomponent.PaymentBuilder;
+import io.mifos.individuallending.internal.service.costcomponent.SimulatedRunningBalances;
+import io.mifos.individuallending.internal.service.schedule.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -51,11 +55,12 @@ public class IndividualLoanService {
 
     final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(initialDisbursalDate, dataContextOfAction.getCaseParameters());
 
-    final Set<Action> actionsScheduled = scheduledActions.stream().map(x -> x.action).collect(Collectors.toSet());
+    final Set<Action> actionsScheduled = scheduledActions.stream().map(ScheduledAction::getAction).collect(Collectors.toSet());
 
     final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(dataContextOfAction.getProductEntity().getIdentifier(), scheduledActions);
 
     final BigDecimal loanPaymentSize = CostComponentService.getLoanPaymentSize(
+        dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum(),
         dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum(),
         dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
@@ -123,41 +128,42 @@ public class IndividualLoanService {
         .sorted()
         .collect(Collector.of(ArrayList::new, List::add, (left, right) -> { left.addAll(right); return left; }));
 
-    BigDecimal balance = initialBalance.setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
+    final SimulatedRunningBalances balances = new SimulatedRunningBalances();
     final List<PlannedPayment> plannedPayments = new ArrayList<>();
     for (int i = 0; i < sortedRepaymentPeriods.size(); i++)
     {
       final Period repaymentPeriod = sortedRepaymentPeriods.get(i);
-      final BigDecimal currentLoanPaymentSize;
-      if (repaymentPeriod.isDefined()) {
-        // last repayment period: Force the proposed payment to "overhang". Cost component calculation
-        // corrects last loan payment downwards but not upwards.
-        if (i == sortedRepaymentPeriods.size() - 1)
-          currentLoanPaymentSize = loanPaymentSize.add(BigDecimal.valueOf(sortedRepaymentPeriods.size()));
-        else
-          currentLoanPaymentSize = loanPaymentSize;
+      final BigDecimal requestedRepayment;
+      final BigDecimal requestedDisbursal;
+      if (i == 0)
+      { //First "period" is actually just the OPEN/APPROVE/DISBURSAL action set.
+        requestedRepayment = BigDecimal.ZERO;
+        requestedDisbursal = initialBalance.setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
       }
-      else
-        currentLoanPaymentSize = BigDecimal.ZERO;
+      else if (i == sortedRepaymentPeriods.size() - 1)
+      { //Last repayment period: Fill the proposed payment out to the remaining balance of the loan.
+        requestedRepayment = loanPaymentSize.multiply(BigDecimal.valueOf(2));
+        requestedDisbursal = BigDecimal.ZERO;
+      }
+      else {
+        requestedRepayment = loanPaymentSize;
+        requestedDisbursal = BigDecimal.ZERO;
+      }
 
       final SortedSet<ScheduledCharge> scheduledChargesInPeriod = orderedScheduledChargesGroupedByPeriod.get(repaymentPeriod);
-      final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
+      final PaymentBuilder paymentBuilder =
               CostComponentService.getCostComponentsForScheduledCharges(
-                  Collections.emptyMap(),
                   scheduledChargesInPeriod,
                   initialBalance,
-                  balance,
-                  currentLoanPaymentSize,
+                  balances,
+                  loanPaymentSize,
+                  requestedDisbursal,
+                  requestedRepayment,
                   interest,
                   minorCurrencyUnitDigits,
-                  false);
+                  true);
 
-      final PlannedPayment plannedPayment = new PlannedPayment();
-      plannedPayment.setCostComponents(new ArrayList<>(costComponentsForRepaymentPeriod.getCostComponents().values()));
-      plannedPayment.setDate(repaymentPeriod.getEndDateAsString());
-      balance = balance.add(costComponentsForRepaymentPeriod.getBalanceAdjustment());
-      plannedPayment.setRemainingPrincipal(balance);
-      plannedPayments.add(plannedPayment);
+      plannedPayments.add(paymentBuilder.accumulatePlannedPayment(balances, repaymentPeriod.getEndDate()));
     }
     return plannedPayments;
   }
@@ -172,9 +178,9 @@ public class IndividualLoanService {
 
   private static Period getPeriodFromScheduledCharge(final ScheduledCharge scheduledCharge) {
     final ScheduledAction scheduledAction = scheduledCharge.getScheduledAction();
-    if (ScheduledActionHelpers.actionHasNoActionPeriod(scheduledAction.action))
+    if (ScheduledActionHelpers.actionHasNoActionPeriod(scheduledAction.getAction()))
       return new Period(null, null);
     else
-      return scheduledAction.repaymentPeriod;
+      return scheduledAction.getRepaymentPeriod();
   }
 }

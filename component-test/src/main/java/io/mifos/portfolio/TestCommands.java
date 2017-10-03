@@ -15,18 +15,15 @@
  */
 package io.mifos.portfolio;
 
-import io.mifos.accounting.api.v1.domain.AccountEntry;
-import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.Product;
 import org.junit.Test;
-import org.mockito.Matchers;
-import org.mockito.Mockito;
 
+import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Collections;
-import java.util.stream.Stream;
 
 import static io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants.*;
 
@@ -34,81 +31,9 @@ import static io.mifos.individuallending.api.v1.events.IndividualLoanEventConsta
  * @author Myrle Krantz
  */
 public class TestCommands extends AbstractPortfolioTest {
-  @Test
-  public void testHappyWorkflow() throws InterruptedException {
-    final Product product = createAndEnableProduct();
-    final Case customerCase = createCase(product.getIdentifier());
-
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN);
-
-
-    checkStateTransfer(
-        product.getIdentifier(),
-        customerCase.getIdentifier(),
-        Action.OPEN,
-        Collections.singletonList(assignEntryToTeller()),
-        OPEN_INDIVIDUALLOAN_CASE,
-        Case.State.PENDING);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, Action.DENY);
-
-
-    checkStateTransfer(product.getIdentifier(),
-        customerCase.getIdentifier(),
-        Action.APPROVE,
-        Collections.singletonList(assignEntryToTeller()),
-        APPROVE_INDIVIDUALLOAN_CASE,
-        Case.State.APPROVED);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE, Action.CLOSE);
-
-
-    checkStateTransfer(
-        product.getIdentifier(),
-        customerCase.getIdentifier(),
-        Action.DISBURSE,
-        Collections.singletonList(assignEntryToTeller()),
-        DISBURSE_INDIVIDUALLOAN_CASE,
-        Case.State.ACTIVE);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
-            Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
-
-    final AccountEntry firstEntry = new AccountEntry();
-    firstEntry.setAmount(2000.0);
-    firstEntry.setTransactionDate(DateConverter.toIsoString(LocalDateTime.now()));
-    Mockito.doAnswer((x) -> Stream.of(firstEntry))
-        .when(ledgerManager)
-        .fetchAccountEntriesStream(Matchers.anyString(), Matchers.anyString(), Matchers.anyString(), Matchers.eq("ASC"));
-
-
-    checkStateTransfer(
-        product.getIdentifier(),
-        customerCase.getIdentifier(),
-        Action.ACCEPT_PAYMENT,
-        Collections.singletonList(assignEntryToTeller()),
-        ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE,
-        Case.State.ACTIVE);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
-            Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
-
-
-    checkStateTransfer(
-        product.getIdentifier(),
-        customerCase.getIdentifier(),
-        Action.ACCEPT_PAYMENT,
-        Collections.singletonList(assignEntryToTeller()),
-        ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE,
-        Case.State.ACTIVE);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
-            Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
-
-    checkStateTransfer(
-        product.getIdentifier(),
-        customerCase.getIdentifier(),
-        Action.CLOSE,
-        Collections.singletonList(assignEntryToTeller()),
-        CLOSE_INDIVIDUALLOAN_CASE,
-        Case.State.CLOSED);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
-  }
+  // Happy case test deleted because the case is covered in more detail in
+  // TestAccountingInteractionInLoanWorkflow.
+  //public void testHappyWorkflow() throws InterruptedException
 
   @Test
   public void testBadCustomerWorkflow() throws InterruptedException {
@@ -142,8 +67,11 @@ public class TestCommands extends AbstractPortfolioTest {
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DISBURSE,
+        LocalDateTime.now(Clock.systemUTC()),
         Collections.singletonList(assignEntryToTeller()),
+        BigDecimal.valueOf(2000L),
         DISBURSE_INDIVIDUALLOAN_CASE,
+        midnightToday(),
         Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
             Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);

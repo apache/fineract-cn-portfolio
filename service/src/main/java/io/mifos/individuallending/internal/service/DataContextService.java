@@ -66,6 +66,10 @@ public class DataContextService {
                 "Individual loan not found ''{0}.{1}''.",
                 productIdentifier, caseIdentifier));
 
-    return new DataContextOfAction(product, customerCase, caseParameters, oneTimeAccountAssignments);
+    return new DataContextOfAction(
+        product,
+        customerCase,
+        caseParameters,
+        oneTimeAccountAssignments);
   }
 }

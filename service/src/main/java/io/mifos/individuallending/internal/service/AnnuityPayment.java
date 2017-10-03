@@ -28,7 +28,7 @@ import java.util.Objects;
 /**
  * @author Myrle Krantz
  */
-final class AnnuityPayment implements MonetaryOperator {
+public final class AnnuityPayment implements MonetaryOperator {
   private Rate rate;
   private int periods;
 
@@ -52,13 +52,16 @@ final class AnnuityPayment implements MonetaryOperator {
     return new AnnuityPayment(rate, periods);
   }
 
-  static MonetaryAmount calculate(
-          final @Nonnull MonetaryAmount amount,
-          final @Nonnull Rate rate,
-          final @Nonnegative int periods)
+  public static MonetaryAmount calculate(
+      final @Nonnull MonetaryAmount amount,
+      final @Nonnull Rate rate,
+      final @Nonnegative int periods)
   {
     Objects.requireNonNull(amount, "Amount required");
     Objects.requireNonNull(rate, "Rate required");
+    if (rate.get().compareTo(BigDecimal.ZERO) == 0)
+      return amount.divide(periods);
+
     // AP(m) = m*r / [ (1-((1 + r).pow(-n))) ]
 
     return amount.multiply(rate.get()).divide(

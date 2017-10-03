@@ -16,6 +16,7 @@
 package io.mifos.individuallending.internal.command.handler;
 
 
+import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.command.annotation.Aggregate;
 import io.mifos.core.command.annotation.CommandHandler;
 import io.mifos.core.command.annotation.CommandLogLevel;
@@ -29,18 +30,17 @@ import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.individuallending.internal.command.*;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
-import io.mifos.individuallending.internal.service.*;
+import io.mifos.individuallending.internal.service.DataContextOfAction;
+import io.mifos.individuallending.internal.service.DataContextService;
+import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
+import io.mifos.individuallending.internal.service.costcomponent.*;
+import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpers;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
-import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
-import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.service.internal.mapper.CaseMapper;
-import io.mifos.portfolio.service.internal.repository.CaseEntity;
-import io.mifos.portfolio.service.internal.repository.CaseRepository;
-import io.mifos.portfolio.service.internal.repository.TaskInstanceRepository;
+import io.mifos.portfolio.service.internal.repository.*;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
-import io.mifos.portfolio.service.internal.util.ChargeInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,8 +64,18 @@ import java.util.stream.Collectors;
 public class IndividualLoanCommandHandler {
   private final CaseRepository caseRepository;
   private final DataContextService dataContextService;
-  private final CostComponentService costComponentService;
+  private final OpenPaymentBuilderService openPaymentBuilderService;
+  private final ApprovePaymentBuilderService approvePaymentBuilderService;
+  private final DenyPaymentBuilderService denyPaymentBuilderService;
+  private final DisbursePaymentBuilderService disbursePaymentBuilderService;
+  private final ApplyInterestPaymentBuilderService applyInterestPaymentBuilderService;
+  private final AcceptPaymentBuilderService acceptPaymentBuilderService;
+  private final ClosePaymentBuilderService closePaymentBuilderService;
+  private final MarkLatePaymentBuilderService markLatePaymentBuilderService;
+  private final WriteOffPaymentBuilderService writeOffPaymentBuilderService;
+  private final RecoverPaymentBuilderService recoverPaymentBuilderService;
   private final AccountingAdapter accountingAdapter;
+  private final CaseCommandRepository caseCommandRepository;
   private final TaskInstanceRepository taskInstanceRepository;
   private final CaseParametersRepository caseParametersRepository;
 
@@ -73,14 +83,33 @@ public class IndividualLoanCommandHandler {
   public IndividualLoanCommandHandler(
       final CaseRepository caseRepository,
       final DataContextService dataContextService,
-      final CostComponentService costComponentService,
+      final OpenPaymentBuilderService openPaymentBuilderService,
+      final ApprovePaymentBuilderService approvePaymentBuilderService,
+      final DenyPaymentBuilderService denyPaymentBuilderService,
+      final DisbursePaymentBuilderService disbursePaymentBuilderService,
+      final ApplyInterestPaymentBuilderService applyInterestPaymentBuilderService,
+      final AcceptPaymentBuilderService acceptPaymentBuilderService,
+      final ClosePaymentBuilderService closePaymentBuilderService,
+      final MarkLatePaymentBuilderService markLatePaymentBuilderService,
+      final WriteOffPaymentBuilderService writeOffPaymentBuilderService,
+      final RecoverPaymentBuilderService recoverPaymentBuilderService,
       final AccountingAdapter accountingAdapter,
-      final TaskInstanceRepository taskInstanceRepository,
+      CaseCommandRepository caseCommandRepository, final TaskInstanceRepository taskInstanceRepository,
       final CaseParametersRepository caseParametersRepository) {
     this.caseRepository = caseRepository;
     this.dataContextService = dataContextService;
-    this.costComponentService = costComponentService;
+    this.openPaymentBuilderService = openPaymentBuilderService;
+    this.approvePaymentBuilderService = approvePaymentBuilderService;
+    this.denyPaymentBuilderService = denyPaymentBuilderService;
+    this.disbursePaymentBuilderService = disbursePaymentBuilderService;
+    this.applyInterestPaymentBuilderService = applyInterestPaymentBuilderService;
+    this.acceptPaymentBuilderService = acceptPaymentBuilderService;
+    this.closePaymentBuilderService = closePaymentBuilderService;
+    this.markLatePaymentBuilderService = markLatePaymentBuilderService;
+    this.writeOffPaymentBuilderService = writeOffPaymentBuilderService;
+    this.recoverPaymentBuilderService = recoverPaymentBuilderService;
     this.accountingAdapter = accountingAdapter;
+    this.caseCommandRepository = caseCommandRepository;
     this.taskInstanceRepository = taskInstanceRepository;
     this.caseParametersRepository = caseParametersRepository;
   }
@@ -88,7 +117,7 @@ public class IndividualLoanCommandHandler {
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(
-      selectorName = EventConstants.SELECTOR_NAME,
+      selectorName = IndividualLoanEventConstants.SELECTOR_NAME,
       selectorValue = IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final OpenCommand command) {
     final String productIdentifier = command.getProductIdentifier();
@@ -99,30 +128,33 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.OPEN);
 
-    final CostComponentsForRepaymentPeriod costComponents
-        = costComponentService.getCostComponentsForOpen(dataContextOfAction);
-
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
-            = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponents.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.OPEN,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final PaymentBuilder paymentBuilder
+        = openPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.OPEN),
         Action.OPEN.getTransactionType());
-    //Only move to new state if book charges command was accepted.
+
     final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getCommand().getCreatedOn(),
+        customerCase.getId(),
+        Action.OPEN,
+        transactionUniqueifier);
+
+    //Only move to new state if book charges command was accepted.
     customerCase.setCurrentState(Case.State.PENDING.name());
     caseRepository.save(customerCase);
 
@@ -132,7 +164,7 @@ public class IndividualLoanCommandHandler {
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(
-      selectorName = EventConstants.SELECTOR_NAME,
+      selectorName = IndividualLoanEventConstants.SELECTOR_NAME,
       selectorValue = IndividualLoanEventConstants.DENY_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final DenyCommand command) {
     final String productIdentifier = command.getProductIdentifier();
@@ -143,36 +175,58 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.DENY);
 
-    final CostComponentsForRepaymentPeriod costComponents
-        = costComponentService.getCostComponentsForDeny(dataContextOfAction);
-
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponents.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.DENY,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final PaymentBuilder paymentBuilder
+        = denyPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
     final LocalDateTime today = today();
 
+    final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
+        command.getCommand().getNote(),
+        command.getCommand().getCreatedOn(),
+        dataContextOfAction.getMessageForCharge(Action.DENY),
+        Action.DENY.getTransactionType());
+
     final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getCommand().getCreatedOn(),
+        customerCase.getId(),
+        Action.DENY,
+        transactionUniqueifier);
+
     customerCase.setCurrentState(Case.State.CLOSED.name());
     caseRepository.save(customerCase);
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
   }
 
+  static class InterruptedInALambdaException extends RuntimeException {
+
+    private final InterruptedException interruptedException;
+
+    InterruptedInALambdaException(InterruptedException e) {
+      interruptedException = e;
+    }
+
+    void throwWrappedException() throws InterruptedException {
+      throw interruptedException;
+    }
+  }
+
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(
-      selectorName = EventConstants.SELECTOR_NAME,
+      selectorName = IndividualLoanEventConstants.SELECTOR_NAME,
       selectorValue = IndividualLoanEventConstants.APPROVE_INDIVIDUALLOAN_CASE)
-  public IndividualLoanCommandEvent process(final ApproveCommand command) {
+  public IndividualLoanCommandEvent process(final ApproveCommand command) throws InterruptedException
+  {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
     final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
@@ -184,39 +238,65 @@ public class IndividualLoanCommandHandler {
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
             = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
 
+    //Create the needed account assignments for groups and persist them for the case.
+    try {
+      designatorToAccountIdentifierMapper.getGroupsNeedingLedgers()
+          .map(groupNeedingLedger -> {
+            try {
+              final String createdLedgerIdentifier = accountingAdapter.createLedger(
+                  dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
+                  groupNeedingLedger.getGroupName(),
+                  groupNeedingLedger.getParentLedger());
+              return new AccountAssignment(groupNeedingLedger.getGroupName(), createdLedgerIdentifier);
+            } catch (InterruptedException e) {
+              throw new InterruptedInALambdaException(e);
+            }
+          })
+          .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
+          .forEach(caseAccountAssignmentEntity -> dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity));
+    }
+    catch (final InterruptedInALambdaException e) {
+      e.throwWrappedException();
+    }
+
     //Create the needed account assignments and persist them for the case.
     designatorToAccountIdentifierMapper.getLedgersNeedingAccounts()
-            .map(ledger ->
-                    new AccountAssignment(ledger.getDesignator(),
-                            accountingAdapter.createAccountForLedgerAssignment(dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(), ledger)))
-            .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
-            .forEach(caseAccountAssignmentEntity ->
-              dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity)
-            );
+        .map(ledger ->
+            new AccountAssignment(ledger.getDesignator(),
+                accountingAdapter.createAccountForLedgerAssignment(
+                    dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
+                    ledger)))
+        .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
+        .forEach(caseAccountAssignmentEntity ->
+            dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity)
+        );
     caseRepository.save(dataContextOfAction.getCustomerCaseEntity());
 
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-        costComponentService.getCostComponentsForApprove(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.APPROVE,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final PaymentBuilder paymentBuilder =
+        approvePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.APPROVE),
         Action.APPROVE.getTransactionType());
 
-    //Only move to new state if book charges command was accepted.
     final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getCommand().getCreatedOn(),
+        customerCase.getId(),
+        Action.APPROVE,
+        transactionUniqueifier);
+
+    //Only move to new state if book charges command was accepted.
     customerCase.setCurrentState(Case.State.APPROVED.name());
     caseRepository.save(customerCase);
 
@@ -225,7 +305,7 @@ public class IndividualLoanCommandHandler {
 
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
-  @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE)
+  @EventEmitter(selectorName = IndividualLoanEventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final DisburseCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
@@ -236,32 +316,35 @@ public class IndividualLoanCommandHandler {
     checkIfTasksAreOutstanding(dataContextOfAction, Action.DISBURSE);
 
     final BigDecimal disbursalAmount = Optional.ofNullable(command.getCommand().getPaymentSize()).orElse(BigDecimal.ZERO);
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-        costComponentService.getCostComponentsForDisburse(dataContextOfAction, disbursalAmount);
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
 
-    final List<ChargeInstance> charges =
-        costComponentsForRepaymentPeriod.stream()
-            .map(entry -> mapCostComponentEntryToChargeInstance(
-                Action.DISBURSE,
-                entry,
-                designatorToAccountIdentifierMapper))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-        .collect(Collectors.toList());
+    final PaymentBuilder paymentBuilder =
+        disbursePaymentBuilderService.getPaymentBuilder(dataContextOfAction, disbursalAmount, CostComponentService.today(), runningBalances);
 
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.DISBURSE),
         Action.DISBURSE.getTransactionType());
+
+    final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getCommand().getCreatedOn(),
+        customerCase.getId(),
+        Action.DISBURSE,
+        transactionUniqueifier);
+
     //Only move to new state if book charges command was accepted.
     if (Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState()) != Case.State.ACTIVE) {
-      final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
       final LocalDateTime endOfTerm
           = ScheduledActionHelpers.getRoughEndDate(today.toLocalDate(), dataContextOfAction.getCaseParameters())
           .atTime(LocalTime.MIDNIGHT);
@@ -269,11 +352,10 @@ public class IndividualLoanCommandHandler {
       customerCase.setCurrentState(Case.State.ACTIVE.name());
       caseRepository.save(customerCase);
     }
-    final String customerLoanAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN);
-    final BigDecimal currentBalance = accountingAdapter.getCurrentBalance(customerLoanAccountIdentifier).negate();
+    final BigDecimal currentBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
 
-    final BigDecimal newLoanPaymentSize = costComponentService.getLoanPaymentSize(
-        currentBalance.add(disbursalAmount),
+    final BigDecimal newLoanPaymentSize = disbursePaymentBuilderService.getLoanPaymentSizeForSingleDisbursement(
+        currentBalance.add(paymentBuilder.getBalanceAdjustment(AccountDesignators.ENTRY)),
         dataContextOfAction);
 
     dataContextOfAction.getCaseParametersEntity().setPaymentSize(newLoanPaymentSize);
@@ -285,7 +367,7 @@ public class IndividualLoanCommandHandler {
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(
-      selectorName = EventConstants.SELECTOR_NAME,
+      selectorName = IndividualLoanEventConstants.SELECTOR_NAME,
       selectorValue = IndividualLoanEventConstants.APPLY_INTEREST_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final ApplyInterestCommand command) {
     final String productIdentifier = command.getProductIdentifier();
@@ -298,26 +380,29 @@ public class IndividualLoanCommandHandler {
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-        costComponentService.getCostComponentsForApplyInterest(dataContextOfAction);
-
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.APPLY_INTEREST,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final PaymentBuilder paymentBuilder =
+        applyInterestPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
-    accountingAdapter.bookCharges(charges,
+    final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         "Applied interest on " + command.getForTime(),
         command.getForTime(),
         dataContextOfAction.getMessageForCharge(Action.APPLY_INTEREST),
         Action.APPLY_INTEREST.getTransactionType());
+
+    final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getForTime(),
+        customerCase.getId(),
+        Action.APPLY_INTEREST,
+        transactionUniqueifier);
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
   }
@@ -325,7 +410,7 @@ public class IndividualLoanCommandHandler {
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(
-      selectorName = EventConstants.SELECTOR_NAME,
+      selectorName = IndividualLoanEventConstants.SELECTOR_NAME,
       selectorValue = IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final AcceptPaymentCommand command) {
     final String productIdentifier = command.getProductIdentifier();
@@ -340,31 +425,35 @@ public class IndividualLoanCommandHandler {
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-        costComponentService.getCostComponentsForAcceptPayment(
-            dataContextOfAction,
-            command.getCommand().getPaymentSize(),
-            DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate());
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.ACCEPT_PAYMENT,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final PaymentBuilder paymentBuilder =
+        acceptPaymentBuilderService.getPaymentBuilder(
+            dataContextOfAction,
+            command.getCommand().getPaymentSize(),
+            DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate(), runningBalances);
 
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
         dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT),
         Action.ACCEPT_PAYMENT.getTransactionType());
+
+    final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getCommand().getCreatedOn(),
+        customerCase.getId(),
+        Action.ACCEPT_PAYMENT,
+        transactionUniqueifier);
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
   }
@@ -372,7 +461,7 @@ public class IndividualLoanCommandHandler {
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
   @EventEmitter(
-      selectorName = EventConstants.SELECTOR_NAME,
+      selectorName = IndividualLoanEventConstants.SELECTOR_NAME,
       selectorValue = IndividualLoanEventConstants.MARK_LATE_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final MarkLateCommand command) {
     final String productIdentifier = command.getProductIdentifier();
@@ -387,35 +476,39 @@ public class IndividualLoanCommandHandler {
       throw ServiceException.internalError(
           "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
 
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-        costComponentService.getCostComponentsForMarkLate(dataContextOfAction, DateConverter.fromIsoString(command.getForTime()));
-
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
 
-    final List<ChargeInstance> charges = costComponentsForRepaymentPeriod.stream()
-        .map(entry -> mapCostComponentEntryToChargeInstance(
-            Action.MARK_LATE,
-            entry,
-            designatorToAccountIdentifierMapper))
-        .filter(Optional::isPresent)
-        .map(Optional::get)
-        .collect(Collectors.toList());
+    final PaymentBuilder paymentBuilder =
+        markLatePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, DateConverter.fromIsoString(command.getForTime()).toLocalDate(),
+            runningBalances);
 
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         "Marked late on " + command.getForTime(),
         command.getForTime(),
         dataContextOfAction.getMessageForCharge(Action.MARK_LATE),
         Action.MARK_LATE.getTransactionType());
+
+    final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getForTime(),
+        customerCase.getId(),
+        Action.MARK_LATE,
+        transactionUniqueifier);
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
   }
 
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
-  @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.WRITE_OFF_INDIVIDUALLOAN_CASE)
+  @EventEmitter(selectorName = IndividualLoanEventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.WRITE_OFF_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final WriteOffCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
@@ -424,10 +517,35 @@ public class IndividualLoanCommandHandler {
     IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState()), Action.WRITE_OFF);
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.WRITE_OFF);
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
+
+    final PaymentBuilder paymentBuilder =
+        writeOffPaymentBuilderService.getPaymentBuilder(
+            dataContextOfAction,
+            command.getCommand().getPaymentSize(),
+            DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate(), runningBalances);
 
     final LocalDateTime today = today();
 
+    final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
+        command.getCommand().getNote(),
+        command.getCommand().getCreatedOn(),
+        dataContextOfAction.getMessageForCharge(Action.WRITE_OFF),
+        Action.WRITE_OFF.getTransactionType());
+
     final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getCommand().getCreatedOn(),
+        customerCase.getId(),
+        Action.WRITE_OFF,
+        transactionUniqueifier);
+
     customerCase.setCurrentState(Case.State.CLOSED.name());
     caseRepository.save(customerCase);
 
@@ -436,7 +554,7 @@ public class IndividualLoanCommandHandler {
 
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
-  @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.CLOSE_INDIVIDUALLOAN_CASE)
+  @EventEmitter(selectorName = IndividualLoanEventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.CLOSE_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final CloseCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
@@ -446,29 +564,23 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.CLOSE);
 
-    final CostComponentsForRepaymentPeriod costComponentsForRepaymentPeriod =
-        costComponentService.getCostComponentsForClose(dataContextOfAction);
-
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
         = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
 
-    final List<ChargeInstance> charges =
-        costComponentsForRepaymentPeriod.stream()
-            .map(entry -> mapCostComponentEntryToChargeInstance(
-                Action.DISBURSE,
-                entry,
-                designatorToAccountIdentifierMapper))
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .collect(Collectors.toList());
+    final PaymentBuilder paymentBuilder =
+        closePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
     final LocalDateTime today = today();
 
-    accountingAdapter.bookCharges(charges,
+    final Optional<String> transactionIdentifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
         command.getCommand().getCreatedOn(),
-        dataContextOfAction.getMessageForCharge(Action.DISBURSE),
-        Action.DISBURSE.getTransactionType());
+        dataContextOfAction.getMessageForCharge(Action.CLOSE),
+        Action.CLOSE.getTransactionType());
 
     final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
     customerCase.setCurrentState(Case.State.CLOSED.name());
@@ -479,7 +591,7 @@ public class IndividualLoanCommandHandler {
 
   @Transactional
   @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
-  @EventEmitter(selectorName = EventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.RECOVER_INDIVIDUALLOAN_CASE)
+  @EventEmitter(selectorName = IndividualLoanEventConstants.SELECTOR_NAME, selectorValue = IndividualLoanEventConstants.RECOVER_INDIVIDUALLOAN_CASE)
   public IndividualLoanCommandEvent process(final RecoverCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
@@ -489,43 +601,36 @@ public class IndividualLoanCommandHandler {
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.RECOVER);
 
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
+
+    final PaymentBuilder paymentBuilder =
+        recoverPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
+
     final LocalDateTime today = today();
 
+    final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
+        command.getCommand().getNote(),
+        command.getCommand().getCreatedOn(),
+        dataContextOfAction.getMessageForCharge(Action.RECOVER),
+        Action.CLOSE.getTransactionType());
+
     final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getCommand().getCreatedOn(),
+        customerCase.getId(),
+        Action.RECOVER,
+        transactionUniqueifier);
+
     customerCase.setCurrentState(Case.State.CLOSED.name());
     caseRepository.save(customerCase);
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
-  }
-
-  private static Optional<ChargeInstance> mapCostComponentEntryToChargeInstance(
-      final Action action,
-      final Map.Entry<ChargeDefinition, CostComponent> costComponentEntry,
-      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper) {
-    final ChargeDefinition chargeDefinition = costComponentEntry.getKey();
-    final BigDecimal chargeAmount = costComponentEntry.getValue().getAmount();
-
-    if (CostComponentService.chargeIsAccrued(chargeDefinition)) {
-      if (Action.valueOf(chargeDefinition.getAccrueAction()) == action)
-        return Optional.of(new ChargeInstance(
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            chargeAmount));
-      else if (Action.valueOf(chargeDefinition.getChargeAction()) == action)
-        return Optional.of(new ChargeInstance(
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getAccrualAccountDesignator()),
-            designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
-            chargeAmount));
-      else
-        return Optional.empty();
-    }
-    else if (Action.valueOf(chargeDefinition.getChargeAction()) == action)
-      return Optional.of(new ChargeInstance(
-          designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getFromAccountDesignator()),
-          designatorToAccountIdentifierMapper.mapOrThrow(chargeDefinition.getToAccountDesignator()),
-          chargeAmount));
-    else
-      return Optional.empty();
   }
 
   private Map<String, BigDecimal> getRequestedChargeAmounts(final @Nullable List<CostComponent> costComponents) {
@@ -548,6 +653,20 @@ public class IndividualLoanCommandHandler {
     if (tasksOutstanding)
       throw ServiceException.conflict("Cannot execute action ''{0}'' for case ''{1}.{2}'' because tasks are incomplete.",
           action.name(), productIdentifier, caseIdentifier);
+  }
+
+  private void recordCommand(
+      final String when,
+      final Long caseId,
+      final Action action,
+      @SuppressWarnings("OptionalUsedAsFieldOrParameterType") final Optional<String> transactionUniqueifier) {
+    final CaseCommandEntity caseCommandEntity = new CaseCommandEntity();
+    caseCommandEntity.setCaseId(caseId);
+    caseCommandEntity.setActionName(action.name());
+    caseCommandEntity.setCreatedBy(UserContextHolder.checkedGetUser());
+    caseCommandEntity.setCreatedOn(DateConverter.fromIsoString(when));
+    caseCommandEntity.setTransactionUniqueifier(transactionUniqueifier.orElse(""));
+    caseCommandRepository.save(caseCommandEntity);
   }
 
   private static LocalDateTime today() {

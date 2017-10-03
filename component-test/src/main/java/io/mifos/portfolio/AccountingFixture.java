@@ -19,8 +19,11 @@ import io.mifos.accounting.api.v1.client.LedgerManager;
 import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.NotFoundException;
 import io.mifos.core.lang.DateConverter;
+import io.mifos.core.lang.TenantContextHolder;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.portfolio.service.internal.util.AccountingListener;
 import org.hamcrest.Description;
+import org.junit.Assert;
 import org.mockito.AdditionalMatchers;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Matchers;
@@ -50,7 +53,6 @@ class AccountingFixture {
   private static final String FEES_AND_CHARGES_LEDGER_IDENTIFIER = "1300";
   private static final String ASSET_LEDGER_IDENTIFIER = "7000";
   private static final String CASH_LEDGER_IDENTIFIER = "7300";
-  static final String PENDING_DISBURSAL_LEDGER_IDENTIFIER = "7320";
   static final String CUSTOMER_LOAN_LEDGER_IDENTIFIER = "7353";
   private static final String ACCRUED_INCOME_LEDGER_IDENTIFIER = "7800";
 
@@ -61,10 +63,11 @@ class AccountingFixture {
   static final String TELLER_ONE_ACCOUNT_IDENTIFIER = "7352";
   static final String LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER = "7810";
   static final String CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER = "1103";
-  static final String LOANS_PAYABLE_ACCOUNT_IDENTIFIER ="8690";
   static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "1311";
   static final String LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER = "7840";
-  static final String ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER = "3010";
+  static final String PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER = "7353.0";
+  static final String GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER = "3010";
+  static final String GENERAL_EXPENSE_ACCOUNT_IDENTIFIER = "3011";
 
   static final Map<String, AccountData> accountMap = new HashMap<>();
 
@@ -102,6 +105,15 @@ class AccountingFixture {
         .fetchAccountEntriesStream(Mockito.eq(account.getIdentifier()), Matchers.anyString(), Matchers.anyString(), AdditionalMatchers.or(Matchers.eq("DESC"), Matchers.eq("ASC")));
   }
 
+  private static void makeLedgerResponsive(
+      final Ledger ledger,
+      final LedgerManager ledgerManagerMock)
+  {
+    Mockito.doReturn(ledger).when(ledgerManagerMock).findLedger(ledger.getIdentifier());
+    Mockito.doReturn(emptyAccountsPage()).when(ledgerManagerMock).fetchAccountsOfLedger(Mockito.eq(ledger.getIdentifier()),
+        Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
+  }
+
 
   private static Ledger cashLedger() {
     final Ledger ret = new Ledger();
@@ -125,15 +137,6 @@ class AccountingFixture {
     ret.setIdentifier(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setParentLedgerIdentifier(INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
-    ret.setCreatedOn(DateConverter.toIsoString(universalCreationDate));
-    return ret;
-  }
-
-  private static Ledger pendingDisbursalLedger() {
-    final Ledger ret = new Ledger();
-    ret.setIdentifier(PENDING_DISBURSAL_LEDGER_IDENTIFIER);
-    ret.setParentLedgerIdentifier(CASH_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.ASSET.name());
     ret.setCreatedOn(DateConverter.toIsoString(universalCreationDate));
     return ret;
   }
@@ -223,19 +226,11 @@ class AccountingFixture {
     return ret;
   }
 
-  private static Account loansPayableAccount() {
-    final Account ret = new Account();
-    ret.setIdentifier(LOANS_PAYABLE_ACCOUNT_IDENTIFIER);
-    //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.LIABILITY.name());
-    return ret;
-  }
-
   private static Account lateFeeIncomeAccount() {
     final Account ret = new Account();
     ret.setIdentifier(LATE_FEE_INCOME_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.LIABILITY.name()); //TODO: ??
+    ret.setType(AccountType.REVENUE.name());
     return ret;
   }
 
@@ -243,15 +238,28 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER);
     ret.setLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.LIABILITY.name()); //TODO: ??
+    ret.setType(AccountType.REVENUE.name());
     return ret;
   }
 
-  private static Account arrearsAllowanceAccount() {
+  private static Account productLossAllowanceAccount() {
     final Account ret = new Account();
-    ret.setIdentifier(ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER);
-    //ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER); //TODO: ??
-    ret.setType(AccountType.LIABILITY.name()); //TODO: ??
+    ret.setIdentifier(PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER);
+    ret.setType(AccountType.ASSET.name());
+    return ret;
+  }
+
+  private static Account generalLossAllowanceAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER);
+    ret.setType(AccountType.EXPENSE.name());
+    return ret;
+  }
+
+  private static Account generalExpenseAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(GENERAL_EXPENSE_ACCOUNT_IDENTIFIER);
+    ret.setType(AccountType.EXPENSE.name());
     return ret;
   }
 
@@ -270,20 +278,11 @@ class AccountingFixture {
     return ret;
   }
 
-  private static Object pendingDisbursalAccountsPage() {
-    final Account pendingDisbursalAccount1 = new Account();
-    pendingDisbursalAccount1.setIdentifier("pendingDisbursalAccount1");
-
-    final Account pendingDisbursalAccount2 = new Account();
-    pendingDisbursalAccount2.setIdentifier("pendingDisbursalAccount2");
-
-    final Account pendingDisbursalAccount3 = new Account();
-    pendingDisbursalAccount3.setIdentifier("pendingDisbursalAccount3");
-
+  private static AccountPage emptyAccountsPage() {
     final AccountPage ret = new AccountPage();
-    ret.setTotalElements(3L);
+    ret.setTotalElements(0L);
     ret.setTotalPages(1);
-    ret.setAccounts(Arrays.asList(pendingDisbursalAccount1, pendingDisbursalAccount2, pendingDisbursalAccount3));
+    ret.setAccounts(Collections.emptyList());
     return ret;
   }
 
@@ -305,11 +304,16 @@ class AccountingFixture {
 
   private static class AccountMatcher extends ArgumentMatcher<Account> {
     private final String ledgerIdentifer;
+    private final String accountDesignator;
     private final AccountType type;
     private Account matchedArgument;
 
-    private AccountMatcher(final String ledgerIdentifier, final AccountType type) {
+    private AccountMatcher(
+        final String ledgerIdentifier,
+        final String accountDesignator,
+        final AccountType type) {
       this.ledgerIdentifer = ledgerIdentifier;
+      this.accountDesignator = accountDesignator;
       this.type = type;
       this.matchedArgument = null; //Set when matches called and returns true.
     }
@@ -324,6 +328,7 @@ class AccountingFixture {
       final Account checkedArgument = (Account) argument;
 
       final boolean ret = checkedArgument.getLedger().equals(ledgerIdentifer) &&
+          checkedArgument.getIdentifier().contains(accountDesignator) &&
           checkedArgument.getType().equals(type.name()) &&
           checkedArgument.getBalance() == 0.0;
 
@@ -333,8 +338,74 @@ class AccountingFixture {
       return ret;
     }
 
+    @Override
+    public void describeTo(final Description description) {
+      description.appendText(this.toString());
+    }
+
     Account getMatchedArgument() {
       return matchedArgument;
+    }
+
+    @Override
+    public String toString() {
+      return "AccountMatcher{" +
+          "ledgerIdentifer='" + ledgerIdentifer + '\'' +
+          ", accountDesignator='" + accountDesignator + '\'' +
+          ", type=" + type +
+          '}';
+    }
+  }
+
+  private static class LedgerMatcher extends ArgumentMatcher<Ledger> {
+    private final String ledgerIdentifer;
+    private final AccountType type;
+    private Ledger matchedArgument;
+
+    LedgerMatcher(String ledgerIdentifier, AccountType type) {
+      this.ledgerIdentifer = ledgerIdentifier;
+      this.type = type;
+      this.matchedArgument = null; //Set when matches called and returns true.
+    }
+
+    @Override
+    public boolean matches(final Object argument) {
+      if (argument == null)
+        return false;
+      if (! (argument instanceof Ledger))
+        return false;
+
+      final Ledger checkedArgument = (Ledger) argument;
+
+      final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+      final Set errors = validator.validate(checkedArgument);
+
+      Assert.assertEquals(0, errors.size());
+
+      final boolean ret = checkedArgument.getParentLedgerIdentifier().equals(ledgerIdentifer) &&
+          checkedArgument.getType().equals(type.name());
+
+      if (ret)
+        matchedArgument = checkedArgument;
+
+      return ret;
+    }
+
+    @Override
+    public void describeTo(final Description description) {
+      description.appendText(this.toString());
+    }
+
+    Ledger getMatchedArgument() {
+      return matchedArgument;
+    }
+
+    @Override
+    public String toString() {
+      return "LedgerMatcher{" +
+          "ledgerIdentifer='" + ledgerIdentifer + '\'' +
+          ", type=" + type +
+          '}';
     }
   }
 
@@ -397,6 +468,22 @@ class AccountingFixture {
               journalEntry.getMessage(),
               journalEntry.getTransactionDate(),
               Double.valueOf(debtor.getAmount())));
+
+      final BigDecimal creditorSum = journalEntry.getCreditors().stream()
+          .map(Creditor::getAmount)
+          .map(Double::valueOf)
+          .map(BigDecimal::valueOf)
+          .map(x -> x.setScale(4, BigDecimal.ROUND_HALF_EVEN))
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+      final BigDecimal debtorSum = journalEntry.getDebtors().stream()
+          .map(Debtor::getAmount)
+          .map(Double::valueOf)
+          .map(BigDecimal::valueOf)
+          .map(x -> x.setScale(4, BigDecimal.ROUND_HALF_EVEN))
+          .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+      Assert.assertEquals(creditorSum, debtorSum);
       return null;
     }
   }
@@ -418,6 +505,22 @@ class AccountingFixture {
     public Void answer(final InvocationOnMock invocation) throws Throwable {
       final Account account = invocation.getArgumentAt(0, Account.class);
       makeAccountResponsive(account, LocalDateTime.now(), (LedgerManager) invocation.getMock());
+      return null;
+    }
+  }
+
+  private static class CreateLedgerAnswer implements Answer {
+    private final AccountingListener accountingListener;
+
+    CreateLedgerAnswer(AccountingListener accountingListener) {
+      this.accountingListener = accountingListener;
+    }
+
+    @Override
+    public Void answer(final InvocationOnMock invocation) throws Throwable {
+      final Ledger ledger = invocation.getArgumentAt(1, Ledger.class);
+      makeLedgerResponsive(ledger, (LedgerManager) invocation.getMock());
+      accountingListener.onPostLedger(TenantContextHolder.checkedGetIdentifier(), ledger.getIdentifier());
       return null;
     }
   }
@@ -449,7 +552,7 @@ class AccountingFixture {
     }
   }
 
-  static void mockAccountingPrereqs(final LedgerManager ledgerManagerMock) {
+  static void mockAccountingPrereqs(final LedgerManager ledgerManagerMock, final AccountingListener accountingListener) {
     makeAccountResponsive(loanFundsSourceAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(loanOriginationFeesIncomeAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(processingFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);
@@ -457,52 +560,49 @@ class AccountingFixture {
     makeAccountResponsive(tellerOneAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(loanInterestAccrualAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(consumerLoanInterestAccount(), universalCreationDate, ledgerManagerMock);
-    makeAccountResponsive(loansPayableAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(lateFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(lateFeeAccrualAccount(), universalCreationDate, ledgerManagerMock);
-    makeAccountResponsive(arrearsAllowanceAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(productLossAllowanceAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(generalLossAllowanceAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(generalExpenseAccount(), universalCreationDate, ledgerManagerMock);
 
     Mockito.doReturn(incomeLedger()).when(ledgerManagerMock).findLedger(INCOME_LEDGER_IDENTIFIER);
     Mockito.doReturn(feesAndChargesLedger()).when(ledgerManagerMock).findLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     Mockito.doReturn(cashLedger()).when(ledgerManagerMock).findLedger(CASH_LEDGER_IDENTIFIER);
-    Mockito.doReturn(pendingDisbursalLedger()).when(ledgerManagerMock).findLedger(PENDING_DISBURSAL_LEDGER_IDENTIFIER);
     Mockito.doReturn(customerLoanLedger()).when(ledgerManagerMock).findLedger(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
     Mockito.doReturn(loanIncomeLedger()).when(ledgerManagerMock).findLedger(LOAN_INCOME_LEDGER_IDENTIFIER);
     Mockito.doReturn(accruedIncomeLedger()).when(ledgerManagerMock).findLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
     Mockito.doReturn(customerLoanAccountsPage()).when(ledgerManagerMock).fetchAccountsOfLedger(Mockito.eq(CUSTOMER_LOAN_LEDGER_IDENTIFIER),
             Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
-    Mockito.doReturn(pendingDisbursalAccountsPage()).when(ledgerManagerMock).fetchAccountsOfLedger(Mockito.eq(PENDING_DISBURSAL_LEDGER_IDENTIFIER),
-            Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
     Mockito.doAnswer(new FindAccountAnswer()).when(ledgerManagerMock).findAccount(Matchers.anyString());
     Mockito.doAnswer(new CreateAccountAnswer()).when(ledgerManagerMock).createAccount(Matchers.any());
     Mockito.doAnswer(new CreateJournalEntryAnswer()).when(ledgerManagerMock).createJournalEntry(Matchers.any(JournalEntry.class));
+    Mockito.doAnswer(new CreateLedgerAnswer(accountingListener)).when(ledgerManagerMock).addSubLedger(Matchers.anyString(), Matchers.any(Ledger.class));
   }
 
   static void mockBalance(final String accountIdentifier, final BigDecimal balance) {
     accountMap.get(accountIdentifier).setBalance(balance.doubleValue());
   }
 
-  static String verifyAccountCreation(final LedgerManager ledgerManager,
-                                      final String ledgerIdentifier,
-                                      final AccountType type) {
-    final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, type);
+  static String verifyAccountCreationMatchingDesignator(
+      final LedgerManager ledgerManager,
+      final String ledgerIdentifier,
+      final String accountDesignator,
+      final AccountType type) {
+    final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, accountDesignator, type);
     Mockito.verify(ledgerManager).createAccount(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectAccount)));
     return specifiesCorrectAccount.getMatchedArgument().getIdentifier();
   }
 
-  static void verifyTransfer(final LedgerManager ledgerManager,
-                             final String fromAccountIdentifier,
-                             final String toAccountIdentifier,
-                             final BigDecimal amount,
-                             final String productIdentifier,
-                             final String caseIdentifier,
-                             final Action action) {
-    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(
-        Collections.singleton(new Debtor(fromAccountIdentifier, amount.toPlainString())),
-        Collections.singleton(new Creditor(toAccountIdentifier, amount.toPlainString())),
-        productIdentifier, caseIdentifier, action);
-    Mockito.verify(ledgerManager).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
+  static String verifyLedgerCreation(
+      final LedgerManager ledgerManager,
+      final String ledgerIdentifier,
+      final AccountType type) {
+    final LedgerMatcher specifiesCorrectLedger = new LedgerMatcher(ledgerIdentifier, type);
+    Mockito.verify(ledgerManager).addSubLedger(Matchers.anyString(), AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectLedger)));
+    makeLedgerResponsive(specifiesCorrectLedger.getMatchedArgument(), ledgerManager);
+    return specifiesCorrectLedger.getMatchedArgument().getIdentifier();
   }
 
   static void verifyTransfer(final LedgerManager ledgerManager,
@@ -511,10 +611,21 @@ class AccountingFixture {
                              final String productIdentifier,
                              final String caseIdentifier,
                              final Action action) {
-    final Set<Debtor> filteredDebtors = debtors.stream().filter(x -> BigDecimal.valueOf(Double.valueOf(x.getAmount())).compareTo(BigDecimal.ZERO) != 0).collect(Collectors.toSet());
-    final Set<Creditor> filteredCreditors = creditors.stream().filter(x -> BigDecimal.valueOf(Double.valueOf(x.getAmount())).compareTo(BigDecimal.ZERO) != 0).collect(Collectors.toSet());
-    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(filteredDebtors, filteredCreditors, productIdentifier, caseIdentifier, action);
-    Mockito.verify(ledgerManager, Mockito.atLeastOnce()).createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
-
+    final Set<Debtor> filteredDebtors = debtors.stream()
+        .filter(x -> BigDecimal.valueOf(Double.valueOf(x.getAmount())).compareTo(BigDecimal.ZERO) != 0)
+        .collect(Collectors.toSet());
+    final Set<Creditor> filteredCreditors = creditors.stream()
+        .filter(x -> BigDecimal.valueOf(Double.valueOf(x.getAmount())).compareTo(BigDecimal.ZERO) != 0)
+        .collect(Collectors.toSet());
+    if (filteredCreditors.size() == 0 && filteredDebtors.size() == 0)
+      return;
+    final JournalEntryMatcher specifiesCorrectJournalEntry = new JournalEntryMatcher(
+        filteredDebtors,
+        filteredCreditors,
+        productIdentifier,
+        caseIdentifier,
+        action);
+    Mockito.verify(ledgerManager, Mockito.atLeastOnce())
+        .createJournalEntry(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectJournalEntry)));
   }
 }

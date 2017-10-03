@@ -90,10 +90,6 @@ public class ChargeDefinitionMapper {
 
   private static Boolean readOnlyLegacyMapper(final String identifier) {
     switch (identifier) {
-      case LOAN_FUNDS_ALLOCATION_ID:
-        return true;
-      case RETURN_DISBURSEMENT_ID:
-        return true;
       case INTEREST_ID:
         return false;
       case ALLOW_FOR_WRITE_OFF_ID:
@@ -104,15 +100,11 @@ public class ChargeDefinitionMapper {
         return false;
       case DISBURSE_PAYMENT_ID:
         return false;
-      case TRACK_DISBURSAL_PAYMENT_ID:
-        return false;
       case LOAN_ORIGINATION_FEE_ID:
         return true;
       case PROCESSING_FEE_ID:
         return true;
-      case REPAYMENT_ID:
-        return false;
-      case TRACK_RETURN_PRINCIPAL_ID:
+      case REPAY_PRINCIPAL_ID:
         return false;
       default:
         return false;
@@ -126,14 +118,12 @@ public class ChargeDefinitionMapper {
       return from.getProportionalTo();
 
     switch (identifier) {
-      case LOAN_FUNDS_ALLOCATION_ID:
-        return ChargeProportionalDesignator.MAXIMUM_BALANCE_DESIGNATOR.getValue();
       case LOAN_ORIGINATION_FEE_ID:
         return ChargeProportionalDesignator.MAXIMUM_BALANCE_DESIGNATOR.getValue();
       case PROCESSING_FEE_ID:
         return ChargeProportionalDesignator.MAXIMUM_BALANCE_DESIGNATOR.getValue();
       case LATE_FEE_ID:
-        return ChargeProportionalDesignator.REPAYMENT_DESIGNATOR.getValue();
+        return ChargeProportionalDesignator.CONTRACTUAL_REPAYMENT_DESIGNATOR.getValue();
       default:
         return ChargeProportionalDesignator.RUNNING_BALANCE_DESIGNATOR.getValue();
     }

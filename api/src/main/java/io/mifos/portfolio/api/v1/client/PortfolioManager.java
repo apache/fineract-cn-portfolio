@@ -17,6 +17,7 @@ package io.mifos.portfolio.api.v1.client;
 
 import io.mifos.core.api.annotation.ThrowsException;
 import io.mifos.core.api.util.CustomFeignClientsConfiguration;
+import io.mifos.portfolio.api.v1.domain.Payment;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.api.v1.validation.ValidSortColumn;
 import io.mifos.portfolio.api.v1.validation.ValidSortDirection;
@@ -46,15 +47,6 @@ public interface PortfolioManager {
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
   List<Pattern> getAllPatterns();
-
-  @RequestMapping(
-      value = "/patterns/{patternpackage}/charges/",
-      method = RequestMethod.GET,
-      produces = MediaType.ALL_VALUE,
-      consumes = MediaType.APPLICATION_JSON_VALUE
-  )
-  List<ChargeDefinition> getAllDefaultChargeDefinitionsForPattern(
-      @PathVariable("patternpackage") final String patternPackage);
 
   @RequestMapping(
       value = "/products/",
@@ -268,7 +260,6 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  @ThrowsException(status = HttpStatus.CONFLICT, exception = ChargeDefinitionIsReadOnly.class)
   void changeChargeDefinition(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier,
@@ -280,7 +271,6 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  @ThrowsException(status = HttpStatus.CONFLICT, exception = ChargeDefinitionIsReadOnly.class)
   void deleteChargeDefinition(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("chargedefinitionidentifier") final String chargeDefinitionIdentifier);
@@ -345,7 +335,7 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(
+  Payment getCostComponentsForAction(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("caseidentifier") final String caseIdentifier,
       @PathVariable("actionidentifier") final String actionIdentifier,
@@ -360,7 +350,7 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(
+  Payment getCostComponentsForAction(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("caseidentifier") final String caseIdentifier,
       @PathVariable("actionidentifier") final String actionIdentifier,
@@ -375,7 +365,7 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(
+  Payment getCostComponentsForAction(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("caseidentifier") final String caseIdentifier,
       @PathVariable("actionidentifier") final String actionIdentifier,
@@ -388,7 +378,7 @@ public interface PortfolioManager {
       produces = MediaType.ALL_VALUE,
       consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  List<CostComponent> getCostComponentsForAction(
+  Payment getCostComponentsForAction(
       @PathVariable("productidentifier") final String productIdentifier,
       @PathVariable("caseidentifier") final String caseIdentifier,
       @PathVariable("actionidentifier") final String actionIdentifier);
@@ -462,6 +452,4 @@ public interface PortfolioManager {
   CasePage getAllCases(
       @RequestParam("pageIndex") final Integer pageIndex,
       @RequestParam("size") final Integer size);
-
-  //TODO: find a way to list cases by customer even though the portfolio contains products which may be associated with groups instead of customers.
 }

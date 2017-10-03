@@ -16,6 +16,7 @@
 package io.mifos.portfolio;
 
 import com.google.gson.Gson;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
 import io.mifos.portfolio.api.v1.domain.Product;
@@ -88,8 +89,8 @@ public class TestIndividualLoans extends AbstractPortfolioTest {
 
     Assert.assertNotNull(paymentScheduleFirstPage);
     paymentScheduleFirstPage.getElements().forEach(x -> {
-      x.getCostComponents().forEach(y -> Assert.assertEquals(product.getMinorCurrencyUnitDigits(), y.getAmount().scale()));
-      Assert.assertEquals(product.getMinorCurrencyUnitDigits(), x.getRemainingPrincipal().scale());
+      x.getPayment().getCostComponents().forEach(y -> Assert.assertEquals(product.getMinorCurrencyUnitDigits(), y.getAmount().scale()));
+      Assert.assertEquals(product.getMinorCurrencyUnitDigits(), x.getBalances().get(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL).scale());
     });
   }
 

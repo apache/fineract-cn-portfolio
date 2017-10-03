@@ -37,9 +37,8 @@ import io.mifos.products.spi.PatternFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
@@ -78,7 +77,7 @@ public class ProductCommandHandler {
     final ProductEntity productEntity = ProductMapper.map(createProductCommand.getInstance(), false);
     this.productRepository.save(productEntity);
 
-    patternFactory.charges().forEach(charge -> createChargeDefinition(productEntity, charge));
+    patternFactory.defaultConfigurableCharges().forEach(charge -> createChargeDefinition(productEntity, charge));
 
     return createProductCommand.getInstance().getIdentifier();
   }
@@ -139,11 +138,9 @@ public class ProductCommandHandler {
     //noinspection PointlessBooleanExpression
     if (changeEnablingOfProductCommand.getEnabled() == true) {
       final Set<AccountAssignment> accountAssignments = ProductMapper.map(productEntity).getAccountAssignments();
-      final List<ChargeDefinition> chargeDefinitions = chargeDefinitionRepository
+      final Stream<ChargeDefinition> chargeDefinitions = chargeDefinitionRepository
               .findByProductId(productEntity.getIdentifier())
-              .stream()
-              .map(ChargeDefinitionMapper::map)
-              .collect(Collectors.toList());
+              .map(ChargeDefinitionMapper::map);
 
       final Set<String> accountAssignmentsRequiredButNotProvided
           = AccountingAdapter.accountAssignmentsRequiredButNotProvided(accountAssignments, chargeDefinitions);

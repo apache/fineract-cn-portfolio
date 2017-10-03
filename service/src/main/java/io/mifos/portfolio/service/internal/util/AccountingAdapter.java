@@ -15,19 +15,19 @@
  */
 package io.mifos.portfolio.service.internal.util;
 
-import io.mifos.accounting.api.v1.client.AccountAlreadyExistsException;
-import io.mifos.accounting.api.v1.client.AccountNotFoundException;
-import io.mifos.accounting.api.v1.client.LedgerManager;
-import io.mifos.accounting.api.v1.client.LedgerNotFoundException;
+import io.mifos.accounting.api.v1.client.*;
 import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.lang.DateConverter;
 import io.mifos.core.lang.DateRange;
 import io.mifos.core.lang.ServiceException;
+import io.mifos.core.lang.listening.EventExpectation;
+import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.service.ServiceConstants;
 import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -38,6 +38,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -49,53 +50,122 @@ import static io.mifos.individuallending.api.v1.domain.product.AccountDesignator
 @Component
 public class AccountingAdapter {
 
+
   public enum IdentifierType {LEDGER, ACCOUNT}
 
   private final LedgerManager ledgerManager;
+  private final AccountingListener accountingListener;
   private final Logger logger;
 
   @Autowired
   public AccountingAdapter(@SuppressWarnings("SpringJavaAutowiringInspection") final LedgerManager ledgerManager,
+                           final AccountingListener accountingListener,
                            @Qualifier(ServiceConstants.LOGGER_NAME) final Logger logger) {
     this.ledgerManager = ledgerManager;
+    this.accountingListener = accountingListener;
     this.logger = logger;
   }
 
-  public void bookCharges(final List<ChargeInstance> costComponents,
-                          final String note,
-                          final String transactionDate,
-                          final String message,
-                          final String transactionType) {
-    final Set<Creditor> creditors = costComponents.stream()
-            .map(AccountingAdapter::mapToCreditor)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .collect(Collectors.toSet());
-    final Set<Debtor> debtors = costComponents.stream()
-            .map(AccountingAdapter::mapToDebtor)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .collect(Collectors.toSet());
+  private static class BalanceAdjustment {
+    final private String accountIdentifier; //*Not* designator.
+    final private BigDecimal adjustment;
+
+    BalanceAdjustment(String accountIdentifier, BigDecimal adjustment) {
+      this.accountIdentifier = accountIdentifier;
+      this.adjustment = adjustment;
+    }
+
+    String getAccountIdentifier() {
+      return accountIdentifier;
+    }
+
+    BigDecimal getAdjustment() {
+      return adjustment;
+    }
+  }
+
+  public Optional<String> bookCharges(
+      final Map<String, BigDecimal> balanceAdjustments,
+      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
+      final String note,
+      final String transactionDate,
+      final String message,
+      final String transactionType) {
+    final String transactionUniqueifier = RandomStringUtils.random(26, true, true);
+    final JournalEntry journalEntry = getJournalEntry(
+        balanceAdjustments,
+        designatorToAccountIdentifierMapper,
+        note,
+        transactionDate,
+        message,
+        transactionType,
+        transactionUniqueifier,
+        UserContextHolder.checkedGetUser());
+
+    //noinspection ConstantConditions
+    if (journalEntry.getCreditors().isEmpty() && journalEntry.getDebtors().isEmpty())
+      return Optional.empty();
+
+    ledgerManager.createJournalEntry(journalEntry);
+    return Optional.of(transactionUniqueifier);
+  }
+
+  static JournalEntry getJournalEntry(
+      final Map<String, BigDecimal> balanceAdjustments,
+      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
+      final String note,
+      final String transactionDate,
+      final String message,
+      final String transactionType,
+      final String transactionUniqueifier,
+      final String user) {
+    final JournalEntry journalEntry = new JournalEntry();
+    final Set<Creditor> creditors = new HashSet<>();
+    journalEntry.setCreditors(creditors);
+    final Set<Debtor> debtors = new HashSet<>();
+    journalEntry.setDebtors(debtors);
+    final Map<String, BigDecimal> summedBalanceAdjustments = balanceAdjustments.entrySet().stream()
+        .map(entry -> {
+          final String accountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(entry.getKey());
+          return new BalanceAdjustment(accountIdentifier, entry.getValue());
+        })
+        .collect(Collectors.groupingBy(BalanceAdjustment::getAccountIdentifier,
+            Collectors.mapping(BalanceAdjustment::getAdjustment,
+                Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))));
+
+    summedBalanceAdjustments.forEach((accountIdentifier, balanceAdjustment) -> {
+      final int sign = balanceAdjustment.compareTo(BigDecimal.ZERO);
+      if (sign == 0)
+        return;
+
+      if (sign < 0) {
+        final Debtor debtor = new Debtor();
+        debtor.setAccountNumber(accountIdentifier);
+        debtor.setAmount(balanceAdjustment.negate().toPlainString());
+        debtors.add(debtor);
+      } else {
+        final Creditor creditor = new Creditor();
+        creditor.setAccountNumber(accountIdentifier);
+        creditor.setAmount(balanceAdjustment.toPlainString());
+        creditors.add(creditor);
+      }
+    });
 
     if (creditors.isEmpty() && !debtors.isEmpty() ||
         debtors.isEmpty() && !creditors.isEmpty())
       throw ServiceException.internalError("either only creditors or only debtors were provided.");
 
-    //noinspection ConstantConditions
-    if (creditors.isEmpty() && debtors.isEmpty())
-      return;
 
-    final JournalEntry journalEntry = new JournalEntry();
+    final String transactionIdentifier = "portfolio." + message + "." + transactionUniqueifier;
     journalEntry.setCreditors(creditors);
     journalEntry.setDebtors(debtors);
-    journalEntry.setClerk(UserContextHolder.checkedGetUser());
+    journalEntry.setClerk(user);
     journalEntry.setTransactionDate(transactionDate);
     journalEntry.setMessage(message);
     journalEntry.setTransactionType(transactionType);
     journalEntry.setNote(note);
-    journalEntry.setTransactionIdentifier("portfolio." + message + "." + RandomStringUtils.random(26, true, true));
-
-    ledgerManager.createJournalEntry(journalEntry);
+    journalEntry.setTransactionIdentifier(transactionIdentifier);
+    return journalEntry;
   }
 
   public Optional<LocalDateTime> getDateOfOldestEntryContainingMessage(final String accountIdentifier,
@@ -133,34 +203,54 @@ public class AccountingAdapter {
         .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 
-  private static Optional<Debtor> mapToDebtor(final ChargeInstance chargeInstance) {
-    if (chargeInstance.getAmount().compareTo(BigDecimal.ZERO) == 0)
-      return Optional.empty();
-
-    final Debtor ret = new Debtor();
-    ret.setAccountNumber(chargeInstance.getFromAccount());
-    ret.setAmount(chargeInstance.getAmount().toPlainString());
-    return Optional.of(ret);
-  }
-
-  private static Optional<Creditor> mapToCreditor(final ChargeInstance chargeInstance) {
-    if (chargeInstance.getAmount().compareTo(BigDecimal.ZERO) == 0)
-      return Optional.empty();
-
-    final Creditor ret = new Creditor();
-    ret.setAccountNumber(chargeInstance.getToAccount());
-    ret.setAmount(chargeInstance.getAmount().toPlainString());
-    return Optional.of(ret);
-  }
-
-  public BigDecimal getCurrentBalance(final String accountIdentifier) {
+  public BigDecimal getCurrentAccountBalance(final String accountIdentifier) {
     try {
       final Account account = ledgerManager.findAccount(accountIdentifier);
+      if (account == null || account.getBalance() == null)
+        throw ServiceException.internalError("Could not find the account with identifier ''{0}''", accountIdentifier);
       return BigDecimal.valueOf(account.getBalance());
     }
     catch (final AccountNotFoundException e) {
-     throw ServiceException.internalError("Could not found the account with the identifier ''{0}''", accountIdentifier);
+     throw ServiceException.internalError("Could not find the account with identifier ''{0}''", accountIdentifier);
     }
+  }
+
+  public String createLedger(
+      final String customerIdentifier,
+      final String groupName,
+      final String parentLedger) throws InterruptedException {
+    final Ledger ledger = ledgerManager.findLedger(parentLedger);
+    final List<Ledger> subLedgers = ledger.getSubLedgers() == null ? Collections.emptyList() : ledger.getSubLedgers();
+
+    final Ledger generatedLedger = new Ledger();
+    generatedLedger.setShowAccountsInChart(true);
+    generatedLedger.setParentLedgerIdentifier(parentLedger);
+    generatedLedger.setType(ledger.getType());
+    final IdentiferWithIndex ledgerIdentifer = createLedgerIdentifier(customerIdentifier, groupName, subLedgers);
+    generatedLedger.setIdentifier(ledgerIdentifer.getIdentifier());
+    generatedLedger.setDescription("Individual loan case specific ledger");
+    generatedLedger.setName(ledgerIdentifer.getIdentifier());
+
+
+    final EventExpectation expectation = accountingListener.expectLedgerCreation(generatedLedger.getIdentifier());
+    boolean created = false;
+    while (!created) {
+      try {
+        logger.info("Attempting to create ledger with identifier '{}'", ledgerIdentifer.getIdentifier());
+        ledgerManager.addSubLedger(parentLedger, generatedLedger);
+        created = true;
+      } catch (final LedgerAlreadyExistsException e) {
+        ledgerIdentifer.incrementIndex();
+        generatedLedger.setIdentifier(ledgerIdentifer.getIdentifier());
+        generatedLedger.setName(ledgerIdentifer.getIdentifier());
+      }
+    }
+    final boolean ledgerCreationDetected = expectation.waitForOccurrence(5, TimeUnit.SECONDS);
+    if (!ledgerCreationDetected)
+      logger.warn("Waited 5 seconds for creation of ledger '{}', but it was not detected. This could cause subsequent " +
+              "account creations to fail. Is there something wrong with the accounting service? Is ActiveMQ setup properly?",
+          generatedLedger.getIdentifier());
+    return ledgerIdentifer.getIdentifier();
   }
 
   public String createAccountForLedgerAssignment(final String customerIdentifier, final AccountAssignment ledgerAssignment) {
@@ -195,15 +285,49 @@ public class AccountingAdapter {
             customerIdentifier, ledgerAssignment.getDesignator(), ledgerAssignment.getLedgerIdentifier()));
   }
 
+  private static class IdentiferWithIndex {
+    private long index;
+    private final String prefix;
+
+    IdentiferWithIndex(long index, String prefix) {
+      this.index = index;
+      this.prefix = prefix;
+    }
+
+    String getIdentifier() {
+      return prefix + String.format("%05d", index);
+    }
+
+    void incrementIndex() {
+      index++;
+    }
+  }
+
+  private IdentiferWithIndex createLedgerIdentifier(
+      final String customerIdentifier,
+      final String groupName,
+      final List<Ledger> subLedgers) {
+    final String partialCustomerIdentifer = StringUtils.left(customerIdentifier, 22);
+    final String partialGroupName = StringUtils.left(groupName, 3);
+    final Set<String> subLedgerIdentifiers = subLedgers.stream().map(Ledger::getIdentifier).collect(Collectors.toSet());
+    final String generatedIdentifierPrefix = partialCustomerIdentifer + "." + partialGroupName + ".";
+    final IdentiferWithIndex ret = new IdentiferWithIndex(0, generatedIdentifierPrefix);
+    while (true) {
+      ret.incrementIndex();
+      if (!subLedgerIdentifiers.contains(ret.getIdentifier()))
+        return ret;
+    }
+  }
+
   private String createAccountNumber(final String customerIdentifier, final String designator, final long accountIndex) {
-    return customerIdentifier + "." + designator
+    return StringUtils.left(customerIdentifier, 22) + "." + StringUtils.left(designator, 3)
             + "." + String.format("%05d", accountIndex);
   }
 
 
   public static Set<String> accountAssignmentsRequiredButNotProvided(
           final Set<AccountAssignment> accountAssignments,
-          final List<ChargeDefinition> chargeDefinitionEntities) {
+          final Stream<ChargeDefinition> chargeDefinitionEntities) {
     final Set<String> allAccountDesignatorsRequired = getRequiredAccountDesignators(chargeDefinitionEntities);
     final Set<String> allAccountDesignatorsDefined = accountAssignments.stream().map(AccountAssignment::getDesignator)
             .collect(Collectors.toSet());
@@ -215,8 +339,8 @@ public class AccountingAdapter {
     }
   }
 
-  public static Set<String> getRequiredAccountDesignators(final Collection<ChargeDefinition> chargeDefinitionEntities) {
-    return chargeDefinitionEntities.stream()
+  public static Set<String> getRequiredAccountDesignators(final Stream<ChargeDefinition> chargeDefinitionEntities) {
+    return chargeDefinitionEntities
             .flatMap(AccountingAdapter::getAutomaticActionAccountDesignators)
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());

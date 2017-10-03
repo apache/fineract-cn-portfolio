@@ -19,11 +19,11 @@ import com.google.gson.Gson;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessFactor;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CreditWorthinessSnapshot;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
 import io.mifos.portfolio.api.v1.domain.*;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.function.Consumer;
@@ -39,7 +39,7 @@ import static java.math.BigDecimal.ROUND_HALF_EVEN;
 @SuppressWarnings({"WeakerAccess", "unused"})
 public class Fixture {
   static final int MINOR_CURRENCY_UNIT_DIGITS = 2;
-  static final BigDecimal INTEREST_RATE = BigDecimal.valueOf(0.10).setScale(4, RoundingMode.HALF_EVEN);
+  static final BigDecimal INTEREST_RATE = BigDecimal.valueOf(10_00, 2);
   static final BigDecimal ACCRUAL_PERIODS = BigDecimal.valueOf(365.2425);
   public static final String CUSTOMER_IDENTIFIER = "alice";
 
@@ -60,26 +60,33 @@ public class Fixture {
     product.setMinorCurrencyUnitDigits(MINOR_CURRENCY_UNIT_DIGITS);
 
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
-    final AccountAssignment pendingDisbursalAccountAssignment = new AccountAssignment();
-    pendingDisbursalAccountAssignment.setDesignator(PENDING_DISBURSAL);
-    pendingDisbursalAccountAssignment.setLedgerIdentifier(PENDING_DISBURSAL_LEDGER_IDENTIFIER);
-    accountAssignments.add(pendingDisbursalAccountAssignment);
     accountAssignments.add(new AccountAssignment(PROCESSING_FEE_INCOME, PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(ORIGINATION_FEE_INCOME, LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(DISBURSEMENT_FEE_INCOME, DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(INTEREST_INCOME, CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(INTEREST_ACCRUAL, LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER));
-    accountAssignments.add(new AccountAssignment(LOANS_PAYABLE, LOANS_PAYABLE_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(LATE_FEE_INCOME, LATE_FEE_INCOME_ACCOUNT_IDENTIFIER));
     accountAssignments.add(new AccountAssignment(LATE_FEE_ACCRUAL, LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER));
-    accountAssignments.add(new AccountAssignment(ARREARS_ALLOWANCE, ARREARS_ALLOWANCE_ACCOUNT_IDENTIFIER));
+    accountAssignments.add(new AccountAssignment(PRODUCT_LOSS_ALLOWANCE, PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER));
+    accountAssignments.add(new AccountAssignment(GENERAL_LOSS_ALLOWANCE, GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER));
+    accountAssignments.add(new AccountAssignment(GENERAL_EXPENSE, GENERAL_EXPENSE_ACCOUNT_IDENTIFIER));
     //accountAssignments.add(new AccountAssignment(ENTRY, ...));
     // Don't assign entry account in test since it usually will not be assigned IRL.
     accountAssignments.add(new AccountAssignment(LOAN_FUNDS_SOURCE, LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER));
-    final AccountAssignment customerLoanAccountAssignment = new AccountAssignment();
-    customerLoanAccountAssignment.setDesignator(CUSTOMER_LOAN);
-    customerLoanAccountAssignment.setLedgerIdentifier(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
-    accountAssignments.add(customerLoanAccountAssignment);
+    final AccountAssignment customerLoanPrincipalAccountAssignment = new AccountAssignment();
+    customerLoanPrincipalAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+    customerLoanPrincipalAccountAssignment.setLedgerIdentifier(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
+    accountAssignments.add(customerLoanPrincipalAccountAssignment);
+
+    final AccountAssignment customerLoanInterestAccountAssignment = new AccountAssignment();
+    customerLoanInterestAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+    customerLoanInterestAccountAssignment.setLedgerIdentifier(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
+    accountAssignments.add(customerLoanInterestAccountAssignment);
+
+    final AccountAssignment customerLoanFeesAccountAssignment = new AccountAssignment();
+    customerLoanFeesAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_FEES);
+    customerLoanFeesAccountAssignment.setLedgerIdentifier(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
+    accountAssignments.add(customerLoanFeesAccountAssignment);
     product.setAccountAssignments(accountAssignments);
 
     final ProductParameters productParameters = new ProductParameters();
@@ -118,7 +125,7 @@ public class Fixture {
     final Set<AccountAssignment> accountAssignments = new HashSet<>();
     ret.setAccountAssignments(accountAssignments);
     ret.setCurrentState(Case.State.CREATED.name());
-    ret.setInterest(BigDecimal.valueOf(10_00, 2));
+    ret.setInterest(INTEREST_RATE);
 
     final CaseParameters caseParameters = getTestCaseParameters();
     final Gson gson = new Gson();

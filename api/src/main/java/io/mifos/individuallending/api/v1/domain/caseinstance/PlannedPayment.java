@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Mifos Initiative.
+ * Copyright 2017 Kuelap, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,62 +15,38 @@
  */
 package io.mifos.individuallending.api.v1.domain.caseinstance;
 
-import io.mifos.portfolio.api.v1.domain.CostComponent;
+import io.mifos.portfolio.api.v1.domain.Payment;
 
-import javax.annotation.Nullable;
 import java.math.BigDecimal;
-import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
  * @author Myrle Krantz
  */
-@SuppressWarnings({"WeakerAccess", "unused"})
-public final class PlannedPayment {
-  private Double interestRate;
-  private List<CostComponent> costComponents;
-  private BigDecimal remainingPrincipal;
-  private @Nullable String date;
+public class PlannedPayment {
+  private Payment payment;
+  private Map<String, BigDecimal> balances;
 
-  public PlannedPayment() {
+  public PlannedPayment(Payment payment, Map<String, BigDecimal> balances) {
+    this.payment = payment;
+    this.balances = balances;
   }
 
-  public PlannedPayment(Double interestRate, List<CostComponent> costComponents, BigDecimal remainingPrincipal) {
-    this.interestRate = interestRate;
-    this.costComponents = costComponents;
-    this.remainingPrincipal = remainingPrincipal;
+  public Payment getPayment() {
+    return payment;
   }
 
-  public Double getInterestRate() {
-    return interestRate;
+  public void setPayment(Payment payment) {
+    this.payment = payment;
   }
 
-  public void setInterestRate(Double interestRate) {
-    this.interestRate = interestRate;
+  public Map<String, BigDecimal> getBalances() {
+    return balances;
   }
 
-  public List<CostComponent> getCostComponents() {
-    return costComponents;
-  }
-
-  public void setCostComponents(List<CostComponent> costComponents) {
-    this.costComponents = costComponents;
-  }
-
-  public BigDecimal getRemainingPrincipal() {
-    return remainingPrincipal;
-  }
-
-  public void setRemainingPrincipal(BigDecimal remainingPrincipal) {
-    this.remainingPrincipal = remainingPrincipal;
-  }
-
-  public String getDate() {
-    return date;
-  }
-
-  public void setDate(String date) {
-    this.date = date;
+  public void setBalances(Map<String, BigDecimal> balances) {
+    this.balances = balances;
   }
 
   @Override
@@ -78,24 +54,20 @@ public final class PlannedPayment {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     PlannedPayment that = (PlannedPayment) o;
-    return Objects.equals(interestRate, that.interestRate) &&
-            Objects.equals(costComponents, that.costComponents) &&
-            Objects.equals(remainingPrincipal, that.remainingPrincipal) &&
-            Objects.equals(date, that.date);
+    return Objects.equals(payment, that.payment) &&
+        Objects.equals(balances, that.balances);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(interestRate, costComponents, remainingPrincipal, date);
+    return Objects.hash(payment, balances);
   }
 
   @Override
   public String toString() {
     return "PlannedPayment{" +
-            "interestRate=" + interestRate +
-            ", costComponents=" + costComponents +
-            ", remainingPrincipal=" + remainingPrincipal +
-            ", date='" + date + '\'' +
-            '}';
+        "payment=" + payment +
+        ", balances=" + balances +
+        '}';
   }
 }

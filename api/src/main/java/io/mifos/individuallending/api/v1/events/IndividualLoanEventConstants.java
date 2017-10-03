@@ -22,6 +22,7 @@ public interface IndividualLoanEventConstants {
   String DESTINATION = "portfolio-v1";
   String SELECTOR_NAME = "action";
 
+  String PUT_LOSS_PROVISION_STEPS = "put-loss-provision-steps";
   String OPEN_INDIVIDUALLOAN_CASE = "open-individualloan-case";
   String DENY_INDIVIDUALLOAN_CASE = "deny-individualloan-case";
   String APPROVE_INDIVIDUALLOAN_CASE = "approve-individualloan-case";
@@ -34,6 +35,7 @@ public interface IndividualLoanEventConstants {
   String CLOSE_INDIVIDUALLOAN_CASE = "close-individualloan-case";
   String RECOVER_INDIVIDUALLOAN_CASE = "recover-individualloan-case";
 
+  String SELECTOR_PUT_LOSS_PROVISION_STEPS = SELECTOR_NAME + " = '" + PUT_LOSS_PROVISION_STEPS + "'";
   String SELECTOR_OPEN_INDIVIDUALLOAN_CASE = SELECTOR_NAME + " = '" + OPEN_INDIVIDUALLOAN_CASE + "'";
   String SELECTOR_DENY_INDIVIDUALLOAN_CASE = SELECTOR_NAME + " = '" + DENY_INDIVIDUALLOAN_CASE + "'";
   String SELECTOR_APPROVE_INDIVIDUALLOAN_CASE = SELECTOR_NAME + " = '" + APPROVE_INDIVIDUALLOAN_CASE + "'";

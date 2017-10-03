@@ -18,9 +18,7 @@ package io.mifos.portfolio;
 import io.mifos.core.api.util.NotFoundException;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
-import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
-import io.mifos.portfolio.api.v1.client.ChargeDefinitionIsReadOnly;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
@@ -55,16 +53,6 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
         .map(ChargeDefinition::getIdentifier)
         .collect(Collectors.toSet());
 
-    final Set<String> expectedReadOnlyChargeDefinitionIdentifiers = Stream.of(
-        ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID,
-        ChargeIdentifiers.LOAN_FUNDS_ALLOCATION_ID,
-        ChargeIdentifiers.RETURN_DISBURSEMENT_ID,
-        ChargeIdentifiers.DISBURSE_PAYMENT_ID,
-        ChargeIdentifiers.TRACK_DISBURSAL_PAYMENT_ID,
-        ChargeIdentifiers.TRACK_RETURN_PRINCIPAL_ID,
-        ChargeIdentifiers.INTEREST_ID,
-        ChargeIdentifiers.REPAYMENT_ID)
-        .collect(Collectors.toSet());
     final Set<String> expectedChangeableChargeDefinitionIdentifiers = Stream.of(
         ChargeIdentifiers.DISBURSEMENT_FEE_ID,
         ChargeIdentifiers.LATE_FEE_ID,
@@ -72,7 +60,7 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
         ChargeIdentifiers.PROCESSING_FEE_ID)
         .collect(Collectors.toSet());
 
-    Assert.assertEquals(expectedReadOnlyChargeDefinitionIdentifiers, readOnlyChargeDefinitionIdentifiers);
+    Assert.assertTrue(readOnlyChargeDefinitionIdentifiers.isEmpty()); //Not using readonly any more.  Simply not returning charges instead.
     Assert.assertEquals(expectedChangeableChargeDefinitionIdentifiers, changeableChargeDefinitionIdentifiers);
   }
 
@@ -87,7 +75,7 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
     chargeDefinitionToDelete.setDescription("blah blah blah");
     chargeDefinitionToDelete.setChargeAction(Action.APPROVE.name());
     chargeDefinitionToDelete.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
-    chargeDefinitionToDelete.setToAccountDesignator(AccountDesignators.ARREARS_ALLOWANCE);
+    chargeDefinitionToDelete.setToAccountDesignator(AccountDesignators.GENERAL_LOSS_ALLOWANCE);
     chargeDefinitionToDelete.setFromAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
     portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinitionToDelete);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.POST_CHARGE_DEFINITION,
@@ -105,11 +93,11 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
     catch (final NotFoundException ignored) { }
   }
 
-  @Test(expected = ChargeDefinitionIsReadOnly.class)
+  @Test(expected = NotFoundException.class)
   public void shouldNotDeleteReadOnlyChargeDefinition() throws InterruptedException {
     final Product product = createProduct();
 
-    portfolioManager.deleteChargeDefinition(product.getIdentifier(), ChargeIdentifiers.ALLOW_FOR_WRITE_OFF_ID);
+    portfolioManager.deleteChargeDefinition(product.getIdentifier(), ChargeIdentifiers.INTEREST_ID);
   }
 
   @Test
@@ -175,29 +163,13 @@ public class TestChargeDefinitions extends AbstractPortfolioTest {
   }
 
   @Test
-  public void shouldNotChangeDisbursalChargeDefinition() throws InterruptedException {
+  public void shouldNotGetDisbursalChargeDefinition() throws InterruptedException {
     final Product product = createProduct();
 
-    final ChargeDefinition originalDisbursalChargeDefinition
-        = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.DISBURSE_PAYMENT_ID);
-
-    final ChargeDefinition disbursalChargeDefinition
-        = portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.DISBURSE_PAYMENT_ID);
-    disbursalChargeDefinition.setProportionalTo(ChargeProportionalDesignator.NOT_PROPORTIONAL.getValue());
-    disbursalChargeDefinition.setReadOnly(false);
-
     try {
-      portfolioManager.changeChargeDefinition(
-          product.getIdentifier(),
-          disbursalChargeDefinition.getIdentifier(),
-          disbursalChargeDefinition);
-      Assert.fail("Changing a readonly charge definition should fail.");
+      portfolioManager.getChargeDefinition(product.getIdentifier(), ChargeIdentifiers.DISBURSE_PAYMENT_ID);
+      Assert.fail("Getting a charge derived from configuration should fail.");
     }
-    catch (final ChargeDefinitionIsReadOnly ignore) { }
-
-    final ChargeDefinition chargeDefinitionAsChanged
-        = portfolioManager.getChargeDefinition(product.getIdentifier(), disbursalChargeDefinition.getIdentifier());
-
-    Assert.assertEquals(originalDisbursalChargeDefinition, chargeDefinitionAsChanged);
+    catch (final NotFoundException ignore) { }
   }
 }

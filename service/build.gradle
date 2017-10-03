@@ -47,7 +47,8 @@ dependencies {
             [group: 'org.hibernate', name: 'hibernate-validator', version: versions.validator],
             [group: 'org.javamoney.lib', name: 'javamoney-calc', version: versions.javamoneylib],
             [group: 'javax.money', name: 'money-api', version: '1.0.1'],
-            [group: 'org.javamoney', name: 'moneta', version: '1.0.1']
+            [group: 'org.javamoney', name: 'moneta', version: '1.0.1'],
+            [group: 'net.jodah', name: 'expiringmap', version: versions.expiringmap],
     )
 }
 

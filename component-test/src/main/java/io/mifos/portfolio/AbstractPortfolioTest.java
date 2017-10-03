@@ -31,6 +31,7 @@ import io.mifos.portfolio.api.v1.client.PortfolioManager;
 import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.api.v1.events.*;
 import io.mifos.portfolio.service.config.PortfolioServiceConfiguration;
+import io.mifos.portfolio.service.internal.util.AccountingListener;
 import io.mifos.portfolio.service.internal.util.RhythmAdapter;
 import org.junit.*;
 import org.junit.runner.RunWith;
@@ -41,6 +42,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.cloud.netflix.feign.EnableFeignClients;
 import org.springframework.cloud.netflix.ribbon.RibbonClient;
 import org.springframework.context.annotation.Bean;
@@ -124,6 +126,9 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   @MockBean
   CustomerManager customerManager;
 
+  @SpyBean
+  AccountingListener accountingListener;
+
   @SuppressWarnings("SpringAutowiredFieldsWarningInspection")
   @Autowired
   @Qualifier(LOGGER_NAME)
@@ -132,7 +137,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   @Before
   public void prepTest() {
     userContext = this.tenantApplicationSecurityEnvironment.createAutoUserContext(TEST_USER);
-    AccountingFixture.mockAccountingPrereqs(ledgerManager);
+    AccountingFixture.mockAccountingPrereqs(ledgerManager, accountingListener);
     Mockito.doReturn(true).when(customerManager).isCustomerInGoodStanding(Fixture.CUSTOMER_IDENTIFIER);
   }
 
@@ -262,24 +267,31 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     Assert.assertEquals(actionList, portfolioManager.getActionsForCase(productIdentifier, customerCaseIdentifier));
   }
 
-  void checkCostComponentForActionCorrect(final String productIdentifier,
-                                          final String customerCaseIdentifier,
-                                          final Action action,
-                                          final Set<String> accountDesignators,
-                                          final BigDecimal amount,
-                                          final CostComponent... expectedCostComponents) {
-    final List<CostComponent> costComponents = portfolioManager.getCostComponentsForAction(
+  Payment checkCostComponentForActionCorrect(
+      final String productIdentifier,
+      final String customerCaseIdentifier,
+      final Action action,
+      final Set<String> accountDesignators,
+      final BigDecimal amount,
+      final LocalDateTime forDateTime,
+      final int minorCurrencyUnits,
+      final CostComponent... expectedCostComponents) {
+    final Payment payment = portfolioManager.getCostComponentsForAction(
         productIdentifier,
         customerCaseIdentifier,
         action.name(),
         accountDesignators,
-        amount
+        amount,
+        DateConverter.toIsoString(forDateTime)
     );
-    final Set<CostComponent> setOfCostComponents = new HashSet<>(costComponents);
+    payment.getCostComponents().forEach(x -> x.setAmount(x.getAmount().setScale(minorCurrencyUnits, BigDecimal.ROUND_HALF_EVEN)));
+    final Set<CostComponent> setOfCostComponents = new HashSet<>(payment.getCostComponents());
     final Set<CostComponent> setOfExpectedCostComponents = Stream.of(expectedCostComponents)
         .filter(x -> x.getAmount().compareTo(BigDecimal.ZERO) != 0)
         .collect(Collectors.toSet());
     Assert.assertEquals(setOfExpectedCostComponents, setOfCostComponents);
+
+    return payment;
   }
 
   void setFeeToFixedValue(final String productIdentifier,

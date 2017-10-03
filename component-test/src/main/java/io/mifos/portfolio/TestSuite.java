@@ -32,7 +32,8 @@ import org.junit.runners.Suite;
     TestPatterns.class,
     TestProducts.class,
     TestTaskDefinitions.class,
-    TestTaskInstances.class
+    TestTaskInstances.class,
+    TestLossProvisionSteps.class
 })
 public class TestSuite extends SuiteTestEnvironment {
 }

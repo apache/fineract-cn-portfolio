@@ -231,7 +231,7 @@ public class AccountingAdapter {
         generatedLedger.setName(ledgerIdentifer.getIdentifier());
       }
     }
-    final boolean ledgerCreationDetected = expectation.waitForOccurrence(5, TimeUnit.SECONDS);
+    final boolean ledgerCreationDetected = expectation.waitForOccurrence(10, TimeUnit.SECONDS);
     if (!ledgerCreationDetected)
       logger.warn("Waited 5 seconds for creation of ledger '{}', but it was not detected. This could cause subsequent " +
               "account creations to fail. Is there something wrong with the accounting service? Is ActiveMQ setup properly?",

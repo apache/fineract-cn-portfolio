@@ -24,6 +24,9 @@ import org.junit.Test;
 import java.math.BigDecimal;
 import java.util.Collections;
 
+/**
+ * @author Myrle Krantz
+ */
 public class ApplyInterestPaymentBuilderServiceTest {
   @Test
   public void getPaymentBuilder() throws Exception {

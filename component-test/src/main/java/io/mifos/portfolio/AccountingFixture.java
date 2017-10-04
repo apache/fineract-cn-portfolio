@@ -245,6 +245,7 @@ class AccountingFixture {
   private static Account productLossAllowanceAccount() {
     final Account ret = new Account();
     ret.setIdentifier(PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER);
+    ret.setLedger(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
     return ret;
   }

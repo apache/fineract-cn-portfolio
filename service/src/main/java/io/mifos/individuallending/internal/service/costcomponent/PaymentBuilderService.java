@@ -21,6 +21,9 @@ import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/**
+ * @author Myrle Krantz
+ */
 public interface PaymentBuilderService {
 
   PaymentBuilder getPaymentBuilder(

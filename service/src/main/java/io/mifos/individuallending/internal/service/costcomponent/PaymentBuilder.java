@@ -19,6 +19,7 @@ import com.google.common.collect.Sets;
 import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
@@ -154,18 +155,20 @@ public class PaymentBuilder {
       final BigDecimal plannedCharge) {
     final BigDecimal expectedImpactOnDebitAccount = plannedCharge.subtract(this.getBalanceAdjustment(fromAccountDesignator));
     final BigDecimal maxImpactOnDebitAccount = prePaymentBalances.getMaxDebit(fromAccountDesignator, expectedImpactOnDebitAccount);
-    final BigDecimal maxDebit = maxImpactOnDebitAccount.add(this.getBalanceAdjustment(fromAccountDesignator))
-        .max(BigDecimal.ZERO);
+    final BigDecimal maxDebit = (!fromAccountDesignator.equals(AccountDesignators.PRODUCT_LOSS_ALLOWANCE)) ?
+        maxImpactOnDebitAccount.add(this.getBalanceAdjustment(fromAccountDesignator)).max(BigDecimal.ZERO) :
+        maxImpactOnDebitAccount.add(this.getBalanceAdjustment(fromAccountDesignator));
 
     final BigDecimal expectedImpactOnCreditAccount = plannedCharge.add(this.getBalanceAdjustment(toAccountDesignator));
     final BigDecimal maxImpactOnCreditAccount = prePaymentBalances.getMaxCredit(toAccountDesignator, expectedImpactOnCreditAccount);
-    final BigDecimal maxCredit = maxImpactOnCreditAccount.subtract(this.getBalanceAdjustment(toAccountDesignator))
-        .max(BigDecimal.ZERO);
+    final BigDecimal maxCredit = (!toAccountDesignator.equals(AccountDesignators.GENERAL_LOSS_ALLOWANCE)) ?
+        maxImpactOnCreditAccount.subtract(this.getBalanceAdjustment(toAccountDesignator)).max(BigDecimal.ZERO) :
+        maxImpactOnCreditAccount.subtract(this.getBalanceAdjustment(toAccountDesignator));
     return maxCredit.min(maxDebit);
   }
 
   private static boolean chargeIsAccrued(final ChargeDefinition chargeDefinition) {
-    return chargeDefinition.getAccrualAccountDesignator() != null;
+    return chargeDefinition.getAccrualAccountDesignator() != null && chargeDefinition.getAccrueAction() != null;
   }
 
   private void addToBalance(

@@ -30,6 +30,8 @@ import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.individuallending.internal.command.*;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
+import io.mifos.individuallending.internal.repository.LateCaseEntity;
+import io.mifos.individuallending.internal.repository.LateCaseRepository;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.DataContextService;
 import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
@@ -72,12 +74,14 @@ public class IndividualLoanCommandHandler {
   private final AcceptPaymentBuilderService acceptPaymentBuilderService;
   private final ClosePaymentBuilderService closePaymentBuilderService;
   private final MarkLatePaymentBuilderService markLatePaymentBuilderService;
+  private final MarkInArrearsPaymentBuilderService markInArrearsPaymentBuilderService;
   private final WriteOffPaymentBuilderService writeOffPaymentBuilderService;
   private final RecoverPaymentBuilderService recoverPaymentBuilderService;
   private final AccountingAdapter accountingAdapter;
   private final CaseCommandRepository caseCommandRepository;
   private final TaskInstanceRepository taskInstanceRepository;
   private final CaseParametersRepository caseParametersRepository;
+  private final LateCaseRepository lateCaseRepository;
 
   @Autowired
   public IndividualLoanCommandHandler(
@@ -91,11 +95,14 @@ public class IndividualLoanCommandHandler {
       final AcceptPaymentBuilderService acceptPaymentBuilderService,
       final ClosePaymentBuilderService closePaymentBuilderService,
       final MarkLatePaymentBuilderService markLatePaymentBuilderService,
+      final MarkInArrearsPaymentBuilderService markInArrearsPaymentBuilderService,
       final WriteOffPaymentBuilderService writeOffPaymentBuilderService,
       final RecoverPaymentBuilderService recoverPaymentBuilderService,
       final AccountingAdapter accountingAdapter,
-      CaseCommandRepository caseCommandRepository, final TaskInstanceRepository taskInstanceRepository,
-      final CaseParametersRepository caseParametersRepository) {
+      final CaseCommandRepository caseCommandRepository,
+      final TaskInstanceRepository taskInstanceRepository,
+      final CaseParametersRepository caseParametersRepository,
+      final LateCaseRepository lateCaseRepository) {
     this.caseRepository = caseRepository;
     this.dataContextService = dataContextService;
     this.openPaymentBuilderService = openPaymentBuilderService;
@@ -106,12 +113,14 @@ public class IndividualLoanCommandHandler {
     this.acceptPaymentBuilderService = acceptPaymentBuilderService;
     this.closePaymentBuilderService = closePaymentBuilderService;
     this.markLatePaymentBuilderService = markLatePaymentBuilderService;
+    this.markInArrearsPaymentBuilderService = markInArrearsPaymentBuilderService;
     this.writeOffPaymentBuilderService = writeOffPaymentBuilderService;
     this.recoverPaymentBuilderService = recoverPaymentBuilderService;
     this.accountingAdapter = accountingAdapter;
     this.caseCommandRepository = caseCommandRepository;
     this.taskInstanceRepository = taskInstanceRepository;
     this.caseParametersRepository = caseParametersRepository;
+    this.lateCaseRepository = lateCaseRepository;
   }
 
   @Transactional
@@ -455,6 +464,9 @@ public class IndividualLoanCommandHandler {
         Action.ACCEPT_PAYMENT,
         transactionUniqueifier);
 
+    //TODO: Should this be more sophisticated?  Take into account what the payment amount was?
+    markCaseNotLate(dataContextOfAction);
+
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
   }
 
@@ -486,8 +498,6 @@ public class IndividualLoanCommandHandler {
         markLatePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, DateConverter.fromIsoString(command.getForTime()).toLocalDate(),
             runningBalances);
 
-    final LocalDateTime today = today();
-
     final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
         designatorToAccountIdentifierMapper,
         "Marked late on " + command.getForTime(),
@@ -503,7 +513,58 @@ public class IndividualLoanCommandHandler {
         Action.MARK_LATE,
         transactionUniqueifier);
 
-    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
+    markCaseLate(dataContextOfAction, command.getForTime());
+
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
+  }
+
+  @Transactional
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
+  @EventEmitter(
+      selectorName = IndividualLoanEventConstants.SELECTOR_NAME,
+      selectorValue = IndividualLoanEventConstants.MARK_IN_ARREARS_INDIVIDUALLOAN_CASE)
+  public IndividualLoanCommandEvent process(final MarkInArrearsCommand command) {
+    final String productIdentifier = command.getProductIdentifier();
+    final String caseIdentifier = command.getCaseIdentifier();
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
+        productIdentifier, caseIdentifier, Collections.emptyList());
+    IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState()), Action.MARK_LATE);
+
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.MARK_IN_ARREARS);
+
+    if (dataContextOfAction.getCustomerCaseEntity().getEndOfTerm() == null)
+      throw ServiceException.internalError(
+          "End of term not set for active case ''{0}.{1}.''", productIdentifier, caseIdentifier);
+
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    final RealRunningBalances runningBalances = new RealRunningBalances(
+        accountingAdapter,
+        dataContextOfAction);
+
+    final PaymentBuilder paymentBuilder =
+        markInArrearsPaymentBuilderService.getPaymentBuilder(
+            dataContextOfAction,
+            BigDecimal.valueOf(command.getDaysLate()),
+            DateConverter.fromIsoString(command.getForTime()).toLocalDate(),
+            runningBalances);
+
+    final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
+        designatorToAccountIdentifierMapper,
+        "Marked in arrears on " + command.getForTime(),
+        command.getForTime(),
+        dataContextOfAction.getMessageForCharge(Action.MARK_IN_ARREARS),
+        Action.MARK_IN_ARREARS.getTransactionType());
+
+    final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getForTime(),
+        customerCase.getId(),
+        Action.MARK_IN_ARREARS,
+        transactionUniqueifier);
+
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
   }
 
   @Transactional
@@ -667,6 +728,23 @@ public class IndividualLoanCommandHandler {
     caseCommandEntity.setCreatedOn(DateConverter.fromIsoString(when));
     caseCommandEntity.setTransactionUniqueifier(transactionUniqueifier.orElse(""));
     caseCommandRepository.save(caseCommandEntity);
+  }
+
+  private void markCaseLate(
+      final DataContextOfAction dataContextOfAction,
+      final String forTime) {
+    final Optional<LateCaseEntity> lateCaseEntity = lateCaseRepository.findByCaseId(dataContextOfAction.getCustomerCaseEntity().getId());
+    if (!lateCaseEntity.isPresent()) {
+      final LateCaseEntity markCaseLate = new LateCaseEntity();
+      markCaseLate.setCaseId(dataContextOfAction.getCustomerCaseEntity().getId());
+      markCaseLate.setLateSince(DateConverter.fromIsoString(forTime));
+      lateCaseRepository.save(markCaseLate);
+    }
+  }
+
+  private void markCaseNotLate(
+      final DataContextOfAction dataContextOfAction) {
+    lateCaseRepository.deleteByCaseId(dataContextOfAction.getCustomerCaseEntity().getId());
   }
 
   private static LocalDateTime today() {

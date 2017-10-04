@@ -74,7 +74,7 @@ public class TestCommands extends AbstractPortfolioTest {
         midnightToday(),
         Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
-            Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
+            Action.APPLY_INTEREST, Action.MARK_LATE, Action.MARK_IN_ARREARS, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
 
     checkStateTransfer(
         product.getIdentifier(),

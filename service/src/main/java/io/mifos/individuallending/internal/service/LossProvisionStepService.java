@@ -23,8 +23,6 @@ import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -34,12 +32,6 @@ import java.util.stream.Collectors;
  */
 @Service
 public class LossProvisionStepService {
-  private final static List<LossProvisionStep> DEFAULT_LOSS_PROVISION_STEPS = Arrays.asList(
-      new LossProvisionStep(0, BigDecimal.ONE),
-      new LossProvisionStep(1, BigDecimal.valueOf(9)),
-      new LossProvisionStep(30, BigDecimal.valueOf(30)),
-      new LossProvisionStep(60, BigDecimal.valueOf(60)));
-
   private final ProductRepository productRepository;
   private final LossProvisionStepRepository lossProvisionStepRepository;
 
@@ -62,12 +54,8 @@ public class LossProvisionStepService {
     final Long productId = productRepository.findByIdentifier(productIdentifier)
         .orElseThrow(() -> ServiceException.notFound("Product ''{}'' doesn''t exist.", productIdentifier))
         .getId();
-    final List<LossProvisionStep> ret = lossProvisionStepRepository.findByProductId(productId)
+    return lossProvisionStepRepository.findByProductId(productId)
         .map(LossProvisionStepMapper::map)
         .collect(Collectors.toList());
-    if (!ret.isEmpty())
-      return ret;
-    else
-      return DEFAULT_LOSS_PROVISION_STEPS;
   }
 }

@@ -236,14 +236,12 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS));
 
     int week = 0;
-    final List<Payment> payments = new ArrayList<>();
     while (expectedCurrentPrincipal.compareTo(BigDecimal.ZERO) > 0) {
       logger.info("Simulating week {}. Expected current principal {}.", week, expectedCurrentPrincipal);
       step6CalculateInterestAndCheckForLatenessForWeek(today, week);
       final BigDecimal interestAccruedBeforePayment = interestAccrued;
       final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today.plusDays((week+1)*7));
       final Payment payment = step7PaybackPartialAmount(nextRepaymentAmount, today.plusDays((week + 1) * 7), BigDecimal.ZERO);
-      payments.add(payment);
       final BigDecimal interestAccrual = payment.getBalanceAdjustments().remove(AccountDesignators.INTEREST_ACCRUAL); //Don't compare these with planned payment.
       final BigDecimal customerLoanInterest = payment.getBalanceAdjustments().remove(AccountDesignators.CUSTOMER_LOAN_INTEREST);
       Assert.assertEquals("week " + week, interestAccrual.negate(), customerLoanInterest);

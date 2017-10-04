@@ -180,20 +180,6 @@ public class AccountingAdapter {
         .map(DateConverter::fromIsoString);
   }
 
-  public Optional<LocalDateTime> getDateOfMostRecentEntryContainingMessage(
-      final String accountIdentifier,
-      final String message) {
-
-    final Account account = ledgerManager.findAccount(accountIdentifier);
-    final LocalDateTime accountCreatedOn = DateConverter.fromIsoString(account.getCreatedOn());
-    final DateRange fromAccountCreationUntilNow = oneSidedDateRange(accountCreatedOn.toLocalDate());
-
-    return ledgerManager.fetchAccountEntriesStream(accountIdentifier, fromAccountCreationUntilNow.toString(), message, "DESC")
-        .findFirst()
-        .map(AccountEntry::getTransactionDate)
-        .map(DateConverter::fromIsoString);
-  }
-
   public BigDecimal sumMatchingEntriesSinceDate(final String accountIdentifier, final LocalDate startDate, final String message)
   {
     final DateRange fromLastPaymentUntilNow = oneSidedDateRange(startDate);

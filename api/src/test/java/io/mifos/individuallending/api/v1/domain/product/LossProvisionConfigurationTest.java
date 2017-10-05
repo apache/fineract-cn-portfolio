@@ -36,7 +36,7 @@ public class LossProvisionConfigurationTest extends ValidationTest<LossProvision
     final LossProvisionConfiguration ret = new LossProvisionConfiguration();
     final List<LossProvisionStep> lossProvisionSteps = new ArrayList<>();
     lossProvisionSteps.add(new LossProvisionStep(0, BigDecimal.ONE));
-    lossProvisionSteps.add(new LossProvisionStep(1, BigDecimal.valueOf(9)));
+    lossProvisionSteps.add(new LossProvisionStep(1, BigDecimal.valueOf(10)));
     lossProvisionSteps.add(new LossProvisionStep(10, BigDecimal.valueOf(20)));
     lossProvisionSteps.add(new LossProvisionStep(50, BigDecimal.valueOf(70)));
     ret.setLossProvisionSteps(lossProvisionSteps);
@@ -50,15 +50,12 @@ public class LossProvisionConfigurationTest extends ValidationTest<LossProvision
     ret.add(new ValidationTestCase<LossProvisionConfiguration>("valid"));
     ret.add(new ValidationTestCase<LossProvisionConfiguration>("emptyList")
         .adjustment(x -> x.setLossProvisionSteps(Collections.emptyList()))
-        .valid(false));
+        .valid(true));
     ret.add(new ValidationTestCase<LossProvisionConfiguration>("nullList")
-        .adjustment(x -> x.setLossProvisionSteps(Collections.emptyList()))
+        .adjustment(x -> x.setLossProvisionSteps(null))
         .valid(false));
-    ret.add(new ValidationTestCase<LossProvisionConfiguration>("sumTooSmall")
-        .adjustment(x -> x.getLossProvisionSteps().get(0).setPercentProvision(BigDecimal.valueOf(0.1)))
-        .valid(false));
-    ret.add(new ValidationTestCase<LossProvisionConfiguration>("sumTooLarge")
-        .adjustment(x -> x.getLossProvisionSteps().get(3).setPercentProvision(BigDecimal.valueOf(71)))
+    ret.add(new ValidationTestCase<LossProvisionConfiguration>("moreThanOneValuesForOneDay")
+        .adjustment(x -> x.getLossProvisionSteps().add(new LossProvisionStep(0, BigDecimal.valueOf(0.1))))
         .valid(false));
 
     return ret;

@@ -17,7 +17,6 @@ package io.mifos.individuallending.internal.repository;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
-import java.util.Objects;
 
 /**
  * @author Myrle Krantz
@@ -70,19 +69,5 @@ public class LossProvisionStepEntity {
 
   public void setPercentProvision(BigDecimal percentProvision) {
     this.percentProvision = percentProvision;
-  }
-
-  @Override
-  public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    LossProvisionStepEntity that = (LossProvisionStepEntity) o;
-    return Objects.equals(productId, that.productId) &&
-        Objects.equals(daysLate, that.daysLate);
-  }
-
-  @Override
-  public int hashCode() {
-    return Objects.hash(productId, daysLate);
   }
 }

@@ -24,6 +24,7 @@ import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -33,16 +34,44 @@ public class TestLossProvisionSteps extends AbstractPortfolioTest {
   @Test
   public void shouldChangeAndGetLossProvisionSteps() throws InterruptedException {
     final Product product = createAdjustedProduct(x -> {});
+
     final List<LossProvisionStep> lossProvisionSteps = new ArrayList<>();
     lossProvisionSteps.add(new LossProvisionStep(0, BigDecimal.valueOf(1_00, 2)));
     lossProvisionSteps.add(new LossProvisionStep(1, BigDecimal.valueOf(9_00, 2)));
     lossProvisionSteps.add(new LossProvisionStep(30, BigDecimal.valueOf(35_00, 2)));
     lossProvisionSteps.add(new LossProvisionStep(60, BigDecimal.valueOf(55_00, 2)));
     final LossProvisionConfiguration lossProvisionConfiguration = new LossProvisionConfiguration(lossProvisionSteps);
-    individualLending.changeLossProvisionConfiguration(product.getIdentifier(), lossProvisionConfiguration);
 
+    individualLending.changeLossProvisionConfiguration(product.getIdentifier(), lossProvisionConfiguration);
     Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.PUT_LOSS_PROVISION_STEPS, product.getIdentifier()));
+    Thread.sleep(2000);
+
     final LossProvisionConfiguration lossProvisionConfigurationAsSaved = individualLending.getLossProvisionConfiguration(product.getIdentifier());
     Assert.assertEquals(lossProvisionConfiguration, lossProvisionConfigurationAsSaved);
+
+
+    final List<LossProvisionStep> lossProvisionSteps2 = new ArrayList<>();
+    lossProvisionSteps2.add(new LossProvisionStep(0, BigDecimal.valueOf(2_00, 2)));
+    lossProvisionSteps2.add(new LossProvisionStep(1, BigDecimal.valueOf(15_00, 2)));
+    lossProvisionSteps2.add(new LossProvisionStep(30, BigDecimal.valueOf(35_00, 2)));
+    lossProvisionSteps2.add(new LossProvisionStep(60, BigDecimal.valueOf(55_00, 2)));
+    final LossProvisionConfiguration lossProvisionConfiguration2 = new LossProvisionConfiguration(lossProvisionSteps2);
+
+    individualLending.changeLossProvisionConfiguration(product.getIdentifier(), lossProvisionConfiguration2);
+    Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.PUT_LOSS_PROVISION_STEPS, product.getIdentifier()));
+    Thread.sleep(2000);
+
+    final LossProvisionConfiguration lossProvisionConfiguration2AsSaved = individualLending.getLossProvisionConfiguration(product.getIdentifier());
+    Assert.assertEquals(lossProvisionConfiguration2, lossProvisionConfiguration2AsSaved);
+
+
+    final LossProvisionConfiguration lossProvisionConfiguration3 = new LossProvisionConfiguration(Collections.emptyList());
+
+    individualLending.changeLossProvisionConfiguration(product.getIdentifier(), lossProvisionConfiguration3);
+    Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.PUT_LOSS_PROVISION_STEPS, product.getIdentifier()));
+    Thread.sleep(2000);
+
+    //TODO: final LossProvisionConfiguration lossProvisionConfiguration3AsSaved = individualLending.getLossProvisionConfiguration(product.getIdentifier());
+    //Assert.assertEquals(lossProvisionConfiguration3, lossProvisionConfiguration3AsSaved);
   }
 }

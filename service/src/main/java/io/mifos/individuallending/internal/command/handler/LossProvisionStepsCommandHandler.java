@@ -30,7 +30,9 @@ import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.stream.Stream;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 
 /**
@@ -57,11 +59,28 @@ public class LossProvisionStepsCommandHandler {
   public String process(final ChangeLossProvisionSteps command) {
     final ProductEntity productEntity = productRepository.findByIdentifier(command.getProductIdentifier())
         .orElseThrow(() -> ServiceException.notFound("Product not found ''{0}''.", command.getProductIdentifier()));
-    final Stream<LossProvisionStepEntity> lossProvisionSteps = lossProvisionStepRepository.findByProductId(productEntity.getId());
-    lossProvisionSteps.forEach(lossProvisionStepRepository::delete);
-    command.getLossProvisionConfiguration().getLossProvisionSteps().stream()
-        .map(lossProvisionStep -> LossProvisionStepMapper.map(productEntity.getId(), lossProvisionStep))
-        .forEach(lossProvisionStepRepository::save);
+    final Map<Integer, LossProvisionStepEntity> existingLossProvisionSteps =
+        lossProvisionStepRepository.findByProductId(productEntity.getId())
+        .collect(Collectors.toMap(LossProvisionStepEntity::getDaysLate, Function.identity()));
+
+    final Map<Integer, LossProvisionStepEntity> newLossProvisionSteps =
+        command.getLossProvisionConfiguration().getLossProvisionSteps().stream()
+            .map(newLossProvisionStep -> {
+              final LossProvisionStepEntity existingLossProvisionStepEntity = existingLossProvisionSteps.get(newLossProvisionStep.getDaysLate());
+              if (existingLossProvisionStepEntity != null) {
+                existingLossProvisionStepEntity.setPercentProvision(newLossProvisionStep.getPercentProvision());
+                return existingLossProvisionStepEntity;
+              } else {
+                return LossProvisionStepMapper.map(productEntity.getId(), newLossProvisionStep);
+              }
+            })
+            .collect(Collectors.toMap(LossProvisionStepEntity::getDaysLate, Function.identity()));
+    newLossProvisionSteps.values().forEach(lossProvisionStepRepository::save);
+
+    existingLossProvisionSteps.forEach((daysLate, lossProvisionStep) -> {
+      if (newLossProvisionSteps.get(daysLate) == null)
+        lossProvisionStepRepository.delete(lossProvisionStep);
+    });
 
     return command.getProductIdentifier();
   }

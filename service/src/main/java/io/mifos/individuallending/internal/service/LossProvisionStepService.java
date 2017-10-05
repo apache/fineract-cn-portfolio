@@ -54,7 +54,7 @@ public class LossProvisionStepService {
     final Long productId = productRepository.findByIdentifier(productIdentifier)
         .orElseThrow(() -> ServiceException.notFound("Product ''{}'' doesn''t exist.", productIdentifier))
         .getId();
-    return lossProvisionStepRepository.findByProductId(productId)
+    return lossProvisionStepRepository.findByProductIdOrderByDaysLateAsc(productId)
         .map(LossProvisionStepMapper::map)
         .collect(Collectors.toList());
   }

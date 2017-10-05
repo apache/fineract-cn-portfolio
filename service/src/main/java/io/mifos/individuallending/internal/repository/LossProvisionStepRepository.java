@@ -26,7 +26,9 @@ import java.util.stream.Stream;
  */
 @Repository
 public interface LossProvisionStepRepository extends JpaRepository<LossProvisionStepEntity, Long> {
-  Stream<LossProvisionStepEntity> findByProductId(Long id);
+  Stream<LossProvisionStepEntity> findByProductId(Long productId);
 
-  Optional<LossProvisionStepEntity> findByProductIdAndDaysLate(Long id, int daysLate);
+  Stream<LossProvisionStepEntity> findByProductIdOrderByDaysLateAsc(Long productId);
+
+  Optional<LossProvisionStepEntity> findByProductIdAndDaysLate(Long productId, int daysLate);
 }

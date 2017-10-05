@@ -19,8 +19,9 @@ import io.mifos.individuallending.api.v1.domain.product.LossProvisionStep;
 
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
-import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author Myrle Krantz
@@ -35,10 +36,11 @@ public class CheckValidLossProvisionList implements ConstraintValidator<ValidLos
   public boolean isValid(
       final List<LossProvisionStep> value,
       final ConstraintValidatorContext context) {
-    final BigDecimal sum = value.stream()
-        .map(LossProvisionStep::getPercentProvision)
-        .map(x -> x.setScale(2, BigDecimal.ROUND_HALF_EVEN))
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
-    return sum.compareTo(BigDecimal.valueOf(100_00, 2)) == 0;
+    if (value == null) return false;
+    final Map<Integer, Long> configurationsPerDay = value.stream()
+        .collect(Collectors.groupingBy(LossProvisionStep::getDaysLate, Collectors.counting()));
+    final boolean moreThanOneConfigurationForAtLeastOneDay = configurationsPerDay.values().stream()
+        .anyMatch(x -> x > 1);
+    return !moreThanOneConfigurationForAtLeastOneDay;
   }
 }

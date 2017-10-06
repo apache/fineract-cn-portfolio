@@ -18,6 +18,7 @@ package io.mifos.individuallending.internal.service.costcomponent;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.service.DefaultChargeDefinitionsMocker;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Payment;
 import org.junit.Assert;
@@ -61,7 +62,7 @@ public class WriteOffPaymentBuilderServiceTest {
   @Test
   public void getPaymentBuilder() throws Exception {
     final PaymentBuilder paymentBuilder = PaymentBuilderServiceTestHarness.constructCallToPaymentBuilder(
-        (scheduledChargesService) -> new WriteOffPaymentBuilderService(), testCase);
+        (scheduledChargesService) -> new WriteOffPaymentBuilderService(DefaultChargeDefinitionsMocker.getChargeDefinitionService(Collections.emptyList())), testCase);
 
     final Payment payment = paymentBuilder.buildPayment(Action.WRITE_OFF, Collections.emptySet(), testCase.forDate.toLocalDate());
     Assert.assertNotNull(payment);

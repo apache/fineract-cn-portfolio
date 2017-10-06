@@ -970,7 +970,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         null,
         forDateTime,
         MINOR_CURRENCY_UNIT_DIGITS,
-        new CostComponent(ChargeIdentifiers.WRITE_OFF_ID, expectedCurrentPrincipal));
+        new CostComponent(ChargeIdentifiers.WRITE_OFF_ID, expectedCurrentPrincipal),
+        new CostComponent(ChargeIdentifiers.INTEREST_ID, interestAccrued),
+        new CostComponent(ChargeIdentifiers.LATE_FEE_ID, lateFees));
     checkStateTransfer(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -984,12 +986,12 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(AccountingFixture.GENERAL_EXPENSE_ACCOUNT_IDENTIFIER, expectedCurrentPrincipal.toPlainString()));
-    //TODO:debtors.add(new Debtor(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFees.toPlainString()));
-    //TODO:debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFees.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(AccountingFixture.GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER, expectedCurrentPrincipal.toPlainString()));
-    //TODO:creditors.add(new Creditor(AccountingFixture.PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER, lateFees.add(interestAccrued).toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER, lateFees.add(interestAccrued).toPlainString()));
 
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.WRITE_OFF);
 

@@ -24,8 +24,6 @@ import java.util.Locale;
 public interface ChargeIdentifiers {
   String INTEREST_NAME = "Interest";
   String INTEREST_ID = "interest";
-  String ALLOW_FOR_WRITE_OFF_NAME = "Allow for write-off";
-  String ALLOW_FOR_WRITE_OFF_ID = "allow-for-write-off";
   String LATE_FEE_NAME = "Late fee";
   String LATE_FEE_ID = "late-fee";
   String DISBURSEMENT_FEE_NAME = "Disbursement fee";
@@ -44,6 +42,8 @@ public interface ChargeIdentifiers {
   String REPAY_FEES_ID = "repay-fees";
   String PROVISION_FOR_LOSSES_NAME = "Provision for losses";
   String PROVISION_FOR_LOSSES_ID = "loss-provisioning";
+  String WRITE_OFF_NAME = "Write off";
+  String WRITE_OFF_ID = "write-off";
 
   static String nameToIdentifier(String name) {
     return name.toLowerCase(Locale.US).replace(" ", "-");

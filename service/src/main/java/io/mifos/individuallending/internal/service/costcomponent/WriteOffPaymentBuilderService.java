@@ -15,13 +15,14 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
+import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
 import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
-import io.mifos.individuallending.internal.service.schedule.ScheduledChargesService;
-import org.springframework.beans.factory.annotation.Autowired;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
@@ -30,19 +31,16 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+
+import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.WRITE_OFF_ID;
+import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.WRITE_OFF_NAME;
 
 /**
  * @author Myrle Krantz
  */
 @Service
 public class WriteOffPaymentBuilderService implements PaymentBuilderService {
-  private final ScheduledChargesService scheduledChargesService;
-
-  @Autowired
-  public WriteOffPaymentBuilderService(final ScheduledChargesService scheduledChargesService) {
-    this.scheduledChargesService = scheduledChargesService;
-  }
-
   @Override
   public PaymentBuilder getPaymentBuilder(
       final @Nonnull DataContextOfAction dataContextOfAction,
@@ -51,11 +49,10 @@ public class WriteOffPaymentBuilderService implements PaymentBuilderService {
       final RunningBalances runningBalances)
   {
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
-    final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
     final int minorCurrencyUnitDigits = dataContextOfAction.getProductEntity().getMinorCurrencyUnitDigits();
-    final List<ScheduledAction> scheduledActions = Collections.singletonList(new ScheduledAction(Action.WRITE_OFF, forDate));
-    final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(
-        productIdentifier, scheduledActions);
+
+    final List<ScheduledCharge> scheduledCharges
+        = Collections.singletonList(getScheduledChargeForWriteOff(forDate));
 
     final BigDecimal loanPaymentSize = dataContextOfAction.getCaseParametersEntity().getPaymentSize();
 
@@ -69,5 +66,23 @@ public class WriteOffPaymentBuilderService implements PaymentBuilderService {
         dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         true);
+  }
+
+
+  private ScheduledCharge getScheduledChargeForWriteOff(final LocalDate forDate) {
+
+    final ChargeDefinition chargeDefinition = new ChargeDefinition();
+    chargeDefinition.setChargeAction(Action.WRITE_OFF.name());
+    chargeDefinition.setIdentifier(WRITE_OFF_ID);
+    chargeDefinition.setName(WRITE_OFF_NAME);
+    chargeDefinition.setDescription(WRITE_OFF_NAME);
+    chargeDefinition.setFromAccountDesignator(AccountDesignators.EXPENSE);
+    chargeDefinition.setToAccountDesignator(AccountDesignators.GENERAL_LOSS_ALLOWANCE);
+    chargeDefinition.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_DESIGNATOR.getValue());
+    chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
+    chargeDefinition.setAmount(BigDecimal.valueOf(100));
+    chargeDefinition.setReadOnly(true);
+    final ScheduledAction scheduledAction = new ScheduledAction(Action.WRITE_OFF, forDate);
+    return new ScheduledCharge(scheduledAction, chargeDefinition, Optional.empty());
   }
 }

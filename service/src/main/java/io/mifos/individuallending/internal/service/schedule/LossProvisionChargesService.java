@@ -29,8 +29,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
-import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PROVISION_FOR_LOSSES_ID;
-import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PROVISION_FOR_LOSSES_NAME;
+import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.*;
 
 /**
  * @author Myrle Krantz
@@ -88,14 +87,12 @@ public class LossProvisionChargesService {
       final BigDecimal percentProvision,
       final Action action) {
     final ChargeDefinition ret = new ChargeDefinition();
-    ret.setChargeAction(Action.WRITE_OFF.name());
+    ret.setChargeAction(action.name());
     ret.setIdentifier(PROVISION_FOR_LOSSES_ID);
     ret.setName(PROVISION_FOR_LOSSES_NAME);
     ret.setDescription(PROVISION_FOR_LOSSES_NAME);
     ret.setFromAccountDesignator(AccountDesignators.PRODUCT_LOSS_ALLOWANCE);
-    ret.setAccrualAccountDesignator(AccountDesignators.GENERAL_LOSS_ALLOWANCE);
-    ret.setAccrueAction(action.name());
-    ret.setToAccountDesignator(AccountDesignators.GENERAL_EXPENSE);
+    ret.setToAccountDesignator(AccountDesignators.GENERAL_LOSS_ALLOWANCE);
     ret.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_DESIGNATOR.getValue());
     ret.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
     ret.setAmount(percentProvision.negate());

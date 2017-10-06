@@ -106,7 +106,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
         AccountDesignators.GENERAL_LOSS_ALLOWANCE,
         AccountType.EXPENSE.name()));
     individualLendingRequiredAccounts.add(new RequiredAccountAssignment(
-        AccountDesignators.GENERAL_EXPENSE,
+        AccountDesignators.EXPENSE,
         AccountType.EXPENSE.name()));
     individualLendingRequiredAccounts.add(new RequiredAccountAssignment(
         AccountDesignators.ENTRY,

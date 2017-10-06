@@ -48,8 +48,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
@@ -146,7 +144,6 @@ public class IndividualLoanCommandHandler {
     final PaymentBuilder paymentBuilder
         = openPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
-    final LocalDateTime today = today();
 
     final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
         designatorToAccountIdentifierMapper,
@@ -167,7 +164,7 @@ public class IndividualLoanCommandHandler {
     customerCase.setCurrentState(Case.State.PENDING.name());
     caseRepository.save(customerCase);
 
-    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getCommand().getCreatedOn());
   }
 
   @Transactional
@@ -193,7 +190,6 @@ public class IndividualLoanCommandHandler {
     final PaymentBuilder paymentBuilder
         = denyPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
-    final LocalDateTime today = today();
 
     final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
         designatorToAccountIdentifierMapper,
@@ -213,7 +209,7 @@ public class IndividualLoanCommandHandler {
     customerCase.setCurrentState(Case.State.CLOSED.name());
     caseRepository.save(customerCase);
 
-    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getCommand().getCreatedOn());
   }
 
   static class InterruptedInALambdaException extends RuntimeException {
@@ -288,8 +284,6 @@ public class IndividualLoanCommandHandler {
     final PaymentBuilder paymentBuilder =
         approvePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
-    final LocalDateTime today = today();
-
     final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
         designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
@@ -309,7 +303,7 @@ public class IndividualLoanCommandHandler {
     customerCase.setCurrentState(Case.State.APPROVED.name());
     caseRepository.save(customerCase);
 
-    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getCommand().getCreatedOn());
   }
 
   @Transactional
@@ -335,8 +329,6 @@ public class IndividualLoanCommandHandler {
     final PaymentBuilder paymentBuilder =
         disbursePaymentBuilderService.getPaymentBuilder(dataContextOfAction, disbursalAmount, CostComponentService.today(), runningBalances);
 
-    final LocalDateTime today = today();
-
     final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
         designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
@@ -355,7 +347,7 @@ public class IndividualLoanCommandHandler {
     //Only move to new state if book charges command was accepted.
     if (Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState()) != Case.State.ACTIVE) {
       final LocalDateTime endOfTerm
-          = ScheduledActionHelpers.getRoughEndDate(today.toLocalDate(), dataContextOfAction.getCaseParameters())
+          = ScheduledActionHelpers.getRoughEndDate(DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate(), dataContextOfAction.getCaseParameters())
           .atTime(LocalTime.MIDNIGHT);
       customerCase.setEndOfTerm(endOfTerm);
       customerCase.setCurrentState(Case.State.ACTIVE.name());
@@ -370,7 +362,7 @@ public class IndividualLoanCommandHandler {
     dataContextOfAction.getCaseParametersEntity().setPaymentSize(newLoanPaymentSize);
     caseParametersRepository.save(dataContextOfAction.getCaseParametersEntity());
 
-    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getCommand().getCreatedOn());
   }
 
   @Transactional
@@ -447,8 +439,6 @@ public class IndividualLoanCommandHandler {
             command.getCommand().getPaymentSize(),
             DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate(), runningBalances);
 
-    final LocalDateTime today = today();
-
     final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
         designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
@@ -467,7 +457,7 @@ public class IndividualLoanCommandHandler {
     //TODO: Should this be more sophisticated?  Take into account what the payment amount was?
     markCaseNotLate(dataContextOfAction);
 
-    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getCommand().getCreatedOn());
   }
 
   @Transactional
@@ -590,8 +580,6 @@ public class IndividualLoanCommandHandler {
             command.getCommand().getPaymentSize(),
             DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate(), runningBalances);
 
-    final LocalDateTime today = today();
-
     final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
         designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
@@ -610,7 +598,7 @@ public class IndividualLoanCommandHandler {
     customerCase.setCurrentState(Case.State.CLOSED.name());
     caseRepository.save(customerCase);
 
-    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getCommand().getCreatedOn());
   }
 
   @Transactional
@@ -634,8 +622,6 @@ public class IndividualLoanCommandHandler {
     final PaymentBuilder paymentBuilder =
         closePaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
-    final LocalDateTime today = today();
-
     final Optional<String> transactionIdentifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
         designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
@@ -647,7 +633,7 @@ public class IndividualLoanCommandHandler {
     customerCase.setCurrentState(Case.State.CLOSED.name());
     caseRepository.save(customerCase);
 
-    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getCommand().getCreatedOn());
   }
 
   @Transactional
@@ -671,8 +657,6 @@ public class IndividualLoanCommandHandler {
     final PaymentBuilder paymentBuilder =
         recoverPaymentBuilderService.getPaymentBuilder(dataContextOfAction, BigDecimal.ZERO, CostComponentService.today(), runningBalances);
 
-    final LocalDateTime today = today();
-
     final Optional<String> transactionUniqueifier = accountingAdapter.bookCharges(paymentBuilder.getBalanceAdjustments(),
         designatorToAccountIdentifierMapper,
         command.getCommand().getNote(),
@@ -691,7 +675,7 @@ public class IndividualLoanCommandHandler {
     customerCase.setCurrentState(Case.State.CLOSED.name());
     caseRepository.save(customerCase);
 
-    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(today));
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getCommand().getCreatedOn());
   }
 
   private Map<String, BigDecimal> getRequestedChargeAmounts(final @Nullable List<CostComponent> costComponents) {
@@ -745,9 +729,5 @@ public class IndividualLoanCommandHandler {
   private void markCaseNotLate(
       final DataContextOfAction dataContextOfAction) {
     lateCaseRepository.deleteByCaseId(dataContextOfAction.getCustomerCaseEntity().getId());
-  }
-
-  private static LocalDateTime today() {
-    return LocalDate.now(Clock.systemUTC()).atStartOfDay();
   }
 }

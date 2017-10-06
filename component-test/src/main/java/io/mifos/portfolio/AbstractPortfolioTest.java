@@ -56,7 +56,6 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 import java.math.BigDecimal;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -192,40 +191,41 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     return caseInstance;
   }
 
-  void checkStateTransfer(final String productIdentifier,
-                          final String caseIdentifier,
-                          final Action action,
-                          final List<AccountAssignment> oneTimeAccountAssignments,
-                          final String event,
-                          final Case.State nextState) throws InterruptedException {
+  void checkStateTransfer(
+      final String productIdentifier,
+      final String caseIdentifier,
+      final Action action,
+      final LocalDateTime actionDateTime,
+      final List<AccountAssignment> oneTimeAccountAssignments,
+      final String event,
+      final Case.State nextState) throws InterruptedException {
     checkStateTransfer(
         productIdentifier,
         caseIdentifier,
         action,
-        LocalDateTime.now(Clock.systemUTC()),
+        actionDateTime,
         oneTimeAccountAssignments,
         BigDecimal.ZERO,
         event,
-        midnightToday(),
         nextState);
   }
 
-  void checkStateTransfer(final String productIdentifier,
-                          final String caseIdentifier,
-                          final Action action,
-                          final LocalDateTime actionDateTime,
-                          final List<AccountAssignment> oneTimeAccountAssignments,
-                          final BigDecimal paymentSize,
-                          final String event,
-                          final LocalDateTime eventDateTime,
-                          final Case.State nextState) throws InterruptedException {
+  void checkStateTransfer(
+      final String productIdentifier,
+      final String caseIdentifier,
+      final Action action,
+      final LocalDateTime actionDateTime,
+      final List<AccountAssignment> oneTimeAccountAssignments,
+      final BigDecimal paymentSize,
+      final String event,
+      final Case.State nextState) throws InterruptedException {
     final Command command = new Command();
     command.setOneTimeAccountAssignments(oneTimeAccountAssignments);
     command.setPaymentSize(paymentSize);
     command.setCreatedOn(DateConverter.toIsoString(actionDateTime));
     portfolioManager.executeCaseCommand(productIdentifier, caseIdentifier, action.name(), command);
 
-    Assert.assertTrue(eventRecorder.wait(event, new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(eventDateTime))));
+    Assert.assertTrue(eventRecorder.wait(event, new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, DateConverter.toIsoString(actionDateTime))));
 
     final Case customerCase = portfolioManager.getCase(productIdentifier, caseIdentifier);
     Assert.assertEquals(nextState.name(), customerCase.getCurrentState());
@@ -311,6 +311,13 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
     final AccountAssignment entryAccountAssignment = new AccountAssignment();
     entryAccountAssignment.setDesignator(AccountDesignators.ENTRY);
     entryAccountAssignment.setAccountIdentifier(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER);
+    return entryAccountAssignment;
+  }
+
+  AccountAssignment assignExpenseToGeneralExpense() {
+    final AccountAssignment entryAccountAssignment = new AccountAssignment();
+    entryAccountAssignment.setDesignator(AccountDesignators.EXPENSE);
+    entryAccountAssignment.setAccountIdentifier(AccountingFixture.GENERAL_EXPENSE_ACCOUNT_IDENTIFIER);
     return entryAccountAssignment;
   }
 

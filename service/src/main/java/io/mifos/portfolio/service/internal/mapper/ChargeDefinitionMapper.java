@@ -77,7 +77,7 @@ public class ChargeDefinitionMapper {
     ret.setFromAccountDesignator(from.getFromAccountDesignator());
     ret.setAccrualAccountDesignator(from.getAccrualAccountDesignator());
     ret.setToAccountDesignator(from.getToAccountDesignator());
-    ret.setReadOnly(Optional.ofNullable(from.getReadOnly()).orElseGet(() -> readOnlyLegacyMapper(from.getIdentifier())));
+    ret.setReadOnly(Optional.ofNullable(from.getReadOnly()).orElse(false));
     if (from.getSegmentSet() != null && from.getFromSegment() != null && from.getToSegment() != null) {
       ret.setForSegmentSet(from.getSegmentSet());
       ret.setFromSegment(from.getFromSegment());
@@ -86,29 +86,6 @@ public class ChargeDefinitionMapper {
     ret.setChargeOnTop(from.getOnTop());
 
     return ret;
-  }
-
-  private static Boolean readOnlyLegacyMapper(final String identifier) {
-    switch (identifier) {
-      case INTEREST_ID:
-        return false;
-      case ALLOW_FOR_WRITE_OFF_ID:
-        return false;
-      case LATE_FEE_ID:
-        return true;
-      case DISBURSEMENT_FEE_ID:
-        return false;
-      case DISBURSE_PAYMENT_ID:
-        return false;
-      case LOAN_ORIGINATION_FEE_ID:
-        return true;
-      case PROCESSING_FEE_ID:
-        return true;
-      case REPAY_PRINCIPAL_ID:
-        return false;
-      default:
-        return false;
-    }
   }
 
   private static String proportionalToLegacyMapper(final ChargeDefinitionEntity from,

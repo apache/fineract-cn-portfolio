@@ -180,20 +180,6 @@ public class AccountingAdapter {
         .map(DateConverter::fromIsoString);
   }
 
-  public Optional<LocalDateTime> getDateOfMostRecentEntryContainingMessage(
-      final String accountIdentifier,
-      final String message) {
-
-    final Account account = ledgerManager.findAccount(accountIdentifier);
-    final LocalDateTime accountCreatedOn = DateConverter.fromIsoString(account.getCreatedOn());
-    final DateRange fromAccountCreationUntilNow = oneSidedDateRange(accountCreatedOn.toLocalDate());
-
-    return ledgerManager.fetchAccountEntriesStream(accountIdentifier, fromAccountCreationUntilNow.toString(), message, "DESC")
-        .findFirst()
-        .map(AccountEntry::getTransactionDate)
-        .map(DateConverter::fromIsoString);
-  }
-
   public BigDecimal sumMatchingEntriesSinceDate(final String accountIdentifier, final LocalDate startDate, final String message)
   {
     final DateRange fromLastPaymentUntilNow = oneSidedDateRange(startDate);
@@ -245,7 +231,7 @@ public class AccountingAdapter {
         generatedLedger.setName(ledgerIdentifer.getIdentifier());
       }
     }
-    final boolean ledgerCreationDetected = expectation.waitForOccurrence(5, TimeUnit.SECONDS);
+    final boolean ledgerCreationDetected = expectation.waitForOccurrence(10, TimeUnit.SECONDS);
     if (!ledgerCreationDetected)
       logger.warn("Waited 5 seconds for creation of ledger '{}', but it was not detected. This could cause subsequent " +
               "account creations to fail. Is there something wrong with the accounting service? Is ActiveMQ setup properly?",

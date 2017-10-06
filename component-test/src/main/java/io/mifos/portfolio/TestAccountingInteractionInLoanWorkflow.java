@@ -23,9 +23,7 @@ import io.mifos.core.api.util.ApiFactory;
 import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
-import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
-import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
-import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
+import io.mifos.individuallending.api.v1.domain.product.*;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
@@ -41,14 +39,15 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Clock;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static io.mifos.portfolio.Fixture.MINOR_CURRENCY_UNIT_DIGITS;
 
@@ -78,6 +77,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private BigDecimal interestAccrued = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
   private BigDecimal nonLateFees = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
   private BigDecimal lateFees = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
+  private BigDecimal productLossAllowance = BigDecimal.ZERO.setScale(MINOR_CURRENCY_UNIT_DIGITS, RoundingMode.HALF_EVEN);
 
 
   @Before
@@ -235,14 +235,12 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS));
 
     int week = 0;
-    final List<Payment> payments = new ArrayList<>();
     while (expectedCurrentPrincipal.compareTo(BigDecimal.ZERO) > 0) {
       logger.info("Simulating week {}. Expected current principal {}.", week, expectedCurrentPrincipal);
       step6CalculateInterestAndCheckForLatenessForWeek(today, week);
       final BigDecimal interestAccruedBeforePayment = interestAccrued;
       final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today.plusDays((week+1)*7));
       final Payment payment = step7PaybackPartialAmount(nextRepaymentAmount, today.plusDays((week + 1) * 7), BigDecimal.ZERO);
-      payments.add(payment);
       final BigDecimal interestAccrual = payment.getBalanceAdjustments().remove(AccountDesignators.INTEREST_ACCRUAL); //Don't compare these with planned payment.
       final BigDecimal customerLoanInterest = payment.getBalanceAdjustments().remove(AccountDesignators.CUSTOMER_LOAN_INTEREST);
       Assert.assertEquals("week " + week, interestAccrual.negate(), customerLoanInterest);
@@ -284,7 +282,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
             today,
             (week * 7) + 1,
             (week + 1) * 7 + 2,
-            8,
+            7,
             lateFee);
         final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today.plusDays((week + 1) * 7 + 2));
         step7PaybackPartialAmount(nextRepaymentAmount, today.plusDays((week + 1) * 7 + 2), lateFee);
@@ -302,6 +300,38 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     }
 
     step8Close(DateConverter.fromIsoString(plannedPayments.get(plannedPayments.size()-1).getPayment().getDate()));
+  }
+
+  @Test
+  public void workflowTerminatingInWriteOff() throws InterruptedException {
+    final LocalDateTime today = midnightToday();
+
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase(today);
+    step4ApproveCase(today);
+
+    step5Disburse(
+        BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS),
+        today,
+        UPPER_RANGE_DISBURSEMENT_FEE_ID, BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS));
+
+    final BigDecimal lateFee = BigDecimal.valueOf(15_36, MINOR_CURRENCY_UNIT_DIGITS); //??? TODO: check the late fee value.
+    step6CalculateInterestAndCheckForLatenessForRangeOfDays(
+        today,
+        1,
+        8,
+        7,
+        lateFee);
+    step6ICalculateInterestAndLossAllowancesForLateLoanForRangeOfDays(
+        today,
+        new LossProvisionStep(0, BigDecimal.valueOf(1)),
+        new LossProvisionStep(1, BigDecimal.valueOf(9)),
+        new LossProvisionStep(30, BigDecimal.valueOf(30)),
+        new LossProvisionStep(60, BigDecimal.valueOf(60))
+    );
+
+    step8IWriteOff(today.plusDays(68));
   }
 
   private BigDecimal findNextRepaymentAmount(
@@ -371,6 +401,15 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     portfolioManager.enableProduct(product.getIdentifier(), true);
     Assert.assertTrue(this.eventRecorder.wait(EventConstants.PUT_PRODUCT_ENABLE, product.getIdentifier()));
+
+    final List<LossProvisionStep> lossProvisionSteps = Arrays.asList(
+        new LossProvisionStep(0, BigDecimal.ONE),
+        new LossProvisionStep(1, BigDecimal.valueOf(9)),
+        new LossProvisionStep(30, BigDecimal.valueOf(30)),
+        new LossProvisionStep(60, BigDecimal.valueOf(60)));
+    final LossProvisionConfiguration lossProvisionConfiguration = new LossProvisionConfiguration(lossProvisionSteps);
+    individualLending.changeLossProvisionConfiguration(product.getIdentifier(), lossProvisionConfiguration);
+    Assert.assertTrue(this.eventRecorder.wait(IndividualLoanEventConstants.PUT_LOSS_PROVISION_STEPS, product.getIdentifier()));
   }
 
   private void step2CreateCase() throws InterruptedException {
@@ -399,6 +438,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.OPEN,
+        forDateTime,
         Collections.singletonList(assignEntryToTeller()),
         IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);
@@ -421,6 +461,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DENY,
+        forDateTime,
         Collections.singletonList(assignEntryToTeller()),
         IndividualLoanEventConstants.DENY_INDIVIDUALLOAN_CASE,
         Case.State.CLOSED);
@@ -447,6 +488,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.APPROVE,
+        forDateTime,
         Collections.singletonList(assignEntryToTeller()),
         IndividualLoanEventConstants.APPROVE_INDIVIDUALLOAN_CASE,
         Case.State.APPROVED);
@@ -478,6 +520,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       final String whichDisbursementFee,
       final BigDecimal disbursementFeeAmount) throws InterruptedException {
     logger.info("step5Disburse  '{}'", amount);
+    final BigDecimal provisionForLosses = amount.multiply(BigDecimal.valueOf(0.01)).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
     checkCostComponentForActionCorrect(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -494,30 +537,32 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DISBURSE,
-        LocalDateTime.now(Clock.systemUTC()),
+        forDateTime,
         Collections.singletonList(assignEntryToTeller()),
         amount,
         IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE,
-        midnightToday(),
         Case.State.ACTIVE);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
-        Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
+        Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.MARK_IN_ARREARS, Action.WRITE_OFF, Action.CLOSE);
 
     final Set<Debtor> debtors = new HashSet<>();
     debtors.add(new Debtor(customerLoanPrincipalIdentifier, amount.toPlainString()));
     debtors.add(new Debtor(customerLoanFeeIdentifier, PROCESSING_FEE_AMOUNT.add(disbursementFeeAmount).add(LOAN_ORIGINATION_FEE_AMOUNT).toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER, provisionForLosses.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toString()));
     creditors.add(new Creditor(AccountingFixture.PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER, PROCESSING_FEE_AMOUNT.toPlainString()));
     creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, disbursementFeeAmount.toPlainString()));
     creditors.add(new Creditor(AccountingFixture.LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER, LOAN_ORIGINATION_FEE_AMOUNT.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER, provisionForLosses.toPlainString()));
     AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE);
 
     expectedCurrentPrincipal = expectedCurrentPrincipal.add(amount);
     interestAccrued = BigDecimal.ZERO;
     nonLateFees = nonLateFees.add(disbursementFeeAmount).add(PROCESSING_FEE_AMOUNT).add(LOAN_ORIGINATION_FEE_AMOUNT);
     lateFees = BigDecimal.ZERO;
+    productLossAllowance = provisionForLosses;
 
     updateBalanceMock();
   }
@@ -581,8 +626,14 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         .multiply(dailyInterestRate)
         .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
 
+    final BigDecimal provisionForLosses = calculatedLateFee.equals(BigDecimal.ZERO) ?
+        BigDecimal.ZERO :
+        expectedCurrentPrincipal.multiply(BigDecimal.valueOf(0.09))
+            .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
+
     logger.info("calculatedInterest '{}'", calculatedInterest);
     logger.info("calculatedLateFee '{}'", calculatedLateFee);
+    logger.info("provisionForLosses '{}'", provisionForLosses);
 
 
     checkCostComponentForActionCorrect(
@@ -602,7 +653,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
           null,
           null,
           forDateTime,
-          MINOR_CURRENCY_UNIT_DIGITS);
+          MINOR_CURRENCY_UNIT_DIGITS,
+          new CostComponent(ChargeIdentifiers.PROVISION_FOR_LOSSES_ID, provisionForLosses.negate()));
     }
     final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
     portfolioBeatListener.publishBeat(interestBeat);
@@ -614,6 +666,10 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.APPLY_INTEREST_INDIVIDUALLOAN_CASE,
         new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), midnightTimeStamp)));
+
+    if (calculatedLateFee.compareTo(BigDecimal.ZERO) != 0)
+      Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.MARK_LATE_INDIVIDUALLOAN_CASE,
+          new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), midnightTimeStamp)));
 
 
     final Case customerCaseAfterStateChange = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
@@ -641,11 +697,17 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       lateFeeDebtors.add(new Debtor(
           customerLoanFeeIdentifier,
           calculatedLateFee.toPlainString()));
+      lateFeeDebtors.add(new Debtor(
+          AccountingFixture.GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER,
+          provisionForLosses.toPlainString()));
 
       final Set<Creditor> lateFeeCreditors = new HashSet<>();
       lateFeeCreditors.add(new Creditor(
           AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER,
           calculatedLateFee.toPlainString()));
+      lateFeeCreditors.add(new Creditor(
+          AccountingFixture.PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER,
+          provisionForLosses.toPlainString()));
       AccountingFixture.verifyTransfer(
           ledgerManager,
           lateFeeDebtors,
@@ -654,11 +716,150 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
           customerCase.getIdentifier(),
           Action.MARK_LATE);
       lateFees = lateFees.add(calculatedLateFee);
+      productLossAllowance = productLossAllowance.add(provisionForLosses);
     }
     interestAccrued = interestAccrued.add(calculatedInterest);
 
     updateBalanceMock();
     logger.info("Completed step6CalculateInterestAccrualAndCheckForLateness");
+  }
+
+  private void step6ICalculateInterestAndLossAllowancesForLateLoanForRangeOfDays(
+      final LocalDateTime referenceDate,
+      final LossProvisionStep... lossProvisionSteps) throws InterruptedException
+  {
+    try {
+      final Map<Integer, BigDecimal> lossProvisionConfiguration = Stream.of(lossProvisionSteps)
+          .collect(Collectors.toMap(LossProvisionStep::getDaysLate, LossProvisionStep::getPercentProvision));
+
+      IntStream.rangeClosed(9, 67)
+          .forEach(day -> {
+            try {
+              final int daysLate = day - 7;
+              step6ICalculateInterestAndLossAllowancesForLateLoan(
+                  referenceDate.plusDays(day),
+                  daysLate,
+                  lossProvisionConfiguration.get(daysLate));
+            } catch (InterruptedException e) {
+              throw new RuntimeException(e);
+            }
+          });
+    }
+    catch (RuntimeException e) {
+      final Throwable cause = e.getCause();
+      if (cause != null && cause.getClass().isAssignableFrom(InterruptedException.class))
+        throw (InterruptedException)e.getCause();
+      else
+        throw e;
+    }
+  }
+
+  private void step6ICalculateInterestAndLossAllowancesForLateLoan(
+      final LocalDateTime forDateTime,
+      final int daysLate,
+      final @Nullable BigDecimal percentProvision) throws InterruptedException
+  {
+    logger.info("step6ICalculateInterestAndLossAllowancesForLateLoan  '{}'", forDateTime);
+    final String beatIdentifier = "alignment0";
+    final String midnightTimeStamp = DateConverter.toIsoString(forDateTime);
+
+    final BigDecimal dailyInterestRate = Fixture.INTEREST_RATE
+        .divide(BigDecimal.valueOf(100), 8, BigDecimal.ROUND_HALF_EVEN)
+        .divide(Fixture.ACCRUAL_PERIODS, 8, BigDecimal.ROUND_HALF_EVEN);
+
+    final BigDecimal calculatedInterest = expectedCurrentPrincipal
+        .multiply(dailyInterestRate)
+        .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
+
+    final BigDecimal provisionForLosses = percentProvision == null ?
+        BigDecimal.ZERO :
+        expectedCurrentPrincipal.multiply(percentProvision.divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_HALF_EVEN))
+            .setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
+
+    logger.info("calculatedInterest '{}'", calculatedInterest);
+    logger.info("percentProvision '{}'", percentProvision);
+    logger.info("provisionForLosses '{}'", provisionForLosses);
+
+
+    checkCostComponentForActionCorrect(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.APPLY_INTEREST,
+        null,
+        null,
+        forDateTime,
+        MINOR_CURRENCY_UNIT_DIGITS);
+
+    checkCostComponentForActionCorrect(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.MARK_IN_ARREARS,
+        null,
+        BigDecimal.valueOf(daysLate),
+        forDateTime,
+        MINOR_CURRENCY_UNIT_DIGITS,
+        new CostComponent(ChargeIdentifiers.PROVISION_FOR_LOSSES_ID, provisionForLosses.negate()));
+
+    final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
+    portfolioBeatListener.publishBeat(interestBeat);
+    Assert.assertTrue(this.eventRecorder.wait(io.mifos.rhythm.spi.v1.events.EventConstants.POST_PUBLISHEDBEAT,
+        new BeatPublishEvent(EventConstants.DESTINATION, beatIdentifier, midnightTimeStamp)));
+
+    Assert.assertTrue(this.eventRecorder.wait(IndividualLoanEventConstants.CHECK_LATE_INDIVIDUALLOAN_CASE,
+        new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), midnightTimeStamp)));
+
+    Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.APPLY_INTEREST_INDIVIDUALLOAN_CASE,
+        new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), midnightTimeStamp)));
+
+    if (percentProvision != null) {
+      Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.MARK_IN_ARREARS_INDIVIDUALLOAN_CASE,
+          new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), midnightTimeStamp)));
+    }
+
+
+    final Case customerCaseAfterStateChange = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
+    Assert.assertEquals(customerCaseAfterStateChange.getCurrentState(), Case.State.ACTIVE.name());
+
+    final Set<Debtor> debtors = new HashSet<>();
+    debtors.add(new Debtor(
+        customerLoanInterestIdentifier,
+        calculatedInterest.toPlainString()));
+
+    final Set<Creditor> creditors = new HashSet<>();
+    creditors.add(new Creditor(
+        AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER,
+        calculatedInterest.toPlainString()));
+    AccountingFixture.verifyTransfer(
+        ledgerManager,
+        debtors,
+        creditors,
+        product.getIdentifier(),
+        customerCase.getIdentifier(), Action.APPLY_INTEREST);
+
+    if (percentProvision != null) {
+      final Set<Debtor> lateFeeDebtors = new HashSet<>();
+      lateFeeDebtors.add(new Debtor(
+          AccountingFixture.GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER,
+          provisionForLosses.toPlainString()));
+
+      final Set<Creditor> lateFeeCreditors = new HashSet<>();
+      lateFeeCreditors.add(new Creditor(
+          AccountingFixture.PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER,
+          provisionForLosses.toPlainString()));
+      AccountingFixture.verifyTransfer(
+          ledgerManager,
+          lateFeeDebtors,
+          lateFeeCreditors,
+          product.getIdentifier(),
+          customerCase.getIdentifier(),
+          Action.MARK_IN_ARREARS);
+      productLossAllowance = productLossAllowance.add(provisionForLosses);
+    }
+    interestAccrued = interestAccrued.add(calculatedInterest);
+
+    updateBalanceMock();
+    logger.info("Completed step6ICalculateInterestAndLossAllowancesForLateLoan");
+
   }
 
   private Payment step7PaybackPartialAmount(
@@ -689,10 +890,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         Collections.singletonList(assignEntryToTeller()),
         amount,
         IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE,
-        midnightToday(),
         Case.State.ACTIVE); //Close has to be done explicitly.
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
-        Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
+        Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.MARK_IN_ARREARS, Action.WRITE_OFF, Action.CLOSE);
 
     final Set<Debtor> debtors = new HashSet<>();
     BigDecimal tellerOneDebit = principal;
@@ -736,7 +936,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private void step8Close(
       final LocalDateTime forDateTime) throws InterruptedException
   {
-    logger.info("step8Close");
+    logger.info("step8Close for '{}'", forDateTime);
 
     checkCostComponentForActionCorrect(
         product.getIdentifier(),
@@ -750,11 +950,53 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.CLOSE,
+        forDateTime,
         Collections.singletonList(assignEntryToTeller()),
         IndividualLoanEventConstants.CLOSE_INDIVIDUALLOAN_CASE,
         Case.State.CLOSED); //Close has to be done explicitly.
 
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
+  }
+
+  private void step8IWriteOff(
+      final LocalDateTime forDateTime) throws InterruptedException {
+    logger.info("step8IWriteOff for '{}'", forDateTime);
+
+    checkCostComponentForActionCorrect(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.WRITE_OFF,
+        null,
+        null,
+        forDateTime,
+        MINOR_CURRENCY_UNIT_DIGITS,
+        new CostComponent(ChargeIdentifiers.WRITE_OFF_ID, expectedCurrentPrincipal),
+        new CostComponent(ChargeIdentifiers.INTEREST_ID, interestAccrued),
+        new CostComponent(ChargeIdentifiers.LATE_FEE_ID, lateFees));
+    checkStateTransfer(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.WRITE_OFF,
+        forDateTime,
+        Collections.singletonList(assignExpenseToGeneralExpense()),
+        IndividualLoanEventConstants.WRITE_OFF_INDIVIDUALLOAN_CASE,
+        Case.State.CLOSED); //Close has to be done explicitly.
+
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
+
+    final Set<Debtor> debtors = new HashSet<>();
+    debtors.add(new Debtor(AccountingFixture.GENERAL_EXPENSE_ACCOUNT_IDENTIFIER, expectedCurrentPrincipal.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFees.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued.toPlainString()));
+
+    final Set<Creditor> creditors = new HashSet<>();
+    creditors.add(new Creditor(AccountingFixture.GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER, expectedCurrentPrincipal.toPlainString()));
+    creditors.add(new Creditor(AccountingFixture.PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER, lateFees.add(interestAccrued).toPlainString()));
+
+    AccountingFixture.verifyTransfer(ledgerManager, debtors, creditors, product.getIdentifier(), customerCase.getIdentifier(), Action.WRITE_OFF);
+
+    productLossAllowance = BigDecimal.ZERO;
+    updateBalanceMock();
   }
 
   private void updateBalanceMock() {
@@ -765,9 +1007,12 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     AccountingFixture.mockBalance(customerLoanInterestIdentifier, interestAccrued);
     AccountingFixture.mockBalance(AccountingFixture.LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER, interestAccrued);
     AccountingFixture.mockBalance(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFees);
+    AccountingFixture.mockBalance(AccountingFixture.PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER, productLossAllowance.negate());
+    AccountingFixture.mockBalance(AccountingFixture.GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER, productLossAllowance);
     logger.info("updated currentPrincipal '{}'", expectedCurrentPrincipal);
     logger.info("updated interestAccrued '{}'", interestAccrued);
     logger.info("updated nonLateFees '{}'", nonLateFees);
     logger.info("updated lateFees '{}'", lateFees);
+    logger.info("updated productLossAllowance '{}'", productLossAllowance);
   }
 }

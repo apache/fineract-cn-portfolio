@@ -15,14 +15,10 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
-import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.schedule.LossProvisionChargesService;
-import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
 import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
-import io.mifos.individuallending.internal.service.schedule.ScheduledChargesService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nonnull;
@@ -31,44 +27,35 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * @author Myrle Krantz
  */
 @Service
-public class MarkLatePaymentBuilderService implements PaymentBuilderService {
-  private final ScheduledChargesService scheduledChargesService;
+public class MarkInArrearsPaymentBuilderService implements PaymentBuilderService {
   private final LossProvisionChargesService lossProvisionChargesService;
 
-  @Autowired
-  public MarkLatePaymentBuilderService(
-      final ScheduledChargesService scheduledChargesService,
+  public MarkInArrearsPaymentBuilderService(
       final LossProvisionChargesService lossProvisionChargesService) {
-    this.scheduledChargesService = scheduledChargesService;
     this.lossProvisionChargesService = lossProvisionChargesService;
   }
 
   @Override
   public PaymentBuilder getPaymentBuilder(
       final @Nonnull DataContextOfAction dataContextOfAction,
-      final @Nullable BigDecimal ignored,
+      final @Nullable BigDecimal bigDecimalDaysLate,
       final LocalDate forDate,
       final RunningBalances runningBalances)
   {
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
-    final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
     final int minorCurrencyUnitDigits = dataContextOfAction.getProductEntity().getMinorCurrencyUnitDigits();
-    final ScheduledAction scheduledAction = new ScheduledAction(Action.MARK_LATE, forDate);
 
     final BigDecimal loanPaymentSize = dataContextOfAction.getCaseParametersEntity().getPaymentSize();
 
-    final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(
-        productIdentifier,
-        Collections.singletonList(scheduledAction));
-    final Optional<ScheduledCharge> initialLossProvisionCharge = lossProvisionChargesService.getScheduledChargeForMarkLate(
-        dataContextOfAction, forDate);
-    initialLossProvisionCharge.ifPresent(scheduledCharges::add);
+    int daysLate = bigDecimalDaysLate == null ? 0 : bigDecimalDaysLate.intValueExact();
+
+    final List<ScheduledCharge> scheduledCharges = lossProvisionChargesService.getScheduledChargeForMarkInArrears(
+        dataContextOfAction, forDate, daysLate).map(Collections::singletonList).orElse(Collections.emptyList());
 
     return CostComponentService.getCostComponentsForScheduledCharges(
         scheduledCharges,

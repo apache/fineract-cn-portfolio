@@ -17,25 +17,28 @@ package io.mifos.individuallending.internal.service.costcomponent;
 
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
+import io.mifos.individuallending.api.v1.domain.product.LossProvisionStep;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.service.LossProvisionStepService;
+import io.mifos.individuallending.internal.service.schedule.LossProvisionChargesService;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Payment;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.Matchers;
+import org.mockito.Mockito;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
+import java.math.BigDecimal;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * @author Myrle Krantz
  */
 @RunWith(Parameterized.class)
-public class AcceptPaymentBuilderServiceTest {
+public class DisbursePaymentBuilderServiceTest {
 
   @Parameterized.Parameters
   public static Collection testCases() {
@@ -45,31 +48,37 @@ public class AcceptPaymentBuilderServiceTest {
   }
 
   private static PaymentBuilderServiceTestCase simpleCase() {
-    final PaymentBuilderServiceTestCase testCase = new PaymentBuilderServiceTestCase("simple case");
-    testCase.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.balance.negate());
-    testCase.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_INTEREST, testCase.accruedInterest.negate());
-    testCase.runningBalances.adjustBalance(AccountDesignators.INTEREST_ACCRUAL, testCase.accruedInterest);
-    return testCase;
+    return new PaymentBuilderServiceTestCase("simple case");
   }
 
   private final PaymentBuilderServiceTestCase testCase;
 
-  public AcceptPaymentBuilderServiceTest(final PaymentBuilderServiceTestCase testCase) {
+  public DisbursePaymentBuilderServiceTest(final PaymentBuilderServiceTestCase testCase) {
     this.testCase = testCase;
   }
 
   @Test
   public void getPaymentBuilder() throws Exception {
+    final LossProvisionStepService lossProvisionStepsService = Mockito.mock(LossProvisionStepService.class);
+    Mockito.doReturn(Optional.of(new LossProvisionStep(0, BigDecimal.ONE))).when(lossProvisionStepsService).findByProductIdAndDaysLate(Matchers.any(), Matchers.eq(0));
+    final LossProvisionChargesService lossProvisionChargesService = new LossProvisionChargesService(lossProvisionStepsService);
     final PaymentBuilder paymentBuilder = PaymentBuilderServiceTestHarness.constructCallToPaymentBuilder(
-        AcceptPaymentBuilderService::new, testCase);
+        (scheduledChargesService) -> new DisbursePaymentBuilderService(scheduledChargesService, lossProvisionChargesService), testCase);
 
-    final Payment payment = paymentBuilder.buildPayment(Action.ACCEPT_PAYMENT, Collections.emptySet(), testCase.forDate.toLocalDate());
+    final Payment payment = paymentBuilder.buildPayment(Action.DISBURSE, Collections.emptySet(), testCase.forDate.toLocalDate());
     Assert.assertNotNull(payment);
     final Map<String, CostComponent> mappedCostComponents = payment.getCostComponents().stream()
         .collect(Collectors.toMap(CostComponent::getChargeIdentifier, x -> x));
 
-    Assert.assertEquals(testCase.accruedInterest, mappedCostComponents.get(ChargeIdentifiers.INTEREST_ID).getAmount());
-    Assert.assertEquals(testCase.accruedInterest, mappedCostComponents.get(ChargeIdentifiers.REPAY_INTEREST_ID).getAmount());
-    Assert.assertEquals(testCase.paymentSize.subtract(testCase.accruedInterest), mappedCostComponents.get(ChargeIdentifiers.REPAY_PRINCIPAL_ID).getAmount());
+    Assert.assertEquals(
+        testCase.paymentSize,
+        mappedCostComponents.get(ChargeIdentifiers.DISBURSE_PAYMENT_ID).getAmount());
+    Assert.assertEquals(
+        testCase.paymentSize.multiply(BigDecimal.valueOf(1, 2)).setScale(2, BigDecimal.ROUND_HALF_EVEN),
+        paymentBuilder.getBalanceAdjustments().get(AccountDesignators.PRODUCT_LOSS_ALLOWANCE));
+    Assert.assertEquals(
+        testCase.paymentSize.multiply(BigDecimal.valueOf(1, 2)).negate().setScale(2, BigDecimal.ROUND_HALF_EVEN),
+        paymentBuilder.getBalanceAdjustments().get(AccountDesignators.GENERAL_LOSS_ALLOWANCE));
   }
+
 }

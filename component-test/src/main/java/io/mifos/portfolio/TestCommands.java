@@ -20,7 +20,6 @@ import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.Product;
 import org.junit.Test;
 
-import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Collections;
@@ -34,57 +33,6 @@ public class TestCommands extends AbstractPortfolioTest {
   // Happy case test deleted because the case is covered in more detail in
   // TestAccountingInteractionInLoanWorkflow.
   //public void testHappyWorkflow() throws InterruptedException
-
-  @Test
-  public void testBadCustomerWorkflow() throws InterruptedException {
-    final Product product = createAndEnableProduct();
-    final Case customerCase = createCase(product.getIdentifier());
-
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN);
-
-
-    checkStateTransfer(
-        product.getIdentifier(),
-        customerCase.getIdentifier(),
-        Action.OPEN,
-        Collections.singletonList(assignEntryToTeller()),
-        OPEN_INDIVIDUALLOAN_CASE,
-        Case.State.PENDING);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, Action.DENY);
-
-
-    checkStateTransfer(
-        product.getIdentifier(),
-        customerCase.getIdentifier(),
-        Action.APPROVE,
-        Collections.singletonList(assignEntryToTeller()),
-        APPROVE_INDIVIDUALLOAN_CASE,
-        Case.State.APPROVED);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.DISBURSE, Action.CLOSE);
-
-
-    checkStateTransfer(
-        product.getIdentifier(),
-        customerCase.getIdentifier(),
-        Action.DISBURSE,
-        LocalDateTime.now(Clock.systemUTC()),
-        Collections.singletonList(assignEntryToTeller()),
-        BigDecimal.valueOf(2000L),
-        DISBURSE_INDIVIDUALLOAN_CASE,
-        midnightToday(),
-        Case.State.ACTIVE);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
-            Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.WRITE_OFF, Action.CLOSE);
-
-    checkStateTransfer(
-        product.getIdentifier(),
-        customerCase.getIdentifier(),
-        Action.WRITE_OFF,
-        Collections.singletonList(assignEntryToTeller()),
-        WRITE_OFF_INDIVIDUALLOAN_CASE,
-        Case.State.CLOSED);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier());
-  }
 
   @Test
   public void testApproveBeforeOpen() throws InterruptedException {
@@ -109,6 +57,7 @@ public class TestCommands extends AbstractPortfolioTest {
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.OPEN,
+        LocalDateTime.now(Clock.systemUTC()),
         Collections.singletonList(assignEntryToTeller()),
         OPEN_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);

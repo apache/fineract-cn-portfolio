@@ -119,6 +119,16 @@ public class IndividualLoanCaseCommandEventListener {
   }
 
   @JmsListener(
+      subscription = IndividualLoanEventConstants.DESTINATION,
+      destination = IndividualLoanEventConstants.DESTINATION,
+      selector = IndividualLoanEventConstants.SELECTOR_MARK_IN_ARREARS_INDIVIDUALLOAN_CASE
+  )
+  public void onMarkInArrears(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,
+                         final String payload) {
+    this.eventRecorder.event(tenant, IndividualLoanEventConstants.MARK_IN_ARREARS_INDIVIDUALLOAN_CASE, payload, IndividualLoanCommandEvent.class);
+  }
+
+  @JmsListener(
           subscription = IndividualLoanEventConstants.DESTINATION,
           destination = IndividualLoanEventConstants.DESTINATION,
           selector = IndividualLoanEventConstants.SELECTOR_WRITE_OFF_INDIVIDUALLOAN_CASE

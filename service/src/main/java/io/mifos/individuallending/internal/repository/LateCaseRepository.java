@@ -13,22 +13,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.individuallending.internal.service.costcomponent;
+package io.mifos.individuallending.internal.repository;
 
-import io.mifos.individuallending.internal.service.DataContextOfAction;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-import javax.annotation.Nonnull;
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.util.Optional;
 
 /**
  * @author Myrle Krantz
  */
-public interface PaymentBuilderService {
-
-  PaymentBuilder getPaymentBuilder(
-      final @Nonnull DataContextOfAction dataContextOfAction,
-      final BigDecimal forPaymentSize,
-      final LocalDate forDate,
-      final @Nonnull RunningBalances runningBalances);
+@Repository
+public interface LateCaseRepository extends JpaRepository<LateCaseEntity, Long> {
+  Optional<LateCaseEntity> findByCaseId(Long caseId);
+  void deleteByCaseId(Long caseId);
 }

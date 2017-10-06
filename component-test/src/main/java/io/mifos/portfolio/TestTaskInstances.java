@@ -32,6 +32,8 @@ import io.mifos.portfolio.api.v1.events.TaskInstanceEvent;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -204,6 +206,7 @@ public class TestTaskInstances extends AbstractPortfolioTest {
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.OPEN,
+        LocalDateTime.now(Clock.systemUTC()),
         Collections.singletonList(assignEntryToTeller()),
         IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);

@@ -106,7 +106,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
         AccountDesignators.GENERAL_LOSS_ALLOWANCE,
         AccountType.EXPENSE.name()));
     individualLendingRequiredAccounts.add(new RequiredAccountAssignment(
-        AccountDesignators.GENERAL_EXPENSE,
+        AccountDesignators.EXPENSE,
         AccountType.EXPENSE.name()));
     individualLendingRequiredAccounts.add(new RequiredAccountAssignment(
         AccountDesignators.ENTRY,
@@ -129,6 +129,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
   private final AcceptPaymentBuilderService acceptPaymentBuilderService;
   private final ClosePaymentBuilderService closePaymentBuilderService;
   private final MarkLatePaymentBuilderService markLatePaymentBuilderService;
+  private final MarkInArrearsPaymentBuilderService  markInArrearsBuilderService;
   private final WriteOffPaymentBuilderService writeOffPaymentBuilderService;
   private final RecoverPaymentBuilderService recoverPaymentBuilderService;
   private final AccountingAdapter accountingAdapter;
@@ -148,7 +149,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
       final AcceptPaymentBuilderService acceptPaymentBuilderService,
       final ClosePaymentBuilderService closePaymentBuilderService,
       final MarkLatePaymentBuilderService markLatePaymentBuilderService,
-      final WriteOffPaymentBuilderService writeOffPaymentBuilderService,
+      MarkInArrearsPaymentBuilderService markInArrearsBuilderService, final WriteOffPaymentBuilderService writeOffPaymentBuilderService,
       final RecoverPaymentBuilderService recoverPaymentBuilderService,
       AccountingAdapter accountingAdapter, final CustomerManager customerManager,
       final IndividualLendingCommandDispatcher individualLendingCommandDispatcher,
@@ -164,6 +165,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     this.acceptPaymentBuilderService = acceptPaymentBuilderService;
     this.closePaymentBuilderService = closePaymentBuilderService;
     this.markLatePaymentBuilderService = markLatePaymentBuilderService;
+    this.markInArrearsBuilderService = markInArrearsBuilderService;
     this.writeOffPaymentBuilderService = writeOffPaymentBuilderService;
     this.recoverPaymentBuilderService = recoverPaymentBuilderService;
     this.accountingAdapter = accountingAdapter;
@@ -329,6 +331,9 @@ public class IndividualLendingPatternFactory implements PatternFactory {
       case MARK_LATE:
         paymentBuilderService = markLatePaymentBuilderService;
         break;
+      case MARK_IN_ARREARS:
+        paymentBuilderService = markInArrearsBuilderService;
+        break;
       case WRITE_OFF:
         paymentBuilderService = writeOffPaymentBuilderService;
         break;
@@ -368,7 +373,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
       case APPROVED:
         return new HashSet<>(Arrays.asList(Action.DISBURSE, Action.CLOSE));
       case ACTIVE:
-        return new HashSet<>(Arrays.asList(Action.CLOSE, Action.ACCEPT_PAYMENT, Action.MARK_LATE, Action.APPLY_INTEREST, Action.DISBURSE, Action.WRITE_OFF));
+        return new HashSet<>(Arrays.asList(Action.CLOSE, Action.ACCEPT_PAYMENT, Action.MARK_LATE, Action.APPLY_INTEREST, Action.DISBURSE, Action.MARK_IN_ARREARS, Action.WRITE_OFF));
       case CLOSED:
         return Collections.emptySet();
       default:

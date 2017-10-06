@@ -90,14 +90,26 @@ public class RealRunningBalances implements RunningBalances {
 
   @Override
   public Optional<LocalDateTime> getStartOfTerm(final DataContextOfAction dataContextOfAction) {
-     if (!startOfTerm.isPresent()) {
-       final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+    if (!startOfTerm.isPresent()) {
+      final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
 
-       this.startOfTerm = accountingAdapter.getDateOfOldestEntryContainingMessage(
-           customerLoanPrincipalAccountIdentifier,
-           dataContextOfAction.getMessageForCharge(Action.DISBURSE));
-     }
+      this.startOfTerm = accountingAdapter.getDateOfOldestEntryContainingMessage(
+          customerLoanPrincipalAccountIdentifier,
+          dataContextOfAction.getMessageForCharge(Action.DISBURSE));
+    }
 
     return this.startOfTerm;
+  }
+
+  public BigDecimal getSumOfChargesForActionSinceDate(
+      final String accountDesignator,
+      final Action action,
+      final LocalDateTime since) {
+    final String accountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(accountDesignator);
+    return accountingAdapter.sumMatchingEntriesSinceDate(
+        accountIdentifier,
+        since.toLocalDate(),
+        dataContextOfAction.getMessageForCharge(action));
+
   }
 }

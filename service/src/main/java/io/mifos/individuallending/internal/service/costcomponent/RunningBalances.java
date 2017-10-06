@@ -50,7 +50,7 @@ public interface RunningBalances {
     this.put(AccountDesignators.LATE_FEE_ACCRUAL, positive);
     this.put(AccountDesignators.PRODUCT_LOSS_ALLOWANCE, negative);
     this.put(AccountDesignators.GENERAL_LOSS_ALLOWANCE, negative);
-    this.put(AccountDesignators.GENERAL_EXPENSE, negative);
+    this.put(AccountDesignators.EXPENSE, negative);
     this.put(AccountDesignators.ENTRY, positive);
     //TODO: derive signs from IndividualLendingPatternFactory.individualLendingRequiredAccounts instead.
   }};
@@ -87,7 +87,8 @@ public interface RunningBalances {
   }
 
   default BigDecimal getMaxDebit(final String accountDesignator, final BigDecimal amount) {
-    if (accountDesignator.equals(AccountDesignators.ENTRY))
+    if (accountDesignator.equals(AccountDesignators.ENTRY) ||
+        accountDesignator.equals(AccountDesignators.PRODUCT_LOSS_ALLOWANCE))
       return amount;
 
     if (ACCOUNT_SIGNS.get(accountDesignator).signum() == -1)
@@ -97,8 +98,12 @@ public interface RunningBalances {
   }
 
   default BigDecimal getMaxCredit(final String accountDesignator, final BigDecimal amount) {
-    if (accountDesignator.equals(AccountDesignators.ENTRY))
-      return amount; //don't guard the entry account.
+    if (accountDesignator.equals(AccountDesignators.ENTRY) ||
+        accountDesignator.equals(AccountDesignators.EXPENSE) ||
+        accountDesignator.equals(AccountDesignators.PRODUCT_LOSS_ALLOWANCE))
+      return amount;
+    //entry account can achieve a "relative" negative balance, and
+    // product loss allowance can achieve an "absolute" negative balance.
 
     if (ACCOUNT_SIGNS.get(accountDesignator).signum() != -1)
       return amount;

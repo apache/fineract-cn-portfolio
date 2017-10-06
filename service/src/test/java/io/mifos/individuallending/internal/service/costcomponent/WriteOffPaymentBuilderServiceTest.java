@@ -18,6 +18,7 @@ package io.mifos.individuallending.internal.service.costcomponent;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
+import io.mifos.individuallending.internal.service.DefaultChargeDefinitionsMocker;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Payment;
 import org.junit.Assert;
@@ -35,41 +36,42 @@ import java.util.stream.Collectors;
  * @author Myrle Krantz
  */
 @RunWith(Parameterized.class)
-public class AcceptPaymentBuilderServiceTest {
+public class WriteOffPaymentBuilderServiceTest {
 
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<PaymentBuilderServiceTestCase> ret = new ArrayList<>();
     ret.add(simpleCase());
+    //TODO: add use case for when the general loss allowance account doesn't have enough to cover the write off.
     return ret;
   }
 
   private static PaymentBuilderServiceTestCase simpleCase() {
-    final PaymentBuilderServiceTestCase testCase = new PaymentBuilderServiceTestCase("simple case");
-    testCase.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.balance.negate());
-    testCase.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_INTEREST, testCase.accruedInterest.negate());
-    testCase.runningBalances.adjustBalance(AccountDesignators.INTEREST_ACCRUAL, testCase.accruedInterest);
-    return testCase;
+    final PaymentBuilderServiceTestCase ret = new PaymentBuilderServiceTestCase("simple case");
+    ret.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, ret.balance.negate());
+    ret.runningBalances.adjustBalance(AccountDesignators.GENERAL_LOSS_ALLOWANCE, ret.balance.negate());
+    return ret;
   }
 
   private final PaymentBuilderServiceTestCase testCase;
 
-  public AcceptPaymentBuilderServiceTest(final PaymentBuilderServiceTestCase testCase) {
+  public WriteOffPaymentBuilderServiceTest(final PaymentBuilderServiceTestCase testCase) {
     this.testCase = testCase;
   }
 
   @Test
   public void getPaymentBuilder() throws Exception {
     final PaymentBuilder paymentBuilder = PaymentBuilderServiceTestHarness.constructCallToPaymentBuilder(
-        AcceptPaymentBuilderService::new, testCase);
+        (scheduledChargesService) -> new WriteOffPaymentBuilderService(DefaultChargeDefinitionsMocker.getChargeDefinitionService(Collections.emptyList())), testCase);
 
-    final Payment payment = paymentBuilder.buildPayment(Action.ACCEPT_PAYMENT, Collections.emptySet(), testCase.forDate.toLocalDate());
+    final Payment payment = paymentBuilder.buildPayment(Action.WRITE_OFF, Collections.emptySet(), testCase.forDate.toLocalDate());
     Assert.assertNotNull(payment);
     final Map<String, CostComponent> mappedCostComponents = payment.getCostComponents().stream()
         .collect(Collectors.toMap(CostComponent::getChargeIdentifier, x -> x));
 
-    Assert.assertEquals(testCase.accruedInterest, mappedCostComponents.get(ChargeIdentifiers.INTEREST_ID).getAmount());
-    Assert.assertEquals(testCase.accruedInterest, mappedCostComponents.get(ChargeIdentifiers.REPAY_INTEREST_ID).getAmount());
-    Assert.assertEquals(testCase.paymentSize.subtract(testCase.accruedInterest), mappedCostComponents.get(ChargeIdentifiers.REPAY_PRINCIPAL_ID).getAmount());
+    Assert.assertEquals(
+        testCase.balance,
+        mappedCostComponents.get(ChargeIdentifiers.WRITE_OFF_ID).getAmount());
   }
+
 }

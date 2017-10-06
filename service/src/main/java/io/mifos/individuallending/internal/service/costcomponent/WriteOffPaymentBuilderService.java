@@ -15,12 +15,15 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
+import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
+import io.mifos.individuallending.internal.service.ChargeDefinitionService;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
 import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
-import io.mifos.individuallending.internal.service.schedule.ScheduledChargesService;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,19 +31,23 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.*;
 
 /**
  * @author Myrle Krantz
  */
 @Service
 public class WriteOffPaymentBuilderService implements PaymentBuilderService {
-  private final ScheduledChargesService scheduledChargesService;
+  final private ChargeDefinitionService chargeDefinitionService;
 
   @Autowired
-  public WriteOffPaymentBuilderService(final ScheduledChargesService scheduledChargesService) {
-    this.scheduledChargesService = scheduledChargesService;
+  public WriteOffPaymentBuilderService(
+      final ChargeDefinitionService chargeDefinitionService) {
+    this.chargeDefinitionService = chargeDefinitionService;
   }
 
   @Override
@@ -51,16 +58,21 @@ public class WriteOffPaymentBuilderService implements PaymentBuilderService {
       final RunningBalances runningBalances)
   {
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
-    final String productIdentifier = dataContextOfAction.getProductEntity().getIdentifier();
     final int minorCurrencyUnitDigits = dataContextOfAction.getProductEntity().getMinorCurrencyUnitDigits();
-    final List<ScheduledAction> scheduledActions = Collections.singletonList(new ScheduledAction(Action.WRITE_OFF, forDate));
-    final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(
-        productIdentifier, scheduledActions);
+
+    final Stream<ScheduledCharge> scheduledChargesForAccruals
+        = chargeDefinitionService.getChargeDefinitionsMappedByAccrueAction(dataContextOfAction.getProductEntity().getIdentifier())
+        .values().stream().flatMap(Collection::stream)
+        .map(x -> getReverseAccrualScheduledCharge(x, forDate));
+
+    final List<ScheduledCharge> scheduledChargesForAccrualsAndWriteOff = Stream.concat(scheduledChargesForAccruals,
+        Stream.of(getScheduledChargeForWriteOff(forDate)))
+        .collect(Collectors.toList());
 
     final BigDecimal loanPaymentSize = dataContextOfAction.getCaseParametersEntity().getPaymentSize();
 
     return CostComponentService.getCostComponentsForScheduledCharges(
-        scheduledCharges,
+        scheduledChargesForAccrualsAndWriteOff,
         caseParameters.getBalanceRangeMaximum(),
         runningBalances,
         loanPaymentSize,
@@ -69,5 +81,44 @@ public class WriteOffPaymentBuilderService implements PaymentBuilderService {
         dataContextOfAction.getInterest(),
         minorCurrencyUnitDigits,
         true);
+  }
+
+
+  private ScheduledCharge getScheduledChargeForWriteOff(final LocalDate forDate) {
+
+    final ChargeDefinition chargeDefinition = new ChargeDefinition();
+    chargeDefinition.setChargeAction(Action.WRITE_OFF.name());
+    chargeDefinition.setIdentifier(WRITE_OFF_ID);
+    chargeDefinition.setName(WRITE_OFF_NAME);
+    chargeDefinition.setDescription(WRITE_OFF_NAME);
+    chargeDefinition.setFromAccountDesignator(AccountDesignators.EXPENSE);
+    chargeDefinition.setToAccountDesignator(AccountDesignators.GENERAL_LOSS_ALLOWANCE);
+    chargeDefinition.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_DESIGNATOR.getValue());
+    chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
+    chargeDefinition.setAmount(BigDecimal.valueOf(100));
+    chargeDefinition.setReadOnly(true);
+    final ScheduledAction scheduledAction = new ScheduledAction(Action.WRITE_OFF, forDate);
+    return new ScheduledCharge(scheduledAction, chargeDefinition, Optional.empty());
+  }
+
+  private ScheduledCharge getReverseAccrualScheduledCharge(
+      final ChargeDefinition accrualChargeDefinition,
+      final LocalDate forDate) {
+
+    final ChargeDefinition chargeDefinition = new ChargeDefinition();
+    chargeDefinition.setChargeAction(Action.WRITE_OFF.name());
+    chargeDefinition.setIdentifier(accrualChargeDefinition.getIdentifier());
+    chargeDefinition.setName(accrualChargeDefinition.getName());
+    chargeDefinition.setDescription(accrualChargeDefinition.getDescription());
+    chargeDefinition.setFromAccountDesignator(accrualChargeDefinition.getFromAccountDesignator());
+    chargeDefinition.setAccrualAccountDesignator(accrualChargeDefinition.getAccrualAccountDesignator());
+    chargeDefinition.setAccrueAction(accrualChargeDefinition.getAccrueAction());
+    chargeDefinition.setToAccountDesignator(AccountDesignators.PRODUCT_LOSS_ALLOWANCE);
+    chargeDefinition.setChargeMethod(accrualChargeDefinition.getChargeMethod());
+    chargeDefinition.setAmount(accrualChargeDefinition.getAmount());
+    chargeDefinition.setReadOnly(true);
+    final ScheduledAction scheduledAction = new ScheduledAction(Action.WRITE_OFF, forDate);
+    return new ScheduledCharge(scheduledAction, chargeDefinition, Optional.empty());
+
   }
 }

@@ -29,9 +29,15 @@ import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.individuallending.internal.command.ApplyInterestCommand;
 import io.mifos.individuallending.internal.command.CheckLateCommand;
+import io.mifos.individuallending.internal.command.MarkInArrearsCommand;
 import io.mifos.individuallending.internal.command.MarkLateCommand;
-import io.mifos.individuallending.internal.service.*;
+import io.mifos.individuallending.internal.repository.LateCaseEntity;
+import io.mifos.individuallending.internal.repository.LateCaseRepository;
+import io.mifos.individuallending.internal.repository.LossProvisionStepEntity;
+import io.mifos.individuallending.internal.repository.LossProvisionStepRepository;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
+import io.mifos.individuallending.internal.service.DataContextService;
+import io.mifos.individuallending.internal.service.costcomponent.RealRunningBalances;
 import io.mifos.individuallending.internal.service.schedule.Period;
 import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpers;
 import io.mifos.portfolio.api.v1.domain.Case;
@@ -53,7 +59,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -73,6 +81,8 @@ public class BeatPublishCommandHandler {
   private final ApplicationName applicationName;
   private final CommandBus commandBus;
   private final AccountingAdapter accountingAdapter;
+  private final LateCaseRepository lateCaseRepository;
+  private final LossProvisionStepRepository lossProvisionStepRepository;
 
   @Autowired
   public BeatPublishCommandHandler(
@@ -82,7 +92,9 @@ public class BeatPublishCommandHandler {
       final DataContextService dataContextService,
       final ApplicationName applicationName,
       final CommandBus commandBus,
-      final AccountingAdapter accountingAdapter) {
+      final AccountingAdapter accountingAdapter,
+      final LateCaseRepository lateCaseRepository,
+      final LossProvisionStepRepository lossProvisionStepRepository) {
     this.caseRepository = caseRepository;
     this.caseCommandRepository = caseCommandRepository;
     this.portfolioProperties = portfolioProperties;
@@ -90,6 +102,8 @@ public class BeatPublishCommandHandler {
     this.applicationName = applicationName;
     this.commandBus = commandBus;
     this.accountingAdapter = accountingAdapter;
+    this.lateCaseRepository = lateCaseRepository;
+    this.lossProvisionStepRepository = lossProvisionStepRepository;
   }
 
   @Transactional
@@ -133,30 +147,26 @@ public class BeatPublishCommandHandler {
   public IndividualLoanCommandEvent process(final CheckLateCommand command) {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
-    final LocalDateTime forTime = DateConverter.fromIsoString(command.getForTime());
+    final LocalDateTime forDateTime = DateConverter.fromIsoString(command.getForTime());
+    final LocalDate forDate = forDateTime.toLocalDate();
     final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, Collections.emptyList());
 
-    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
-        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
-    final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
-    final String customerLoanInterestAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_INTEREST);
-    final String lateFeeAccrualAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.LATE_FEE_ACCRUAL);
+    final RealRunningBalances balances = new RealRunningBalances(accountingAdapter, dataContextOfAction);
 
-    final BigDecimal currentBalance = accountingAdapter.getCurrentAccountBalance(customerLoanPrincipalAccountIdentifier);
+    final BigDecimal currentBalance = balances.getAccountBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
     if (currentBalance.compareTo(BigDecimal.ZERO) == 0) //No late fees if the current balance is zilch.
       return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
 
 
-    final LocalDateTime dateOfMostRecentDisbursement =
-        accountingAdapter.getDateOfMostRecentEntryContainingMessage(customerLoanPrincipalAccountIdentifier, dataContextOfAction.getMessageForCharge(Action.DISBURSE))
+    final LocalDateTime dateOfMostRecentDisbursement = dateOfMostRecentDisburse(dataContextOfAction.getCustomerCaseEntity().getId())
             .orElseThrow(() ->
                 ServiceException.badRequest("No last disbursal date for ''{0}.{1}'' could be determined.  " +
                     "Therefore it cannot be checked for lateness.", productIdentifier, caseIdentifier));
 
     final List<Period> repaymentPeriods = ScheduledActionHelpers.generateRepaymentPeriods(
         dateOfMostRecentDisbursement.toLocalDate(),
-        forTime.toLocalDate(),
+        forDate,
         dataContextOfAction.getCaseParameters())
         .collect(Collectors.toList());
 
@@ -167,37 +177,59 @@ public class BeatPublishCommandHandler {
         .getPaymentSize()
         .multiply(BigDecimal.valueOf(repaymentPeriodsBetweenBeginningAndToday));
 
-    final BigDecimal principalSum = accountingAdapter.sumMatchingEntriesSinceDate(
-        customerLoanPrincipalAccountIdentifier,
-        dateOfMostRecentDisbursement.toLocalDate(),
-        dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT));
-    final BigDecimal interestSum = accountingAdapter.sumMatchingEntriesSinceDate(
-        customerLoanInterestAccountIdentifier,
-        dateOfMostRecentDisbursement.toLocalDate(),
-        dataContextOfAction.getMessageForCharge(Action.ACCEPT_PAYMENT));
-    final BigDecimal paymentsSum = principalSum.add(interestSum);
-
-    final BigDecimal lateFeesAccrued = accountingAdapter.sumMatchingEntriesSinceDate(
-        lateFeeAccrualAccountIdentifier,
-        dateOfMostRecentDisbursement.toLocalDate(),
-        dataContextOfAction.getMessageForCharge(Action.MARK_LATE));
+    final BigDecimal principalPaymentSum = balances.getSumOfChargesForActionSinceDate(
+        AccountDesignators.CUSTOMER_LOAN_PRINCIPAL,
+        Action.ACCEPT_PAYMENT,
+        dateOfMostRecentDisbursement);
+    final BigDecimal interestPaymentSum = balances.getSumOfChargesForActionSinceDate(
+        AccountDesignators.CUSTOMER_LOAN_INTEREST,
+        Action.ACCEPT_PAYMENT,
+        dateOfMostRecentDisbursement);
+    final BigDecimal feesPaymentSum = balances.getSumOfChargesForActionSinceDate(
+        AccountDesignators.CUSTOMER_LOAN_FEES,
+        Action.ACCEPT_PAYMENT,
+        dateOfMostRecentDisbursement);
+    final BigDecimal lateFeesSum = balances.getSumOfChargesForActionSinceDate(
+        AccountDesignators.LATE_FEE_INCOME,
+        Action.ACCEPT_PAYMENT,
+        dateOfMostRecentDisbursement);
+    final BigDecimal paymentsSum = principalPaymentSum.add(interestPaymentSum).add(feesPaymentSum.subtract(lateFeesSum));
 
     if (paymentsSum.compareTo(expectedPaymentSum) < 0) {
-      final Optional<LocalDateTime> dateOfMostRecentLateFee = dateOfMostRecentMarkLate(dataContextOfAction.getCustomerCaseEntity().getId());
-      if (!dateOfMostRecentLateFee.isPresent() ||
-          mostRecentLateFeeIsBeforeMostRecentRepaymentPeriod(repaymentPeriods, dateOfMostRecentLateFee.get())) {
+      final Optional<LocalDateTime> dateLateSince = dateLateSince(dataContextOfAction.getCustomerCaseEntity().getId());
+      if (!dateLateSince.isPresent()) {
         commandBus.dispatch(new MarkLateCommand(productIdentifier, caseIdentifier, command.getForTime()));
+      }
+
+      if (dateLateSince.isPresent()) {
+        int daysLate;
+        try {
+          daysLate = Math.toIntExact(dateLateSince.get().until(forDateTime, ChronoUnit.DAYS)) + 1;
+        }
+        catch (ArithmeticException e) {
+          daysLate = -1;
+        }
+        if (daysLate > 1) {
+          final Optional<LossProvisionStepEntity> lossStepEntity = lossProvisionStepRepository.findByProductIdAndDaysLate(dataContextOfAction.getProductEntity().getId(), daysLate);
+          if (lossStepEntity.isPresent()) {
+            commandBus.dispatch(new MarkInArrearsCommand(productIdentifier, caseIdentifier, command.getForTime(), daysLate));
+          }
+        }
       }
     }
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
   }
 
-  private Optional<LocalDateTime> dateOfMostRecentMarkLate(final Long caseId) {
+  private Optional<LocalDateTime> dateLateSince(final Long caseId) {
+    return lateCaseRepository.findByCaseId(caseId).map(LateCaseEntity::getLateSince);
+  }
+
+  private Optional<LocalDateTime> dateOfMostRecentDisburse(final Long caseId) {
     final Pageable pageRequest = new PageRequest(0, 10, Sort.Direction.DESC, "createdOn");
     final Page<CaseCommandEntity> page = caseCommandRepository.findByCaseIdAndActionName(
         caseId,
-        Action.MARK_LATE.name(),
+        Action.DISBURSE.name(),
         pageRequest);
 
     return page.getContent().stream().findFirst().map(CaseCommandEntity::getCreatedOn);

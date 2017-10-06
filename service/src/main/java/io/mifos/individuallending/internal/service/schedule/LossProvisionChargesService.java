@@ -29,8 +29,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
 
-import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PROVISION_FOR_LOSSES_ID;
-import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PROVISION_FOR_LOSSES_NAME;
+import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.*;
 
 /**
  * @author Myrle Krantz
@@ -45,12 +44,19 @@ public class LossProvisionChargesService {
     this.lossProvisionStepService = lossProvisionStepService;
   }
 
-  public Optional<ScheduledCharge> getScheduledChargeForMarkLate(
+  public Optional<ScheduledCharge> getScheduledChargeForMarkInArrears(
       final DataContextOfAction dataContextOfAction,
       final LocalDate forDate,
       final int daysLate)
   {
-    return getScheduledLossProvisioningCharge(dataContextOfAction, forDate, daysLate, Action.MARK_LATE);
+    return getScheduledLossProvisioningCharge(dataContextOfAction, forDate, daysLate, Action.MARK_IN_ARREARS);
+  }
+
+  public Optional<ScheduledCharge> getScheduledChargeForMarkLate(
+      final DataContextOfAction dataContextOfAction,
+      final LocalDate forDate)
+  {
+    return getScheduledLossProvisioningCharge(dataContextOfAction, forDate, 1, Action.MARK_LATE);
   }
 
 
@@ -58,28 +64,23 @@ public class LossProvisionChargesService {
       final DataContextOfAction dataContextOfAction,
       final LocalDate forDate)
   {
-    return getScheduledLossProvisioningCharge(dataContextOfAction, forDate, 0, Action.DISBURSE);
+    final Optional<ScheduledCharge> ret = getScheduledLossProvisioningCharge(dataContextOfAction, forDate, 0, Action.DISBURSE);
+    ret.ifPresent(x -> x.getChargeDefinition().setProportionalTo(ChargeProportionalDesignator.REQUESTED_REPAYMENT_DESIGNATOR.getValue()));
+    return ret;
   }
 
   private Optional<ScheduledCharge> getScheduledLossProvisioningCharge(
       final DataContextOfAction dataContextOfAction,
       final LocalDate forDate,
       final int daysLate, Action action) {
-    final Optional<ChargeDefinition> optionalChargeDefinition = percentProvision(dataContextOfAction, daysLate)
+    final Optional<ChargeDefinition> optionalChargeDefinition = lossProvisionStepService.findByProductIdAndDaysLate(dataContextOfAction.getProductEntity().getId(), daysLate)
+        .map(LossProvisionStep::getPercentProvision)
         .map(percentProvision -> getLossProvisionCharge(percentProvision, action));
 
     return optionalChargeDefinition.map(chargeDefinition -> {
       final ScheduledAction scheduledAction = new ScheduledAction(action, forDate);
       return new ScheduledCharge(scheduledAction, chargeDefinition, Optional.empty());
     });
-  }
-
-  private Optional<BigDecimal> percentProvision(
-      final DataContextOfAction dataContextOfAction,
-      final int daysLate)
-  {
-    return lossProvisionStepService.findByProductIdAndDaysLate(dataContextOfAction.getProductEntity().getId(), daysLate)
-        .map(LossProvisionStep::getPercentProvision);
   }
 
   private ChargeDefinition getLossProvisionCharge(
@@ -91,11 +92,10 @@ public class LossProvisionChargesService {
     ret.setName(PROVISION_FOR_LOSSES_NAME);
     ret.setDescription(PROVISION_FOR_LOSSES_NAME);
     ret.setFromAccountDesignator(AccountDesignators.PRODUCT_LOSS_ALLOWANCE);
-    ret.setAccrualAccountDesignator(AccountDesignators.GENERAL_LOSS_ALLOWANCE);
-    ret.setToAccountDesignator(AccountDesignators.GENERAL_EXPENSE);
+    ret.setToAccountDesignator(AccountDesignators.GENERAL_LOSS_ALLOWANCE);
     ret.setProportionalTo(ChargeProportionalDesignator.PRINCIPAL_DESIGNATOR.getValue());
     ret.setChargeMethod(ChargeDefinition.ChargeMethod.PROPORTIONAL);
-    ret.setAmount(percentProvision);
+    ret.setAmount(percentProvision.negate());
     ret.setReadOnly(true);
     return ret;
   }

@@ -37,6 +37,6 @@ public interface AccountDesignators {
   String LATE_FEE_ACCRUAL = "lfa";
   String PRODUCT_LOSS_ALLOWANCE = "pa";
   String GENERAL_LOSS_ALLOWANCE = "aa";
-  String GENERAL_EXPENSE = "ge";
+  String EXPENSE = "ee";
   String ENTRY = "ey";
 }

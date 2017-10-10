@@ -268,7 +268,7 @@ public class IndividualLoanCommandHandler {
     designatorToAccountIdentifierMapper.getLedgersNeedingAccounts()
         .map(ledger ->
             new AccountAssignment(ledger.getDesignator(),
-                accountingAdapter.createAccountForLedgerAssignment(
+                accountingAdapter.createCaseAccountForLedgerAssignment(
                     dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
                     ledger)))
         .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))

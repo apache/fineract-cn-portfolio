@@ -20,6 +20,7 @@ import io.mifos.core.command.annotation.CommandHandler;
 import io.mifos.core.command.annotation.CommandLogLevel;
 import io.mifos.core.command.annotation.EventEmitter;
 import io.mifos.core.lang.ServiceException;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Product;
@@ -37,7 +38,11 @@ import io.mifos.products.spi.PatternFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -142,6 +147,8 @@ public class ProductCommandHandler {
               .findByProductId(productEntity.getIdentifier())
               .map(ChargeDefinitionMapper::map);
 
+      createAndAssignProductLossAllowanceAccountIfNecessary(productEntity, accountingAdapter);
+
       final Set<String> accountAssignmentsRequiredButNotProvided
           = AccountingAdapter.accountAssignmentsRequiredButNotProvided(accountAssignments, chargeDefinitions);
       if (!accountAssignmentsRequiredButNotProvided.isEmpty())
@@ -161,5 +168,48 @@ public class ProductCommandHandler {
     this.productRepository.save(productEntity);
 
     return changeEnablingOfProductCommand.getProductIdentifier();
+  }
+
+  static void createAndAssignProductLossAllowanceAccountIfNecessary(
+      final ProductEntity productEntity,
+      final AccountingAdapter accountingAdapter) {
+    final Map<String, ProductAccountAssignmentEntity> accountAssignmentEntityMap
+        = productEntity.getAccountAssignments().stream()
+        .collect(Collectors.toMap(ProductAccountAssignmentEntity::getDesignator, Function.identity()));
+    final Optional<ProductAccountAssignmentEntity> productLossAllowanceMapping
+        = Optional.ofNullable(accountAssignmentEntityMap.get(AccountDesignators.PRODUCT_LOSS_ALLOWANCE));
+
+    final boolean productLossAccountIsMappedToAccount = productLossAllowanceMapping
+        .map(x -> x.getType() == AccountingAdapter.IdentifierType.ACCOUNT)
+        .orElse(false);
+    if (productLossAccountIsMappedToAccount)
+      return; //Already done.
+
+    final boolean productLossAccountIsMappedToLedger = productLossAllowanceMapping
+        .map(x -> x.getType() == AccountingAdapter.IdentifierType.LEDGER)
+        .orElse(false);
+    if (productLossAccountIsMappedToLedger)
+      throw ServiceException.conflict("Not ready to enable product ''{0}''.  The account assignment for product loss allowance is mapped to a ledger.",
+          productEntity.getIdentifier());
+
+    final String loanPrincipalLedgerMapping
+        = Optional.ofNullable(accountAssignmentEntityMap.get(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL))
+        .flatMap(x -> {
+            if (x.getType() != AccountingAdapter.IdentifierType.LEDGER)
+              return Optional.empty();
+            else
+              return Optional.of(x.getIdentifier());
+        })
+        .orElseThrow(() ->
+            ServiceException.conflict("Not ready to enable product ''{0}''.  The customer loan principal account is not mapped to a ledger.",
+                productEntity.getIdentifier()));
+
+    final String accountIdentifier = accountingAdapter.createProductAccountForLedgerAssignment(
+        productEntity.getIdentifier(),
+        AccountDesignators.PRODUCT_LOSS_ALLOWANCE,
+        loanPrincipalLedgerMapping);
+
+    final AccountAssignment productLossAccountAssignment = new AccountAssignment(AccountDesignators.PRODUCT_LOSS_ALLOWANCE, accountIdentifier);
+    productEntity.getAccountAssignments().add(ProductMapper.map(productLossAccountAssignment, productEntity));
   }
 }

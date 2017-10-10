@@ -239,7 +239,40 @@ public class AccountingAdapter {
     return ledgerIdentifer.getIdentifier();
   }
 
-  public String createAccountForLedgerAssignment(final String customerIdentifier, final AccountAssignment ledgerAssignment) {
+  public String createProductAccountForLedgerAssignment(
+      final String productIdentifier,
+      final String accountDesignator,
+      final String ledgerIdentifier) {
+    final Ledger ledger = ledgerManager.findLedger(ledgerIdentifier);
+
+    final Account generatedAccount = new Account();
+    generatedAccount.setBalance(0.0);
+    generatedAccount.setType(ledger.getType());
+    generatedAccount.setState(Account.State.OPEN.name());
+    generatedAccount.setLedger(ledger.getIdentifier());
+    final Optional<String> createdAccountNumber =
+        Stream.iterate(0, i -> i + 1).limit(99999)
+            .map(i -> {
+              final String accountNumber = createProductAccountNumber(productIdentifier, accountDesignator, i);
+              generatedAccount.setIdentifier(accountNumber);
+              generatedAccount.setName(accountNumber);
+              try {
+                ledgerManager.createAccount(generatedAccount);
+                return Optional.of(accountNumber);
+              } catch (final AccountAlreadyExistsException e) {
+                logger.error("Account '{}' could not be created because it already exists.", accountNumber);
+                return Optional.<String>empty();
+              }
+            })
+            .filter(Optional::isPresent).map(Optional::get)
+            .findFirst();
+
+    return createdAccountNumber.orElseThrow(() ->
+        ServiceException.conflict("Failed to create an account for product ''{0}'' and designator ''{1}'', in ledger ''{2}''.",
+            productIdentifier, accountDesignator, ledgerIdentifier));
+  }
+
+  public String createCaseAccountForLedgerAssignment(final String customerIdentifier, final AccountAssignment ledgerAssignment) {
     final Ledger ledger = ledgerManager.findLedger(ledgerAssignment.getLedgerIdentifier());
     final AccountPage accountsOfLedger = ledgerManager.fetchAccountsOfLedger(ledger.getIdentifier(), null, null, null, null);
 
@@ -252,7 +285,7 @@ public class AccountingAdapter {
     final Optional<String> createdAccountNumber =
         Stream.iterate(guestimatedAccountIndex, i -> i + 1).limit(99999 - guestimatedAccountIndex)
         .map(i -> {
-          final String accountNumber = createAccountNumber(customerIdentifier, ledgerAssignment.getDesignator(), i);
+          final String accountNumber = createCaseAccountNumber(customerIdentifier, ledgerAssignment.getDesignator(), i);
           generatedAccount.setIdentifier(accountNumber);
           generatedAccount.setName(accountNumber);
           try {
@@ -305,7 +338,12 @@ public class AccountingAdapter {
     }
   }
 
-  private String createAccountNumber(final String customerIdentifier, final String designator, final long accountIndex) {
+  private String createProductAccountNumber(final String productIdentifier, final String designator, final long accountIndex) {
+    return StringUtils.left(productIdentifier, 22) + "." + StringUtils.left(designator, 3)
+        + "." + String.format("%05d", accountIndex);
+  }
+
+  private String createCaseAccountNumber(final String customerIdentifier, final String designator, final long accountIndex) {
     return StringUtils.left(customerIdentifier, 22) + "." + StringUtils.left(designator, 3)
             + "." + String.format("%05d", accountIndex);
   }

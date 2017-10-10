@@ -96,7 +96,7 @@ public class ProductMapper {
     return ret;
   }
 
-  private static ProductAccountAssignmentEntity map (final AccountAssignment accountAssignment,
+  public static ProductAccountAssignmentEntity map (final AccountAssignment accountAssignment,
                                                      final ProductEntity productEntity)
   {
     final ProductAccountAssignmentEntity ret = new ProductAccountAssignmentEntity();

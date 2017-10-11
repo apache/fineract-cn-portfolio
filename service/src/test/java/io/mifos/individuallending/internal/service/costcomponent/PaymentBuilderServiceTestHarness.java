@@ -15,6 +15,7 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.service.ChargeDefinitionService;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
@@ -51,6 +52,14 @@ class PaymentBuilderServiceTestHarness {
     caseParameters.setPaymentCycleTemporalUnit(ChronoUnit.MONTHS);
     caseParameters.setCreditWorthinessFactors(Collections.emptySet());
 
+    final SimulatedRunningBalances runningBalances = new SimulatedRunningBalances(testCase.startOfTerm);
+    runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.balance.negate());
+    runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_INTEREST, testCase.accruedInterest.negate());
+    runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_FEES, testCase.nonLateFees.negate());
+    runningBalances.adjustBalance(AccountDesignators.INTEREST_ACCRUAL, testCase.accruedInterest);
+
+    runningBalances.adjustBalance(AccountDesignators.GENERAL_LOSS_ALLOWANCE, testCase.generalLossAllowance.negate());
+
     final DataContextOfAction dataContextOfAction = new DataContextOfAction(
         product,
         customerCase,
@@ -60,6 +69,6 @@ class PaymentBuilderServiceTestHarness {
         dataContextOfAction,
         testCase.paymentSize,
         testCase.forDate.toLocalDate(),
-        testCase.runningBalances);
+        runningBalances);
   }
 }

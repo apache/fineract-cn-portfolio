@@ -15,7 +15,6 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
-import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.DefaultChargeDefinitionsMocker;
@@ -42,23 +41,14 @@ public class WriteOffPaymentBuilderServiceTest {
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<PaymentBuilderServiceTestCase> ret = new ArrayList<>();
-    ret.add(simpleCase());
+    ret.add(new PaymentBuilderServiceTestCase("simple case"));
     ret.add(lossProvisioningInsufficient());
     return ret;
   }
 
-  private static PaymentBuilderServiceTestCase simpleCase() {
-    final PaymentBuilderServiceTestCase ret = new PaymentBuilderServiceTestCase("simple case");
-    ret.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, ret.balance.negate());
-    ret.runningBalances.adjustBalance(AccountDesignators.GENERAL_LOSS_ALLOWANCE, ret.balance.negate());
-    return ret;
-  }
-
   private static PaymentBuilderServiceTestCase lossProvisioningInsufficient() {
-    final PaymentBuilderServiceTestCase ret = new PaymentBuilderServiceTestCase("loss provisioning insufficient");
-    ret.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, ret.balance.negate());
-    ret.runningBalances.adjustBalance(AccountDesignators.GENERAL_LOSS_ALLOWANCE, BigDecimal.ZERO);
-    return ret;
+    return new PaymentBuilderServiceTestCase("loss provisioning insufficient")
+        .generalLossAllowance(BigDecimal.ZERO);
   }
 
   private final PaymentBuilderServiceTestCase testCase;

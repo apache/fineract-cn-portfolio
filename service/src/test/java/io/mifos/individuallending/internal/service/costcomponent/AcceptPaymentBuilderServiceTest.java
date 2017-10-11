@@ -15,7 +15,6 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
-import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
@@ -25,6 +24,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,16 +40,16 @@ public class AcceptPaymentBuilderServiceTest {
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<PaymentBuilderServiceTestCase> ret = new ArrayList<>();
-    ret.add(simpleCase());
+    ret.add(new PaymentBuilderServiceTestCase("simple case"));
+    ret.add(disbursementFeesExceedFirstRepayment());
     return ret;
   }
 
-  private static PaymentBuilderServiceTestCase simpleCase() {
-    final PaymentBuilderServiceTestCase testCase = new PaymentBuilderServiceTestCase("simple case");
-    testCase.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.balance.negate());
-    testCase.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_INTEREST, testCase.accruedInterest.negate());
-    testCase.runningBalances.adjustBalance(AccountDesignators.INTEREST_ACCRUAL, testCase.accruedInterest);
-    return testCase;
+  private static PaymentBuilderServiceTestCase disbursementFeesExceedFirstRepayment() {
+    return new PaymentBuilderServiceTestCase("disbursement fees exceed first repayment")
+        .nonLateFees(BigDecimal.valueOf(200_00, 2))
+        .expectedPrincipalRepayment(BigDecimal.ZERO)
+        .expectedFeeRepayment(BigDecimal.valueOf(90_00, 2));
   }
 
   private final PaymentBuilderServiceTestCase testCase;
@@ -65,11 +65,12 @@ public class AcceptPaymentBuilderServiceTest {
 
     final Payment payment = paymentBuilder.buildPayment(Action.ACCEPT_PAYMENT, Collections.emptySet(), testCase.forDate.toLocalDate());
     Assert.assertNotNull(payment);
-    final Map<String, CostComponent> mappedCostComponents = payment.getCostComponents().stream()
-        .collect(Collectors.toMap(CostComponent::getChargeIdentifier, x -> x));
+    final Map<String, BigDecimal> mappedCostComponents = payment.getCostComponents().stream()
+        .collect(Collectors.toMap(CostComponent::getChargeIdentifier, CostComponent::getAmount));
 
-    Assert.assertEquals(testCase.accruedInterest, mappedCostComponents.get(ChargeIdentifiers.INTEREST_ID).getAmount());
-    Assert.assertEquals(testCase.accruedInterest, mappedCostComponents.get(ChargeIdentifiers.REPAY_INTEREST_ID).getAmount());
-    Assert.assertEquals(testCase.paymentSize.subtract(testCase.accruedInterest), mappedCostComponents.get(ChargeIdentifiers.REPAY_PRINCIPAL_ID).getAmount());
+    Assert.assertEquals(testCase.accruedInterest, mappedCostComponents.getOrDefault(ChargeIdentifiers.INTEREST_ID, BigDecimal.ZERO));
+    Assert.assertEquals(testCase.accruedInterest, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_INTEREST_ID, BigDecimal.ZERO));
+    Assert.assertEquals(testCase.expectedPrincipalRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_PRINCIPAL_ID, BigDecimal.ZERO));
+    //TODO: Assert.assertEquals(testCase.expectedFeeRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_FEES_ID, BigDecimal.ZERO));
   }
 }

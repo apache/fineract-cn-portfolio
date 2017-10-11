@@ -68,7 +68,7 @@ public class WriteOffPaymentBuilderServiceTest {
         .collect(Collectors.toMap(CostComponent::getChargeIdentifier, x -> x));
 
     Assert.assertEquals(
-        testCase.balance,
+        testCase.remainingPrincipal,
         mappedCostComponents.get(ChargeIdentifiers.WRITE_OFF_ID).getAmount());
   }
 }

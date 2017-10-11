@@ -24,14 +24,16 @@ class PaymentBuilderServiceTestCase {
   LocalDateTime startOfTerm = LocalDateTime.of(2015, 1, 15, 0, 0);
   LocalDateTime endOfTerm = LocalDate.of(2015, 8, 15).atStartOfDay();
   LocalDateTime forDate = startOfTerm.plusMonths(1);
-  BigDecimal paymentSize = BigDecimal.valueOf(100_00, 2);
-  BigDecimal balance = BigDecimal.valueOf(2000_00, 2);
+  BigDecimal configuredPaymentSize = BigDecimal.valueOf(100_00, 2);
+  BigDecimal requestedPaymentSize = BigDecimal.valueOf(100_00, 2);
+  BigDecimal remainingPrincipal = BigDecimal.valueOf(2000_00, 2);
   BigDecimal balanceRangeMaximum = BigDecimal.valueOf(4000_00, 2);
   BigDecimal interestRate = BigDecimal.valueOf(5_00, 2);
   BigDecimal accruedInterest = BigDecimal.valueOf(10_00, 2);
   BigDecimal nonLateFees = BigDecimal.valueOf(10_00, 2);
-  BigDecimal expectedFeeRepayment = BigDecimal.valueOf(10_00, 2);
   BigDecimal expectedPrincipalRepayment = BigDecimal.valueOf(80_00, 2);
+  BigDecimal expectedFeeRepayment = BigDecimal.valueOf(10_00, 2);
+  BigDecimal expectedInterestRepayment = BigDecimal.valueOf(10_00, 2);
   BigDecimal generalLossAllowance = BigDecimal.valueOf(2000_00, 2);
 
   PaymentBuilderServiceTestCase(final String description) {
@@ -48,13 +50,18 @@ class PaymentBuilderServiceTestCase {
     return this;
   }
 
-  PaymentBuilderServiceTestCase paymentSize(BigDecimal paymentSize) {
-    this.paymentSize = paymentSize;
+  PaymentBuilderServiceTestCase configuredPaymentSize(BigDecimal newVal) {
+    this.configuredPaymentSize = newVal;
     return this;
   }
 
-  PaymentBuilderServiceTestCase balance(BigDecimal balance) {
-    this.balance = balance;
+  PaymentBuilderServiceTestCase requestedPaymentSize(BigDecimal newVal) {
+    this.requestedPaymentSize = newVal;
+    return this;
+  }
+
+  PaymentBuilderServiceTestCase remainingPrincipal(BigDecimal newVal) {
+    this.remainingPrincipal = newVal;
     return this;
   }
 
@@ -78,13 +85,18 @@ class PaymentBuilderServiceTestCase {
     return this;
   }
 
+  PaymentBuilderServiceTestCase expectedPrincipalRepayment(BigDecimal newVal) {
+    this.expectedPrincipalRepayment = newVal;
+    return this;
+  }
+
   PaymentBuilderServiceTestCase expectedFeeRepayment(BigDecimal newVal) {
     this.expectedFeeRepayment = newVal;
     return this;
   }
 
-  PaymentBuilderServiceTestCase expectedPrincipalRepayment(BigDecimal newVal) {
-    this.expectedPrincipalRepayment = newVal;
+  PaymentBuilderServiceTestCase expectedInterestRepayment(BigDecimal newVal) {
+    this.expectedInterestRepayment = newVal;
     return this;
   }
 

@@ -25,6 +25,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -42,6 +44,8 @@ public class AcceptPaymentBuilderServiceTest {
     final Collection<PaymentBuilderServiceTestCase> ret = new ArrayList<>();
     ret.add(new PaymentBuilderServiceTestCase("simple case"));
     ret.add(disbursementFeesExceedFirstRepayment());
+    ret.add(lastLittleRepaymentZerosPrincipal());
+    ret.add(lastBigRepaymentZerosPrincipal());
     return ret;
   }
 
@@ -50,6 +54,30 @@ public class AcceptPaymentBuilderServiceTest {
         .nonLateFees(BigDecimal.valueOf(200_00, 2))
         .expectedPrincipalRepayment(BigDecimal.ZERO)
         .expectedFeeRepayment(BigDecimal.valueOf(90_00, 2));
+  }
+
+  private static PaymentBuilderServiceTestCase lastLittleRepaymentZerosPrincipal() {
+    return new PaymentBuilderServiceTestCase("last repayment should zero principal, although standard repayment larger than principal")
+        .nonLateFees(BigDecimal.ZERO)
+        .endOfTerm(LocalDateTime.now(Clock.systemUTC()))
+        .forDate(LocalDateTime.now(Clock.systemUTC()))
+        .requestedPaymentSize(null)
+        .remainingPrincipal(BigDecimal.valueOf(42_00, 2))
+        .expectedPrincipalRepayment(BigDecimal.valueOf(42_00, 2))
+        .expectedInterestRepayment(BigDecimal.valueOf(10_00, 2))
+        .expectedFeeRepayment(BigDecimal.ZERO);
+  }
+
+  private static PaymentBuilderServiceTestCase lastBigRepaymentZerosPrincipal() {
+    return new PaymentBuilderServiceTestCase("last repayment should zero principal, although standard repayment smaller than principal")
+        .nonLateFees(BigDecimal.ZERO)
+        .endOfTerm(LocalDateTime.now(Clock.systemUTC()))
+        .forDate(LocalDateTime.now(Clock.systemUTC()))
+        .requestedPaymentSize(null)
+        .remainingPrincipal(BigDecimal.valueOf(142_00, 2))
+        .expectedPrincipalRepayment(BigDecimal.valueOf(142_00, 2))
+        .expectedInterestRepayment(BigDecimal.valueOf(10_00, 2))
+        .expectedFeeRepayment(BigDecimal.ZERO);
   }
 
   private final PaymentBuilderServiceTestCase testCase;
@@ -68,9 +96,13 @@ public class AcceptPaymentBuilderServiceTest {
     final Map<String, BigDecimal> mappedCostComponents = payment.getCostComponents().stream()
         .collect(Collectors.toMap(CostComponent::getChargeIdentifier, CostComponent::getAmount));
 
-    Assert.assertEquals(testCase.accruedInterest, mappedCostComponents.getOrDefault(ChargeIdentifiers.INTEREST_ID, BigDecimal.ZERO));
-    Assert.assertEquals(testCase.accruedInterest, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_INTEREST_ID, BigDecimal.ZERO));
-    Assert.assertEquals(testCase.expectedPrincipalRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_PRINCIPAL_ID, BigDecimal.ZERO));
-    //TODO: Assert.assertEquals(testCase.expectedFeeRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_FEES_ID, BigDecimal.ZERO));
+    Assert.assertEquals(testCase.toString(),
+        testCase.expectedInterestRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.INTEREST_ID, BigDecimal.ZERO));
+    Assert.assertEquals(testCase.toString(),
+        testCase.expectedInterestRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_INTEREST_ID, BigDecimal.ZERO));
+    Assert.assertEquals(testCase.toString(),
+        testCase.expectedPrincipalRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_PRINCIPAL_ID, BigDecimal.ZERO));
+//TODO:    Assert.assertEquals(testCase.toString(),
+//        testCase.expectedFeeRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_FEES_ID, BigDecimal.ZERO));
   }
 }

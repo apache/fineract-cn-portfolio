@@ -46,14 +46,14 @@ class PaymentBuilderServiceTestHarness {
     customerCase.setEndOfTerm(testCase.endOfTerm);
     customerCase.setInterest(testCase.interestRate);
     final CaseParametersEntity caseParameters = new CaseParametersEntity();
-    caseParameters.setPaymentSize(testCase.paymentSize);
+    caseParameters.setPaymentSize(testCase.configuredPaymentSize);
     caseParameters.setBalanceRangeMaximum(testCase.balanceRangeMaximum);
     caseParameters.setPaymentCyclePeriod(1);
     caseParameters.setPaymentCycleTemporalUnit(ChronoUnit.MONTHS);
     caseParameters.setCreditWorthinessFactors(Collections.emptySet());
 
     final SimulatedRunningBalances runningBalances = new SimulatedRunningBalances(testCase.startOfTerm);
-    runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.balance.negate());
+    runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.remainingPrincipal.negate());
     runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_INTEREST, testCase.accruedInterest.negate());
     runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_FEES, testCase.nonLateFees.negate());
     runningBalances.adjustBalance(AccountDesignators.INTEREST_ACCRUAL, testCase.accruedInterest);
@@ -67,7 +67,7 @@ class PaymentBuilderServiceTestHarness {
         Collections.emptyList());
     return testSubject.getPaymentBuilder(
         dataContextOfAction,
-        testCase.paymentSize,
+        testCase.requestedPaymentSize,
         testCase.forDate.toLocalDate(),
         runningBalances);
   }

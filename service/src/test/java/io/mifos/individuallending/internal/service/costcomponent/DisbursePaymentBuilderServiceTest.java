@@ -71,13 +71,13 @@ public class DisbursePaymentBuilderServiceTest {
         .collect(Collectors.toMap(CostComponent::getChargeIdentifier, x -> x));
 
     Assert.assertEquals(
-        testCase.paymentSize,
+        testCase.configuredPaymentSize,
         mappedCostComponents.get(ChargeIdentifiers.DISBURSE_PAYMENT_ID).getAmount());
     Assert.assertEquals(
-        testCase.paymentSize.multiply(BigDecimal.valueOf(1, 2)).setScale(2, BigDecimal.ROUND_HALF_EVEN),
+        testCase.configuredPaymentSize.multiply(BigDecimal.valueOf(1, 2)).setScale(2, BigDecimal.ROUND_HALF_EVEN),
         paymentBuilder.getBalanceAdjustments().get(AccountDesignators.PRODUCT_LOSS_ALLOWANCE));
     Assert.assertEquals(
-        testCase.paymentSize.multiply(BigDecimal.valueOf(1, 2)).negate().setScale(2, BigDecimal.ROUND_HALF_EVEN),
+        testCase.configuredPaymentSize.multiply(BigDecimal.valueOf(1, 2)).negate().setScale(2, BigDecimal.ROUND_HALF_EVEN),
         paymentBuilder.getBalanceAdjustments().get(AccountDesignators.GENERAL_LOSS_ALLOWANCE));
   }
 

@@ -100,7 +100,8 @@ public interface RunningBalances {
   default BigDecimal getMaxCredit(final String accountDesignator, final BigDecimal amount) {
     if (accountDesignator.equals(AccountDesignators.ENTRY) ||
         accountDesignator.equals(AccountDesignators.EXPENSE) ||
-        accountDesignator.equals(AccountDesignators.PRODUCT_LOSS_ALLOWANCE))
+        accountDesignator.equals(AccountDesignators.PRODUCT_LOSS_ALLOWANCE) ||
+        accountDesignator.equals(AccountDesignators.GENERAL_LOSS_ALLOWANCE))
       return amount;
     //entry account can achieve a "relative" negative balance, and
     // product loss allowance can achieve an "absolute" negative balance.

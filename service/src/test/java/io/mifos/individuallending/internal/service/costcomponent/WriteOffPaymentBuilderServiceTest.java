@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -42,7 +43,7 @@ public class WriteOffPaymentBuilderServiceTest {
   public static Collection testCases() {
     final Collection<PaymentBuilderServiceTestCase> ret = new ArrayList<>();
     ret.add(simpleCase());
-    //TODO: add use case for when the general loss allowance account doesn't have enough to cover the write off.
+    ret.add(lossProvisioningInsufficient());
     return ret;
   }
 
@@ -50,6 +51,13 @@ public class WriteOffPaymentBuilderServiceTest {
     final PaymentBuilderServiceTestCase ret = new PaymentBuilderServiceTestCase("simple case");
     ret.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, ret.balance.negate());
     ret.runningBalances.adjustBalance(AccountDesignators.GENERAL_LOSS_ALLOWANCE, ret.balance.negate());
+    return ret;
+  }
+
+  private static PaymentBuilderServiceTestCase lossProvisioningInsufficient() {
+    final PaymentBuilderServiceTestCase ret = new PaymentBuilderServiceTestCase("loss provisioning insufficient");
+    ret.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, ret.balance.negate());
+    ret.runningBalances.adjustBalance(AccountDesignators.GENERAL_LOSS_ALLOWANCE, BigDecimal.ZERO);
     return ret;
   }
 
@@ -73,5 +81,4 @@ public class WriteOffPaymentBuilderServiceTest {
         testCase.balance,
         mappedCostComponents.get(ChargeIdentifiers.WRITE_OFF_ID).getAmount());
   }
-
 }

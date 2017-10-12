@@ -310,7 +310,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   AccountAssignment assignEntryToTeller() {
     final AccountAssignment entryAccountAssignment = new AccountAssignment();
     entryAccountAssignment.setDesignator(AccountDesignators.ENTRY);
-    entryAccountAssignment.setAccountIdentifier(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER);
+    entryAccountAssignment.setAccountIdentifier(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT);
     return entryAccountAssignment;
   }
 

@@ -154,7 +154,7 @@ public class BeatPublishCommandHandler {
 
     final RealRunningBalances balances = new RealRunningBalances(accountingAdapter, dataContextOfAction);
 
-    final BigDecimal currentBalance = balances.getAccountBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+    final BigDecimal currentBalance = balances.getAccountBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL).orElse(BigDecimal.ZERO);
     if (currentBalance.compareTo(BigDecimal.ZERO) == 0) //No late fees if the current balance is zilch.
       return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getForTime());
 

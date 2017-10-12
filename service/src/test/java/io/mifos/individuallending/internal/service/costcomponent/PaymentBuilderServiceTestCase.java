@@ -21,19 +21,24 @@ import java.time.LocalDateTime;
 
 class PaymentBuilderServiceTestCase {
   private final String description;
-  private LocalDateTime startOfTerm = LocalDateTime.of(2015, 1, 15, 0, 0);
+  LocalDateTime startOfTerm = LocalDateTime.of(2015, 1, 15, 0, 0);
   LocalDateTime endOfTerm = LocalDate.of(2015, 8, 15).atStartOfDay();
   LocalDateTime forDate = startOfTerm.plusMonths(1);
-  BigDecimal paymentSize = BigDecimal.valueOf(100_00, 2);
-  BigDecimal balance = BigDecimal.valueOf(2000_00, 2);
-  BigDecimal balanceRangeMaximum = BigDecimal.valueOf(1000_00, 2);
+  BigDecimal configuredPaymentSize = BigDecimal.valueOf(100_00, 2);
+  BigDecimal requestedPaymentSize = BigDecimal.valueOf(100_00, 2);
+  BigDecimal entryAccountBalance = BigDecimal.valueOf(10_000_00, 2);
+  BigDecimal remainingPrincipal = BigDecimal.valueOf(2000_00, 2);
+  BigDecimal balanceRangeMaximum = BigDecimal.valueOf(4000_00, 2);
   BigDecimal interestRate = BigDecimal.valueOf(5_00, 2);
   BigDecimal accruedInterest = BigDecimal.valueOf(10_00, 2);
-  SimulatedRunningBalances runningBalances;
+  BigDecimal nonLateFees = BigDecimal.valueOf(10_00, 2);
+  BigDecimal expectedPrincipalRepayment = BigDecimal.valueOf(80_00, 2);
+  BigDecimal expectedFeeRepayment = BigDecimal.valueOf(10_00, 2);
+  BigDecimal expectedInterestRepayment = BigDecimal.valueOf(10_00, 2);
+  BigDecimal generalLossAllowance = BigDecimal.valueOf(2000_00, 2);
 
   PaymentBuilderServiceTestCase(final String description) {
     this.description = description;
-    runningBalances = new SimulatedRunningBalances(startOfTerm);
   }
 
   PaymentBuilderServiceTestCase endOfTerm(LocalDateTime endOfTerm) {
@@ -46,23 +51,13 @@ class PaymentBuilderServiceTestCase {
     return this;
   }
 
-  PaymentBuilderServiceTestCase paymentSize(BigDecimal paymentSize) {
-    this.paymentSize = paymentSize;
+  PaymentBuilderServiceTestCase requestedPaymentSize(BigDecimal newVal) {
+    this.requestedPaymentSize = newVal;
     return this;
   }
 
-  PaymentBuilderServiceTestCase balance(BigDecimal balance) {
-    this.balance = balance;
-    return this;
-  }
-
-  PaymentBuilderServiceTestCase balanceRangeMaximum(BigDecimal balanceRangeMaximum) {
-    this.balanceRangeMaximum = balanceRangeMaximum;
-    return this;
-  }
-
-  PaymentBuilderServiceTestCase interestRate(BigDecimal interestRate) {
-    this.interestRate = interestRate;
+  PaymentBuilderServiceTestCase remainingPrincipal(BigDecimal newVal) {
+    this.remainingPrincipal = newVal;
     return this;
   }
 
@@ -71,8 +66,28 @@ class PaymentBuilderServiceTestCase {
     return this;
   }
 
-  PaymentBuilderServiceTestCase runningBalances(SimulatedRunningBalances newVal) {
-    this.runningBalances = newVal;
+  PaymentBuilderServiceTestCase nonLateFees(BigDecimal newVal) {
+    this.nonLateFees = newVal;
+    return this;
+  }
+
+  PaymentBuilderServiceTestCase expectedPrincipalRepayment(BigDecimal newVal) {
+    this.expectedPrincipalRepayment = newVal;
+    return this;
+  }
+
+  PaymentBuilderServiceTestCase expectedFeeRepayment(BigDecimal newVal) {
+    this.expectedFeeRepayment = newVal;
+    return this;
+  }
+
+  PaymentBuilderServiceTestCase expectedInterestRepayment(BigDecimal newVal) {
+    this.expectedInterestRepayment = newVal;
+    return this;
+  }
+
+  PaymentBuilderServiceTestCase generalLossAllowance(BigDecimal newVal) {
+    this.generalLossAllowance = newVal;
     return this;
   }
 

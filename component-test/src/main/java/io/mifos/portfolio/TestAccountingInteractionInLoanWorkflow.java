@@ -336,6 +336,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
   private BigDecimal findNextRepaymentAmount(
       final LocalDateTime forDateTime) {
+    AccountingFixture.mockBalance(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT, BigDecimal.valueOf(2000_00L, 2));
     final Payment nextPayment = portfolioManager.getCostComponentsForAction(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -551,7 +552,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     debtors.add(new Debtor(AccountingFixture.GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER, provisionForLosses.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
-    creditors.add(new Creditor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, amount.toString()));
+    creditors.add(new Creditor(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT, amount.toString()));
     creditors.add(new Creditor(AccountingFixture.PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER, PROCESSING_FEE_AMOUNT.toPlainString()));
     creditors.add(new Creditor(AccountingFixture.DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER, disbursementFeeAmount.toPlainString()));
     creditors.add(new Creditor(AccountingFixture.LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER, LOAN_ORIGINATION_FEE_AMOUNT.toPlainString()));
@@ -869,6 +870,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     logger.info("step7PaybackPartialAmount '{}' '{}'", amount, forDateTime);
     final BigDecimal principal = amount.subtract(interestAccrued).subtract(lateFee.add(nonLateFees));
 
+    AccountingFixture.mockBalance(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT, amount);
+
     final Payment payment = checkCostComponentForActionCorrect(
         product.getIdentifier(),
         customerCase.getIdentifier(),
@@ -906,7 +909,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     if (lateFee.compareTo(BigDecimal.ZERO) != 0) {
       debtors.add(new Debtor(AccountingFixture.LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER, lateFee.toPlainString()));
     }
-    debtors.add(new Debtor(AccountingFixture.TELLER_ONE_ACCOUNT_IDENTIFIER, tellerOneDebit.toPlainString()));
+    debtors.add(new Debtor(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT, tellerOneDebit.toPlainString()));
 
     final Set<Creditor> creditors = new HashSet<>();
     creditors.add(new Creditor(customerLoanPrincipalIdentifier, principal.toPlainString()));

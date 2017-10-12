@@ -55,7 +55,7 @@ public interface RunningBalances {
     //TODO: derive signs from IndividualLendingPatternFactory.individualLendingRequiredAccounts instead.
   }};
 
-  BigDecimal getAccountBalance(final String accountDesignator);
+  Optional<BigDecimal> getAccountBalance(final String accountDesignator);
 
   BigDecimal getAccruedBalanceForCharge(
       final ChargeDefinition chargeDefinition);
@@ -69,16 +69,26 @@ public interface RunningBalances {
             dataContextOfAction.getCompoundIdentifer()));
   }
 
-  default BigDecimal getLedgerBalance(final String ledgerDesignator) {
+  default Optional<BigDecimal> getLedgerBalance(final String ledgerDesignator) {
     final Pattern individualLendingPattern = IndividualLendingPatternFactory.individualLendingPattern();
     return individualLendingPattern.getAccountAssignmentsRequired().stream()
         .filter(requiredAccountAssignment -> ledgerDesignator.equals(requiredAccountAssignment.getGroup()))
         .map(RequiredAccountAssignment::getAccountDesignator)
         .map(this::getAccountBalance)
-        .reduce(BigDecimal.ZERO, BigDecimal::add);
+        .reduce(Optional.empty(), (x, y) -> {
+          if (x.isPresent() && y.isPresent())
+            return Optional.of(x.get().add(y.get()));
+          else if (x.isPresent())
+            return x;
+          else //noinspection OptionalIsPresent
+            if (y.isPresent())
+            return y;
+          else
+            return Optional.empty();
+        });
   }
 
-  default BigDecimal getBalance(final String designator) {
+  default Optional<BigDecimal> getBalance(final String designator) {
     final Pattern individualLendingPattern = IndividualLendingPatternFactory.individualLendingPattern();
     if (individualLendingPattern.getAccountAssignmentGroups().contains(designator))
       return getLedgerBalance(designator);
@@ -86,28 +96,35 @@ public interface RunningBalances {
       return getAccountBalance(designator);
   }
 
-  default BigDecimal getMaxDebit(final String accountDesignator, final BigDecimal amount) {
-    if (accountDesignator.equals(AccountDesignators.ENTRY) ||
-        accountDesignator.equals(AccountDesignators.PRODUCT_LOSS_ALLOWANCE))
-      return amount;
 
+  /**
+   *
+   * @param requestedAmount The requested amount is necessary as a parameter, because infinity is
+   *                        not available as a return value for BigDecimal.  There is no way to express that there is
+   *                        no limit, so when there is no limit, the requestedAmount is what is returned.
+   */
+  default BigDecimal getAvailableBalance(final String designator, final BigDecimal requestedAmount) {
+    return getBalance(designator).orElse(requestedAmount);
+  }
+
+  default BigDecimal getMaxDebit(final String accountDesignator, final BigDecimal amount) {
     if (ACCOUNT_SIGNS.get(accountDesignator).signum() == -1)
       return amount;
     else
-      return amount.min(getBalance(accountDesignator));
+      return amount.min(getAvailableBalance(accountDesignator, amount));
   }
 
   default BigDecimal getMaxCredit(final String accountDesignator, final BigDecimal amount) {
-    if (accountDesignator.equals(AccountDesignators.ENTRY) ||
-        accountDesignator.equals(AccountDesignators.EXPENSE) ||
-        accountDesignator.equals(AccountDesignators.PRODUCT_LOSS_ALLOWANCE))
+    if (accountDesignator.equals(AccountDesignators.EXPENSE) ||
+        accountDesignator.equals(AccountDesignators.PRODUCT_LOSS_ALLOWANCE) ||
+        accountDesignator.equals(AccountDesignators.GENERAL_LOSS_ALLOWANCE))
       return amount;
-    //entry account can achieve a "relative" negative balance, and
-    // product loss allowance can achieve an "absolute" negative balance.
+    //expense account can achieve a "relative" negative balance, and
+    // both loss allowance accounts can achieve an "absolute" negative balance.
 
     if (ACCOUNT_SIGNS.get(accountDesignator).signum() != -1)
       return amount;
     else
-      return amount.min(getBalance(accountDesignator));
+      return amount.min(getAvailableBalance(accountDesignator, amount));
   }
 }

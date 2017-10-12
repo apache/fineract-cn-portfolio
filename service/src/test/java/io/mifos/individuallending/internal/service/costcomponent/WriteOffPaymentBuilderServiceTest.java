@@ -15,7 +15,6 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
-import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.DefaultChargeDefinitionsMocker;
@@ -26,6 +25,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -41,16 +41,14 @@ public class WriteOffPaymentBuilderServiceTest {
   @Parameterized.Parameters
   public static Collection testCases() {
     final Collection<PaymentBuilderServiceTestCase> ret = new ArrayList<>();
-    ret.add(simpleCase());
-    //TODO: add use case for when the general loss allowance account doesn't have enough to cover the write off.
+    ret.add(new PaymentBuilderServiceTestCase("simple case"));
+    ret.add(lossProvisioningInsufficient());
     return ret;
   }
 
-  private static PaymentBuilderServiceTestCase simpleCase() {
-    final PaymentBuilderServiceTestCase ret = new PaymentBuilderServiceTestCase("simple case");
-    ret.runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, ret.balance.negate());
-    ret.runningBalances.adjustBalance(AccountDesignators.GENERAL_LOSS_ALLOWANCE, ret.balance.negate());
-    return ret;
+  private static PaymentBuilderServiceTestCase lossProvisioningInsufficient() {
+    return new PaymentBuilderServiceTestCase("loss provisioning insufficient")
+        .generalLossAllowance(BigDecimal.ZERO);
   }
 
   private final PaymentBuilderServiceTestCase testCase;
@@ -70,8 +68,7 @@ public class WriteOffPaymentBuilderServiceTest {
         .collect(Collectors.toMap(CostComponent::getChargeIdentifier, x -> x));
 
     Assert.assertEquals(
-        testCase.balance,
+        testCase.remainingPrincipal,
         mappedCostComponents.get(ChargeIdentifiers.WRITE_OFF_ID).getAmount());
   }
-
 }

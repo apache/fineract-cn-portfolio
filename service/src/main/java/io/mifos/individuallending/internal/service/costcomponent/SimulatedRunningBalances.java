@@ -42,8 +42,8 @@ public class SimulatedRunningBalances implements RunningBalances {
   }
 
   @Override
-  public BigDecimal getAccountBalance(final String accountDesignator) {
-    return balances.getOrDefault(accountDesignator, BigDecimal.ZERO);
+  public Optional<BigDecimal> getAccountBalance(final String accountDesignator) {
+    return Optional.ofNullable(balances.get(accountDesignator));
   }
 
   @Override
@@ -58,7 +58,7 @@ public class SimulatedRunningBalances implements RunningBalances {
     return Optional.ofNullable(startOfTerm);
   }
 
-  void adjustBalance(final String key, final BigDecimal amount) {
+  public void adjustBalance(final String key, final BigDecimal amount) {
     final BigDecimal sign = ACCOUNT_SIGNS.get(key);
     final BigDecimal currentValue = balances.getOrDefault(key, BigDecimal.ZERO);
     final BigDecimal newValue = currentValue.add(amount.multiply(sign));

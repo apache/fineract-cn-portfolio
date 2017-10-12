@@ -55,7 +55,7 @@ public class DisbursePaymentBuilderService implements PaymentBuilderService {
       final LocalDate forDate,
       final RunningBalances runningBalances)
   {
-    final BigDecimal currentBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+    final BigDecimal currentBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL).orElse(BigDecimal.ZERO);
 
     if (requestedDisbursalSize != null &&
         dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum().compareTo(

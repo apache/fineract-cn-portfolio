@@ -26,6 +26,7 @@ class PaymentBuilderServiceTestCase {
   LocalDateTime forDate = startOfTerm.plusMonths(1);
   BigDecimal configuredPaymentSize = BigDecimal.valueOf(100_00, 2);
   BigDecimal requestedPaymentSize = BigDecimal.valueOf(100_00, 2);
+  BigDecimal entryAccountBalance = BigDecimal.valueOf(10_000_00, 2);
   BigDecimal remainingPrincipal = BigDecimal.valueOf(2000_00, 2);
   BigDecimal balanceRangeMaximum = BigDecimal.valueOf(4000_00, 2);
   BigDecimal interestRate = BigDecimal.valueOf(5_00, 2);
@@ -50,11 +51,6 @@ class PaymentBuilderServiceTestCase {
     return this;
   }
 
-  PaymentBuilderServiceTestCase configuredPaymentSize(BigDecimal newVal) {
-    this.configuredPaymentSize = newVal;
-    return this;
-  }
-
   PaymentBuilderServiceTestCase requestedPaymentSize(BigDecimal newVal) {
     this.requestedPaymentSize = newVal;
     return this;
@@ -62,16 +58,6 @@ class PaymentBuilderServiceTestCase {
 
   PaymentBuilderServiceTestCase remainingPrincipal(BigDecimal newVal) {
     this.remainingPrincipal = newVal;
-    return this;
-  }
-
-  PaymentBuilderServiceTestCase balanceRangeMaximum(BigDecimal balanceRangeMaximum) {
-    this.balanceRangeMaximum = balanceRangeMaximum;
-    return this;
-  }
-
-  PaymentBuilderServiceTestCase interestRate(BigDecimal interestRate) {
-    this.interestRate = interestRate;
     return this;
   }
 

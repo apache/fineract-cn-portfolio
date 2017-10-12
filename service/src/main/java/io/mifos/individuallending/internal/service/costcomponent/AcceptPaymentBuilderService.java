@@ -71,21 +71,25 @@ public class AcceptPaymentBuilderService implements PaymentBuilderService {
 
     if (requestedLoanPaymentSize != null) {
       loanPaymentSize = requestedLoanPaymentSize
-          .min(runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP));
+          .min(runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP).orElse(BigDecimal.ZERO));
     }
     else if (scheduledAction.getActionPeriod() != null && scheduledAction.getActionPeriod().isLastPeriod()) {
-      loanPaymentSize = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
+      loanPaymentSize = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP).orElse(BigDecimal.ZERO);
     }
     else {
       loanPaymentSize = dataContextOfAction.getCaseParametersEntity().getPaymentSize()
-          .min(runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP));
+          .min(runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP).orElse(BigDecimal.ZERO));
     }
+
+    final AvailableRunningBalancesWithLimits availableRunningBalanceWithLimits =
+        new AvailableRunningBalancesWithLimits(runningBalances);
+    availableRunningBalanceWithLimits.setUpperLimit(AccountDesignators.ENTRY, loanPaymentSize);
 
 
     return CostComponentService.getCostComponentsForScheduledCharges(
         scheduledChargesForThisAction,
         caseParameters.getBalanceRangeMaximum(),
-        runningBalances,
+        availableRunningBalanceWithLimits,
         dataContextOfAction.getCaseParametersEntity().getPaymentSize(),
         BigDecimal.ZERO,
         loanPaymentSize,

@@ -37,7 +37,7 @@ public class RealRunningBalances implements RunningBalances {
   private final AccountingAdapter accountingAdapter;
   private final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper;
   private final DataContextOfAction dataContextOfAction;
-  private final ExpiringMap<String, BigDecimal> realAccountBalanceCache;
+  private final ExpiringMap<String, Optional<BigDecimal>> realAccountBalanceCache;
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private Optional<LocalDateTime> startOfTerm;
 
@@ -60,14 +60,14 @@ public class RealRunningBalances implements RunningBalances {
           else {
             accountIdentifier = Optional.of(designatorToAccountIdentifierMapper.mapOrThrow(accountDesignator));
           }
-          return accountIdentifier.map(accountingAdapter::getCurrentAccountBalance).orElse(BigDecimal.ZERO);
+          return accountIdentifier.map(accountingAdapter::getCurrentAccountBalance);
         })
         .build();
     this.startOfTerm = Optional.empty();
   }
 
   @Override
-  public BigDecimal getAccountBalance(final String accountDesignator) {
+  public Optional<BigDecimal> getAccountBalance(final String accountDesignator) {
     return realAccountBalanceCache.get(accountDesignator);
   }
 

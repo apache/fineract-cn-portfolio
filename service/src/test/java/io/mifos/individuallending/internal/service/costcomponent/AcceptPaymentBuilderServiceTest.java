@@ -15,6 +15,7 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
@@ -46,6 +47,7 @@ public class AcceptPaymentBuilderServiceTest {
     ret.add(disbursementFeesExceedFirstRepayment());
     ret.add(lastLittleRepaymentZerosPrincipal());
     ret.add(lastBigRepaymentZerosPrincipal());
+    ret.add(explicitlySetRepaymentSizeIsSmallerThanFees());
     return ret;
   }
 
@@ -80,6 +82,16 @@ public class AcceptPaymentBuilderServiceTest {
         .expectedFeeRepayment(BigDecimal.ZERO);
   }
 
+  private static PaymentBuilderServiceTestCase explicitlySetRepaymentSizeIsSmallerThanFees() {
+    return new PaymentBuilderServiceTestCase("a payment size was chosen which is smaller than the fees due.")
+        .nonLateFees(BigDecimal.valueOf(50_00, 2))
+        .accruedInterest(BigDecimal.ZERO)
+        .requestedPaymentSize(BigDecimal.valueOf(49_00, 2))
+        .expectedInterestRepayment(BigDecimal.ZERO)
+        .expectedPrincipalRepayment(BigDecimal.ZERO)
+        .expectedFeeRepayment(BigDecimal.valueOf(49_00, 2));
+  }
+
   private final PaymentBuilderServiceTestCase testCase;
 
   public AcceptPaymentBuilderServiceTest(final PaymentBuilderServiceTestCase testCase) {
@@ -91,7 +103,11 @@ public class AcceptPaymentBuilderServiceTest {
     final PaymentBuilder paymentBuilder = PaymentBuilderServiceTestHarness.constructCallToPaymentBuilder(
         AcceptPaymentBuilderService::new, testCase);
 
-    final Payment payment = paymentBuilder.buildPayment(Action.ACCEPT_PAYMENT, Collections.emptySet(), testCase.forDate.toLocalDate());
+    final Payment payment = paymentBuilder.buildPayment(
+        Action.ACCEPT_PAYMENT,
+        Collections.emptySet(),
+        testCase.forDate.toLocalDate());
+
     Assert.assertNotNull(payment);
     final Map<String, BigDecimal> mappedCostComponents = payment.getCostComponents().stream()
         .collect(Collectors.toMap(CostComponent::getChargeIdentifier, CostComponent::getAmount));
@@ -102,7 +118,13 @@ public class AcceptPaymentBuilderServiceTest {
         testCase.expectedInterestRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_INTEREST_ID, BigDecimal.ZERO));
     Assert.assertEquals(testCase.toString(),
         testCase.expectedPrincipalRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_PRINCIPAL_ID, BigDecimal.ZERO));
-//TODO:    Assert.assertEquals(testCase.toString(),
-//        testCase.expectedFeeRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_FEES_ID, BigDecimal.ZERO));
+    Assert.assertEquals(testCase.toString(),
+        testCase.expectedFeeRepayment, mappedCostComponents.getOrDefault(ChargeIdentifiers.REPAY_FEES_ID, BigDecimal.ZERO));
+
+    final BigDecimal expectedTotalRepaymentSize = testCase.expectedFeeRepayment.add(testCase.expectedInterestRepayment).add(testCase.expectedPrincipalRepayment);
+    Assert.assertEquals(expectedTotalRepaymentSize.negate(), payment.getBalanceAdjustments().getOrDefault(AccountDesignators.ENTRY, BigDecimal.ZERO));
+    Assert.assertEquals(testCase.expectedFeeRepayment, payment.getBalanceAdjustments().getOrDefault(AccountDesignators.CUSTOMER_LOAN_FEES, BigDecimal.ZERO));
+    Assert.assertEquals(testCase.expectedInterestRepayment, payment.getBalanceAdjustments().getOrDefault(AccountDesignators.CUSTOMER_LOAN_INTEREST, BigDecimal.ZERO));
+    Assert.assertEquals(testCase.expectedPrincipalRepayment, payment.getBalanceAdjustments().getOrDefault(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, BigDecimal.ZERO));
   }
 }

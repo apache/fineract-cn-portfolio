@@ -131,11 +131,11 @@ public class CostComponentService {
       case MAXIMUM_BALANCE_DESIGNATOR:
         return maximumBalance;
       case RUNNING_BALANCE_DESIGNATOR: {
-        final BigDecimal customerLoanRunningBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
+        final BigDecimal customerLoanRunningBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP).orElse(BigDecimal.ZERO);
         return customerLoanRunningBalance.subtract(paymentBuilder.getBalanceAdjustment(AccountDesignators.CUSTOMER_LOAN_GROUP));
       }
       case PRINCIPAL_DESIGNATOR: {
-        return runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+        return runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL).orElse(BigDecimal.ZERO);
       }
       case CONTRACTUAL_REPAYMENT_DESIGNATOR:
         return contractualRepayment;
@@ -144,10 +144,10 @@ public class CostComponentService {
       case REQUESTED_REPAYMENT_DESIGNATOR:
         return requestedRepayment.add(paymentBuilder.getBalanceAdjustment(AccountDesignators.ENTRY));
       case TO_ACCOUNT_DESIGNATOR:
-        return runningBalances.getBalance(scheduledCharge.getChargeDefinition().getToAccountDesignator())
+        return runningBalances.getBalance(scheduledCharge.getChargeDefinition().getToAccountDesignator()).orElse(BigDecimal.ZERO)
             .subtract(paymentBuilder.getBalanceAdjustment(scheduledCharge.getChargeDefinition().getToAccountDesignator()));
       case FROM_ACCOUNT_DESIGNATOR:
-        return runningBalances.getBalance(scheduledCharge.getChargeDefinition().getFromAccountDesignator())
+        return runningBalances.getBalance(scheduledCharge.getChargeDefinition().getFromAccountDesignator()).orElse(BigDecimal.ZERO)
             .add(paymentBuilder.getBalanceAdjustment(scheduledCharge.getChargeDefinition().getFromAccountDesignator()));
       default:
         return BigDecimal.ZERO;

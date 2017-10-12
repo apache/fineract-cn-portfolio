@@ -52,7 +52,7 @@ public class ClosePaymentBuilderService implements PaymentBuilderService {
       final LocalDate forDate,
       final RunningBalances runningBalances)
   {
-    if (runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP).compareTo(BigDecimal.ZERO) != 0)
+    if (runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP).orElse(BigDecimal.ZERO).compareTo(BigDecimal.ZERO) != 0)
       throw ServiceException.conflict("Cannot close loan until the balance is zero.");
 
 

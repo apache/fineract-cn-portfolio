@@ -60,7 +60,7 @@ class AccountingFixture {
   static final String LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER = "1310";
   static final String PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER = "1312";
   static final String DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER = "1313";
-  static final String TELLER_ONE_ACCOUNT_IDENTIFIER = "7352";
+  static final String CUSTOMERS_DEPOSIT_ACCOUNT = "7352";
   static final String LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER = "7810";
   static final String CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER = "1103";
   static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "1311";
@@ -204,7 +204,7 @@ class AccountingFixture {
 
   private static Account tellerOneAccount() {
     final Account ret = new Account();
-    ret.setIdentifier(TELLER_ONE_ACCOUNT_IDENTIFIER);
+    ret.setIdentifier(CUSTOMERS_DEPOSIT_ACCOUNT);
     ret.setLedger(CASH_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
     return ret;

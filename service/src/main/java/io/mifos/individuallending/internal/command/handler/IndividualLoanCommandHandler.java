@@ -353,7 +353,7 @@ public class IndividualLoanCommandHandler {
       customerCase.setCurrentState(Case.State.ACTIVE.name());
       caseRepository.save(customerCase);
     }
-    final BigDecimal currentBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP);
+    final BigDecimal currentBalance = runningBalances.getBalance(AccountDesignators.CUSTOMER_LOAN_GROUP).orElse(BigDecimal.ZERO);
 
     final BigDecimal newLoanPaymentSize = disbursePaymentBuilderService.getLoanPaymentSizeForSingleDisbursement(
         currentBalance.add(paymentBuilder.getBalanceAdjustment(AccountDesignators.ENTRY)),

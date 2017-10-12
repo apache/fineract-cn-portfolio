@@ -53,6 +53,7 @@ class PaymentBuilderServiceTestHarness {
     caseParameters.setCreditWorthinessFactors(Collections.emptySet());
 
     final SimulatedRunningBalances runningBalances = new SimulatedRunningBalances(testCase.startOfTerm);
+    runningBalances.adjustBalance(AccountDesignators.ENTRY, testCase.entryAccountBalance);
     runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, testCase.remainingPrincipal.negate());
     runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_INTEREST, testCase.accruedInterest.negate());
     runningBalances.adjustBalance(AccountDesignators.CUSTOMER_LOAN_FEES, testCase.nonLateFees.negate());

@@ -39,5 +39,4 @@ public interface CaseRepository extends JpaRepository<CaseEntity, Long> {
   boolean existsByProductIdentifier(@Param("productIdentifier") String productIdentifier);
 
   Stream<CaseEntity> findByCurrentStateIn(Collection<String> currentStates);
-
 }

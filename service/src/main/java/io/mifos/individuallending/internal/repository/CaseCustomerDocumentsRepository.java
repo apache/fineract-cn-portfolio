@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Mifos Initiative.
+ * Copyright 2017 Kuelap, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,28 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.mifos.portfolio;
+package io.mifos.individuallending.internal.repository;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
+
+import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz
  */
-@RunWith(Suite.class)
-@Suite.SuiteClasses({
-    TestAccountingInteractionInLoanWorkflow.class,
-    TestBalanceSegmentSets.class,
-    TestCases.class,
-    TestChargeDefinitions.class,
-    TestCommands.class,
-    TestIndividualLoans.class,
-    TestPatterns.class,
-    TestProducts.class,
-    TestTaskDefinitions.class,
-    TestTaskInstances.class,
-    TestLossProvisionSteps.class,
-    TestCaseDocuments.class
-})
-public class TestSuite extends SuiteTestEnvironment {
+@Component
+@Repository
+public interface CaseCustomerDocumentsRepository extends JpaRepository<CaseCustomerDocumentEntity, Long> {
+  Stream<CaseCustomerDocumentEntity> findByCaseParametersId(Long caseId);
 }

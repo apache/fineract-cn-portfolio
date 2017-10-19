@@ -23,6 +23,7 @@ import io.mifos.core.test.fixture.TenantDataStoreContextTestRule;
 import io.mifos.core.test.listener.EnableEventRecording;
 import io.mifos.core.test.listener.EventRecorder;
 import io.mifos.customer.api.v1.client.CustomerManager;
+import io.mifos.individuallending.api.v1.client.CaseDocumentsManager;
 import io.mifos.individuallending.api.v1.client.IndividualLending;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
@@ -114,6 +115,10 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   @SuppressWarnings("SpringAutowiredFieldsWarningInspection")
   @Autowired
   IndividualLending individualLending;
+
+  @SuppressWarnings("SpringAutowiredFieldsWarningInspection")
+  @Autowired
+  CaseDocumentsManager caseDocumentsManager;
 
   @SuppressWarnings("unused")
   @MockBean

@@ -20,6 +20,9 @@ import io.mifos.individuallending.internal.repository.LossProvisionStepEntity;
 
 import java.math.BigDecimal;
 
+/**
+ * @author Myrle Krantz
+ */
 public interface LossProvisionStepMapper {
   static LossProvisionStepEntity map(
       final Long productId,

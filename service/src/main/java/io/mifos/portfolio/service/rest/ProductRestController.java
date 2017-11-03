@@ -54,7 +54,7 @@ import java.util.Set;
 @RestController //
 @RequestMapping("/products") //
 public class ProductRestController {
-  private final static Set<String> VALID_SORT_COLUMNS = new HashSet<>(Arrays.asList("lastModifiedOn", "identifier", "name"));
+  private final static Set<String> VALID_SORT_COLUMNS = new HashSet<>(Arrays.asList("lastModifiedOn", "identifier", "name", "enabled"));
 
   private final CommandGateway commandGateway;
   private final CaseService caseService;

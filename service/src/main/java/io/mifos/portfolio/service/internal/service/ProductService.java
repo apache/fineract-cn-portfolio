@@ -94,7 +94,7 @@ public class ProductService {
     if (sortColumn == null)
       return "lastModifiedOn";
 
-    if (!sortColumn.equals("name") && !sortColumn.equals("identifier") && !sortColumn.equals("lastModifiedOn"))
+    if (!sortColumn.equals("name") && !sortColumn.equals("identifier") && !sortColumn.equals("lastModifiedOn") && !sortColumn.equals("enabled"))
       throw new IllegalStateException("Illegal input for Sort Column should've been blocked in Rest Controller.");
 
     return sortColumn;

@@ -39,9 +39,19 @@ public class IndividualLoanCaseCommandEventListener {
   }
 
   @JmsListener(
-          subscription = IndividualLoanEventConstants.DESTINATION,
-          destination = IndividualLoanEventConstants.DESTINATION,
-          selector = IndividualLoanEventConstants.SELECTOR_OPEN_INDIVIDUALLOAN_CASE
+      subscription = IndividualLoanEventConstants.DESTINATION,
+      destination = IndividualLoanEventConstants.DESTINATION,
+      selector = IndividualLoanEventConstants.SELECTOR_IMPORT_INDIVIDUALLOAN_CASE
+  )
+  public void onImport(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,
+                     final String payload) {
+    this.eventRecorder.event(tenant, IndividualLoanEventConstants.IMPORT_INDIVIDUALLOAN_CASE, payload, IndividualLoanCommandEvent.class);
+  }
+
+  @JmsListener(
+      subscription = IndividualLoanEventConstants.DESTINATION,
+      destination = IndividualLoanEventConstants.DESTINATION,
+      selector = IndividualLoanEventConstants.SELECTOR_OPEN_INDIVIDUALLOAN_CASE
   )
   public void onOpen(@Header(TenantHeaderFilter.TENANT_HEADER) final String tenant,
                      final String payload) {

@@ -22,11 +22,9 @@ import io.mifos.core.command.gateway.CommandGateway;
 import io.mifos.core.lang.DateConverter;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.core.lang.validation.constraints.ValidLocalDateTimeString;
+import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
-import io.mifos.portfolio.api.v1.domain.Case;
-import io.mifos.portfolio.api.v1.domain.CasePage;
-import io.mifos.portfolio.api.v1.domain.Command;
-import io.mifos.portfolio.api.v1.domain.Payment;
+import io.mifos.portfolio.api.v1.domain.*;
 import io.mifos.portfolio.service.internal.checker.CaseChecker;
 import io.mifos.portfolio.service.internal.command.ChangeCaseCommand;
 import io.mifos.portfolio.service.internal.command.CreateCaseCommand;
@@ -200,7 +198,7 @@ public class CaseRestController {
       @RequestParam(value="touchingaccounts", required = false, defaultValue = "") final Set<String> forAccountDesignators,
       @RequestParam(value="forpaymentsize", required = false, defaultValue = "") final BigDecimal forPaymentSize)
   {
-    checkThatCaseExists(productIdentifier, caseIdentifier);
+    actionChecks(productIdentifier, caseIdentifier, actionIdentifier);
 
     if (forPaymentSize != null && forPaymentSize.compareTo(BigDecimal.ZERO) < 0)
       throw ServiceException.badRequest("forpaymentsize can''t be negative.");
@@ -218,16 +216,49 @@ public class CaseRestController {
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)
   @RequestMapping(
-          value = "{caseidentifier}/commands/{actionidentifier}",
-          method = RequestMethod.POST,
-          produces = MediaType.APPLICATION_JSON_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "{caseidentifier}/commands/{actionidentifier}",
+      method = RequestMethod.POST,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  public @ResponseBody ResponseEntity<Void> executeCaseCommand(@PathVariable("productidentifier") final String productIdentifier,
-                                                               @PathVariable("caseidentifier") final String caseIdentifier,
-                                                               @PathVariable("actionidentifier") final String actionIdentifier,
-                                                               @RequestBody @Valid final Command command)
+  public @ResponseBody ResponseEntity<Void> executeCaseCommand(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @PathVariable("actionidentifier") final String actionIdentifier,
+      @RequestBody @Valid final Command command)
   {
+    actionChecks(productIdentifier, caseIdentifier, actionIdentifier);
+
+    final ProductCommandDispatcher productCommandDispatcher = caseService.getProductCommandDispatcher(productIdentifier);
+    productCommandDispatcher.dispatch(productIdentifier, caseIdentifier, actionIdentifier, command);
+
+    return new ResponseEntity<>(HttpStatus.ACCEPTED);
+  }
+
+  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_IMPORT)
+  @RequestMapping(
+      value = "{caseidentifier}/commands/IMPORT",
+      method = RequestMethod.POST,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  public @ResponseBody ResponseEntity<Void> executeImportCommand(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      @RequestBody @Valid final ImportParameters command)
+  {
+    actionChecks(productIdentifier, caseIdentifier, Action.IMPORT.name());
+
+    final ProductCommandDispatcher productCommandDispatcher = caseService.getProductCommandDispatcher(productIdentifier);
+    productCommandDispatcher.importCase(productIdentifier, caseIdentifier, command);
+
+    return new ResponseEntity<>(HttpStatus.ACCEPTED);
+  }
+
+  private void actionChecks(
+      final String productIdentifier,
+      final String caseIdentifier,
+      final String actionIdentifier) {
     checkThatCaseExists(productIdentifier, caseIdentifier);
     final Set<String> nextActions = caseService.getNextActionsForCase(productIdentifier, caseIdentifier);
     if (!nextActions.contains(actionIdentifier))
@@ -239,11 +270,6 @@ public class CaseRestController {
     if (tasksOutstanding)
       throw ServiceException.conflict("Cannot execute action ''{0}'' for case ''{1}.{2}'' because tasks are incomplete.",
           actionIdentifier, productIdentifier, caseIdentifier);
-
-    final ProductCommandDispatcher productCommandDispatcher = caseService.getProductCommandDispatcher(productIdentifier);
-    productCommandDispatcher.dispatch(productIdentifier, caseIdentifier, actionIdentifier, command);
-
-    return new ResponseEntity<>(HttpStatus.ACCEPTED);
   }
 
   private void checkThatCaseExists(final String productIdentifier, final String caseIdentifier) {

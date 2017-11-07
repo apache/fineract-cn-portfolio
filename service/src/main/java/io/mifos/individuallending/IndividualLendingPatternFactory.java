@@ -367,7 +367,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     {
       case CREATED:
         //noinspection ArraysAsListWithZeroOrOneArgument
-        return new HashSet<>(Arrays.asList(Action.OPEN));
+        return new HashSet<>(Arrays.asList(Action.OPEN, Action.IMPORT));
       case PENDING:
         return new HashSet<>(Arrays.asList(Action.DENY, Action.APPROVE));
       case APPROVED:

@@ -20,6 +20,7 @@ import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.command.*;
 import io.mifos.portfolio.api.v1.domain.Command;
+import io.mifos.portfolio.api.v1.domain.ImportParameters;
 import io.mifos.products.spi.ProductCommandDispatcher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -38,7 +39,11 @@ public class IndividualLendingCommandDispatcher implements ProductCommandDispatc
   }
 
   @Override
-  public void dispatch(final String productIdentifier, final String caseIdentifier, final String actionIdentifier, final Command command) {
+  public void dispatch(
+      final String productIdentifier,
+      final String caseIdentifier,
+      final String actionIdentifier,
+      final Command command) {
     final Action action = Action.valueOf(actionIdentifier);
     switch (action) {
       case OPEN:
@@ -68,5 +73,13 @@ public class IndividualLendingCommandDispatcher implements ProductCommandDispatc
       default:
         throw ServiceException.badRequest("Action ''{0}'' is not implemented for individual loans.", actionIdentifier);
     }
+  }
+
+  @Override
+  public void importCase(
+      final String productIdentifier,
+      final String caseIdentifier,
+      final ImportParameters command) {
+    this.commandGateway.process(new ImportCommand(productIdentifier, caseIdentifier, command));
   }
 }

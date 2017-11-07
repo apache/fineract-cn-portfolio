@@ -16,10 +16,12 @@
 package io.mifos.products.spi;
 
 import io.mifos.portfolio.api.v1.domain.Command;
+import io.mifos.portfolio.api.v1.domain.ImportParameters;
 
 /**
  * @author Myrle Krantz
  */
 public interface ProductCommandDispatcher {
-  void dispatch(String productIdentifier, String caseIdentifier, final String actionIdentifier, Command command);
+  void dispatch(String productIdentifier, String caseIdentifier, String actionIdentifier, Command command);
+  void importCase(String productIdentifier, String caseIdentifier, ImportParameters command);
 }

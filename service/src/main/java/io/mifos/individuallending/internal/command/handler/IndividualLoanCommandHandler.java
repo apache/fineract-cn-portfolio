@@ -29,6 +29,7 @@ import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.individuallending.internal.command.*;
+import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.individuallending.internal.repository.LateCaseEntity;
 import io.mifos.individuallending.internal.repository.LateCaseRepository;
@@ -165,6 +166,42 @@ public class IndividualLoanCommandHandler {
     caseRepository.save(customerCase);
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getCommand().getCreatedOn());
+  }
+
+
+  @Transactional
+  @CommandHandler(logStart = CommandLogLevel.INFO, logFinish = CommandLogLevel.INFO)
+  @EventEmitter(
+      selectorName = IndividualLoanEventConstants.SELECTOR_NAME,
+      selectorValue = IndividualLoanEventConstants.IMPORT_INDIVIDUALLOAN_CASE)
+  public IndividualLoanCommandEvent process(final ImportCommand command) {
+    final String productIdentifier = command.getProductIdentifier();
+    final String caseIdentifier = command.getCaseIdentifier();
+    final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
+        productIdentifier, caseIdentifier, command.getImportParameters().getCaseAccountAssignments());
+    IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState()), Action.OPEN);
+
+    checkIfTasksAreOutstanding(dataContextOfAction, Action.IMPORT);
+
+    final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
+
+    recordCommand(
+        command.getImportParameters().getCreatedOn(),
+        customerCase.getId(),
+        Action.IMPORT,
+        Optional.empty());
+
+    customerCase.setCurrentState(Case.State.ACTIVE.name());
+    caseRepository.save(customerCase);
+
+    final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
+    caseParameters.setPaymentSize(command.getImportParameters().getPaymentSize());
+    caseParametersRepository.save(caseParameters);
+    //TODO: find end of term.
+    //TODO: persist start of term.
+    //TODO: create/connect to accounts in account assignments.
+
+    return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getImportParameters().getCreatedOn());
   }
 
   @Transactional

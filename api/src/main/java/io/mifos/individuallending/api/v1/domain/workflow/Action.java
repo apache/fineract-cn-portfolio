@@ -25,6 +25,7 @@ package io.mifos.individuallending.api.v1.domain.workflow;
 public enum Action {
   OPEN("CHRG"),
   DENY("CHRG"),
+  IMPORT("CHRG"),
   APPROVE("ACCO"),
   DISBURSE("CDIS"),
   APPLY_INTEREST("INTR"),

@@ -95,6 +95,14 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   }
 
   @Test
+  public void workflowImportingLoanFromExternalSystem() throws InterruptedException {
+    final LocalDateTime today = midnightToday();
+    step1CreateProduct();
+    step2CreateCase();
+    step3IImportCase(today);
+  }
+
+  @Test
   public void cantChangeDeniedCase() throws InterruptedException {
     final LocalDateTime today = midnightToday();
     step1CreateProduct();
@@ -129,6 +137,22 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     catch (IllegalArgumentException ignored) {
 
     }
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void cantRequestCostComponentsForInvalidAction() throws InterruptedException {
+    final LocalDateTime today = midnightToday();
+
+    step1CreateProduct();
+    step2CreateCase();
+    portfolioManager.getCostComponentsForAction(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        Action.DISBURSE.name(),
+        Collections.emptySet(),
+        BigDecimal.TEN,
+        DateConverter.toIsoString(today)
+    );
   }
 
   @Test
@@ -421,7 +445,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final String caseParametersAsString = new Gson().toJson(caseParameters);
     customerCase = createAdjustedCase(product.getIdentifier(), x -> x.setParameters(caseParametersAsString));
 
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN);
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.OPEN, Action.IMPORT);
   }
 
   //Open the case and accept a processing fee.
@@ -444,6 +468,28 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, Action.DENY);
+  }
+
+  //Open the case and accept a processing fee.
+  private void step3IImportCase(final LocalDateTime forDateTime) throws InterruptedException {
+    logger.info("step3IImportCase");
+
+    final ImportParameters importParameters = new ImportParameters();
+    importParameters.setCaseAccountAssignments(Collections.singletonList(assignEntryToTeller()));
+    importParameters.setPaymentSize(BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS));
+    importParameters.setCreatedOn(DateConverter.toIsoString(forDateTime));
+    importParameters.setCurrentBalance(BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS));
+    importParameters.setStartOfTerm(DateConverter.toIsoString(forDateTime));
+    portfolioManager.executeImportCommand(product.getIdentifier(), customerCase.getIdentifier(), importParameters);
+
+    Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.IMPORT_INDIVIDUALLOAN_CASE, new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), DateConverter.toIsoString(forDateTime))));
+
+    //TODO: check payment size, start of term, and end of term and account assignments.
+
+    final Case changedCase = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
+    Assert.assertEquals(Case.State.ACTIVE.name(), changedCase.getCurrentState());
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
+        Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.MARK_IN_ARREARS, Action.WRITE_OFF, Action.CLOSE);
   }
 
 
@@ -543,7 +589,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         amount,
         IndividualLoanEventConstants.DISBURSE_INDIVIDUALLOAN_CASE,
         Case.State.ACTIVE);
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.MARK_IN_ARREARS, Action.WRITE_OFF, Action.CLOSE);
 
     final Set<Debtor> debtors = new HashSet<>();
@@ -894,7 +940,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         amount,
         IndividualLoanEventConstants.ACCEPT_PAYMENT_INDIVIDUALLOAN_CASE,
         Case.State.ACTIVE); //Close has to be done explicitly.
-    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPLY_INTEREST,
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.MARK_IN_ARREARS, Action.WRITE_OFF, Action.CLOSE);
 
     final Set<Debtor> debtors = new HashSet<>();

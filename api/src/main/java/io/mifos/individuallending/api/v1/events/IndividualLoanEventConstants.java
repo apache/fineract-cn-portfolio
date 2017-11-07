@@ -25,6 +25,7 @@ public interface IndividualLoanEventConstants {
   String PUT_DOCUMENT = "put-individualloan-documents";
   String PUT_LOSS_PROVISION_STEPS = "put-individualloan-loss-provision-steps";
 
+  String IMPORT_INDIVIDUALLOAN_CASE = "import-individualloan-case";
   String OPEN_INDIVIDUALLOAN_CASE = "open-individualloan-case";
   String DENY_INDIVIDUALLOAN_CASE = "deny-individualloan-case";
   String APPROVE_INDIVIDUALLOAN_CASE = "approve-individualloan-case";
@@ -41,6 +42,7 @@ public interface IndividualLoanEventConstants {
   String SELECTOR_PUT_DOCUMENT = SELECTOR_NAME + " = '" + PUT_DOCUMENT + "'";
   String SELECTOR_PUT_LOSS_PROVISION_STEPS = SELECTOR_NAME + " = '" + PUT_LOSS_PROVISION_STEPS + "'";
 
+  String SELECTOR_IMPORT_INDIVIDUALLOAN_CASE = SELECTOR_NAME + " = '" + IMPORT_INDIVIDUALLOAN_CASE + "'";
   String SELECTOR_OPEN_INDIVIDUALLOAN_CASE = SELECTOR_NAME + " = '" + OPEN_INDIVIDUALLOAN_CASE + "'";
   String SELECTOR_DENY_INDIVIDUALLOAN_CASE = SELECTOR_NAME + " = '" + DENY_INDIVIDUALLOAN_CASE + "'";
   String SELECTOR_APPROVE_INDIVIDUALLOAN_CASE = SELECTOR_NAME + " = '" + APPROVE_INDIVIDUALLOAN_CASE + "'";

@@ -16,8 +16,10 @@
 package io.mifos.portfolio.api.v1.domain;
 
 import io.mifos.core.lang.validation.constraints.ValidIdentifier;
+import org.hibernate.validator.constraints.Length;
 import org.hibernate.validator.constraints.ScriptAssert;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -28,11 +30,17 @@ import java.util.Objects;
 public final class AccountAssignment {
   @ValidIdentifier
   private String designator;
+
   @ValidIdentifier(maxLength = 34, optional = true)
   private String accountIdentifier;
+
   @SuppressWarnings("DefaultAnnotationParam")
   @ValidIdentifier(maxLength = 32, optional = true)
   private String ledgerIdentifier;
+
+  @Length(max = 256)
+  @Nullable
+  private String alternativeAccountIdentifier;
 
   public AccountAssignment() {
 
@@ -67,27 +75,38 @@ public final class AccountAssignment {
     this.ledgerIdentifier = ledgerIdentifier;
   }
 
+  @Nullable
+  public String getAlternativeAccountIdentifier() {
+    return alternativeAccountIdentifier;
+  }
+
+  public void setAlternativeAccountIdentifier(@Nullable String alternativeAccountIdentifier) {
+    this.alternativeAccountIdentifier = alternativeAccountIdentifier;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     AccountAssignment that = (AccountAssignment) o;
     return Objects.equals(designator, that.designator) &&
-            Objects.equals(accountIdentifier, that.accountIdentifier) &&
-            Objects.equals(ledgerIdentifier, that.ledgerIdentifier);
+        Objects.equals(accountIdentifier, that.accountIdentifier) &&
+        Objects.equals(ledgerIdentifier, that.ledgerIdentifier) &&
+        Objects.equals(alternativeAccountIdentifier, that.alternativeAccountIdentifier);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(designator, accountIdentifier, ledgerIdentifier);
+    return Objects.hash(designator, accountIdentifier, ledgerIdentifier, alternativeAccountIdentifier);
   }
 
   @Override
   public String toString() {
     return "AccountAssignment{" +
-            "designator='" + designator + '\'' +
-            ", accountIdentifier='" + accountIdentifier + '\'' +
-            ", ledgerIdentifier='" + ledgerIdentifier + '\'' +
-            '}';
+        "designator='" + designator + '\'' +
+        ", accountIdentifier='" + accountIdentifier + '\'' +
+        ", ledgerIdentifier='" + ledgerIdentifier + '\'' +
+        ", alternativeAccountIdentifier='" + alternativeAccountIdentifier + '\'' +
+        '}';
   }
 }

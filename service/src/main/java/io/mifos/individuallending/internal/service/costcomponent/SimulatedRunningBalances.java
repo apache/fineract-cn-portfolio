@@ -16,7 +16,6 @@
 
 package io.mifos.individuallending.internal.service.costcomponent;
 
-import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 
 import java.math.BigDecimal;
@@ -54,7 +53,7 @@ public class SimulatedRunningBalances implements RunningBalances {
   }
 
   @Override
-  public Optional<LocalDateTime> getStartOfTerm(final DataContextOfAction dataContextOfAction) {
+  public Optional<LocalDateTime> getStartOfTerm() {
     return Optional.ofNullable(startOfTerm);
   }
 

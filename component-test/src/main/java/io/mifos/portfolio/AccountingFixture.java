@@ -307,15 +307,18 @@ class AccountingFixture {
     private final String ledgerIdentifer;
     private final String accountDesignator;
     private final AccountType type;
+    private final BigDecimal balance;
     private Account matchedArgument;
 
     private AccountMatcher(
         final String ledgerIdentifier,
         final String accountDesignator,
-        final AccountType type) {
+        final AccountType type,
+        final BigDecimal balance) {
       this.ledgerIdentifer = ledgerIdentifier;
       this.accountDesignator = accountDesignator;
       this.type = type;
+      this.balance = balance;
       this.matchedArgument = null; //Set when matches called and returns true.
     }
 
@@ -331,7 +334,7 @@ class AccountingFixture {
       final boolean ret = checkedArgument.getLedger().equals(ledgerIdentifer) &&
           checkedArgument.getIdentifier().contains(accountDesignator) &&
           checkedArgument.getType().equals(type.name()) &&
-          checkedArgument.getBalance() == 0.0;
+          checkedArgument.getBalance().compareTo(balance.doubleValue()) == 0;
 
       if (ret)
         matchedArgument = checkedArgument;
@@ -354,6 +357,7 @@ class AccountingFixture {
           "ledgerIdentifer='" + ledgerIdentifer + '\'' +
           ", accountDesignator='" + accountDesignator + '\'' +
           ", type=" + type +
+          ", balance=" + balance +
           '}';
     }
   }
@@ -590,8 +594,9 @@ class AccountingFixture {
       final LedgerManager ledgerManager,
       final String ledgerIdentifier,
       final String accountDesignator,
-      final AccountType type) {
-    final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, accountDesignator, type);
+      final AccountType type,
+      final BigDecimal balance) {
+    final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, accountDesignator, type, balance);
     Mockito.verify(ledgerManager).createAccount(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectAccount)));
     return specifiesCorrectAccount.getMatchedArgument().getIdentifier();
   }

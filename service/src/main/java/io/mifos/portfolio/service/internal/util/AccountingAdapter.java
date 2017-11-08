@@ -272,12 +272,15 @@ public class AccountingAdapter {
             productIdentifier, accountDesignator, ledgerIdentifier));
   }
 
-  public String createCaseAccountForLedgerAssignment(final String customerIdentifier, final AccountAssignment ledgerAssignment) {
+  public String createCaseAccountForLedgerAssignment(
+      final String customerIdentifier,
+      final AccountAssignment ledgerAssignment,
+      final BigDecimal currentBalance) {
     final Ledger ledger = ledgerManager.findLedger(ledgerAssignment.getLedgerIdentifier());
     final AccountPage accountsOfLedger = ledgerManager.fetchAccountsOfLedger(ledger.getIdentifier(), null, null, null, null);
 
     final Account generatedAccount = new Account();
-    generatedAccount.setBalance(0.0);
+    generatedAccount.setBalance(currentBalance.doubleValue());
     generatedAccount.setType(ledger.getType());
     generatedAccount.setState(Account.State.OPEN.name());
     long guestimatedAccountIndex = accountsOfLedger.getTotalElements() + 1;

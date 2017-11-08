@@ -89,13 +89,22 @@ public class RealRunningBalances implements RunningBalances {
   }
 
   @Override
-  public Optional<LocalDateTime> getStartOfTerm(final DataContextOfAction dataContextOfAction) {
+  public Optional<LocalDateTime> getStartOfTerm() {
     if (!startOfTerm.isPresent()) {
+      final LocalDateTime persistedStartOfTerm = dataContextOfAction.getCustomerCaseEntity().getStartOfTerm();
+      if (persistedStartOfTerm != null) {
+        this.startOfTerm = Optional.of(persistedStartOfTerm);
+        return this.startOfTerm;
+      }
       final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
 
       this.startOfTerm = accountingAdapter.getDateOfOldestEntryContainingMessage(
           customerLoanPrincipalAccountIdentifier,
           dataContextOfAction.getMessageForCharge(Action.DISBURSE));
+
+      //Moving start of term persistence from accounting to the portfolio db.  Opportunistic migration only right now.
+      startOfTerm.ifPresent(startOfTermPersistedInAccounting ->
+          dataContextOfAction.getCustomerCaseEntity().setStartOfTerm(startOfTermPersistedInAccounting));
     }
 
     return this.startOfTerm;

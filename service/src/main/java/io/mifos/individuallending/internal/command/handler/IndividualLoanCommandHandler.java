@@ -49,6 +49,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Nullable;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
@@ -174,14 +175,18 @@ public class IndividualLoanCommandHandler {
   @EventEmitter(
       selectorName = IndividualLoanEventConstants.SELECTOR_NAME,
       selectorValue = IndividualLoanEventConstants.IMPORT_INDIVIDUALLOAN_CASE)
-  public IndividualLoanCommandEvent process(final ImportCommand command) {
+  public IndividualLoanCommandEvent process(final ImportCommand command) throws InterruptedException {
     final String productIdentifier = command.getProductIdentifier();
     final String caseIdentifier = command.getCaseIdentifier();
     final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(
         productIdentifier, caseIdentifier, command.getImportParameters().getCaseAccountAssignments());
-    IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState()), Action.OPEN);
+    IndividualLendingPatternFactory.checkActionCanBeExecuted(Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState()), Action.IMPORT);
 
     checkIfTasksAreOutstanding(dataContextOfAction, Action.IMPORT);
+
+    final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
+        = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    createAccounts(dataContextOfAction, designatorToAccountIdentifierMapper, command.getImportParameters().getCurrentBalances());
 
     final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
 
@@ -191,14 +196,19 @@ public class IndividualLoanCommandHandler {
         Action.IMPORT,
         Optional.empty());
 
+
+    final LocalDate startOfTerm = DateConverter.fromIsoString(command.getImportParameters().getStartOfTerm()).toLocalDate();
+    final LocalDateTime endOfTerm = ScheduledActionHelpers.getRoughEndDate(startOfTerm, dataContextOfAction.getCaseParameters())
+        .atTime(LocalTime.MIDNIGHT);
+    customerCase.setStartOfTerm(startOfTerm.atTime(LocalTime.MIDNIGHT));
+    customerCase.setEndOfTerm(endOfTerm);
     customerCase.setCurrentState(Case.State.ACTIVE.name());
     caseRepository.save(customerCase);
 
     final CaseParametersEntity caseParameters = dataContextOfAction.getCaseParametersEntity();
     caseParameters.setPaymentSize(command.getImportParameters().getPaymentSize());
     caseParametersRepository.save(caseParameters);
-    //TODO: find end of term.
-    //TODO: persist start of term.
+
     //TODO: create/connect to accounts in account assignments.
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getImportParameters().getCreatedOn());
@@ -279,40 +289,8 @@ public class IndividualLoanCommandHandler {
 
     final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper
             = new DesignatorToAccountIdentifierMapper(dataContextOfAction);
+    createAccounts(dataContextOfAction, designatorToAccountIdentifierMapper, Collections.emptyMap());
 
-    //Create the needed account assignments for groups and persist them for the case.
-    try {
-      designatorToAccountIdentifierMapper.getGroupsNeedingLedgers()
-          .map(groupNeedingLedger -> {
-            try {
-              final String createdLedgerIdentifier = accountingAdapter.createLedger(
-                  dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
-                  groupNeedingLedger.getGroupName(),
-                  groupNeedingLedger.getParentLedger());
-              return new AccountAssignment(groupNeedingLedger.getGroupName(), createdLedgerIdentifier);
-            } catch (InterruptedException e) {
-              throw new InterruptedInALambdaException(e);
-            }
-          })
-          .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
-          .forEach(caseAccountAssignmentEntity -> dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity));
-    }
-    catch (final InterruptedInALambdaException e) {
-      e.throwWrappedException();
-    }
-
-    //Create the needed account assignments and persist them for the case.
-    designatorToAccountIdentifierMapper.getLedgersNeedingAccounts()
-        .map(ledger ->
-            new AccountAssignment(ledger.getDesignator(),
-                accountingAdapter.createCaseAccountForLedgerAssignment(
-                    dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
-                    ledger)))
-        .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
-        .forEach(caseAccountAssignmentEntity ->
-            dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity)
-        );
-    caseRepository.save(dataContextOfAction.getCustomerCaseEntity());
 
     final RealRunningBalances runningBalances = new RealRunningBalances(
         accountingAdapter,
@@ -381,11 +359,12 @@ public class IndividualLoanCommandHandler {
         Action.DISBURSE,
         transactionUniqueifier);
 
-    //Only move to new state if book charges command was accepted.
+    //TODO: Only move to new state if book charges command was accepted.
     if (Case.State.valueOf(dataContextOfAction.getCustomerCaseEntity().getCurrentState()) != Case.State.ACTIVE) {
-      final LocalDateTime endOfTerm
-          = ScheduledActionHelpers.getRoughEndDate(DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate(), dataContextOfAction.getCaseParameters())
+      final LocalDate startOfTerm = DateConverter.fromIsoString(command.getCommand().getCreatedOn()).toLocalDate();
+      final LocalDateTime endOfTerm = ScheduledActionHelpers.getRoughEndDate(startOfTerm, dataContextOfAction.getCaseParameters())
           .atTime(LocalTime.MIDNIGHT);
+      customerCase.setStartOfTerm(startOfTerm.atTime(LocalTime.MIDNIGHT));
       customerCase.setEndOfTerm(endOfTerm);
       customerCase.setCurrentState(Case.State.ACTIVE.name());
       caseRepository.save(customerCase);
@@ -713,6 +692,48 @@ public class IndividualLoanCommandHandler {
     caseRepository.save(customerCase);
 
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getCommand().getCreatedOn());
+  }
+
+  private void createAccounts(
+      final DataContextOfAction dataContextOfAction,
+      final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper,
+      final Map<String, BigDecimal> currentBalances) throws InterruptedException
+  {
+    //Create the needed account assignments for groups and persist them for the case.
+    try {
+      designatorToAccountIdentifierMapper.getGroupsNeedingLedgers()
+          .map(groupNeedingLedger -> {
+            try {
+              final String createdLedgerIdentifier = accountingAdapter.createLedger(
+                  dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
+                  groupNeedingLedger.getGroupName(),
+                  groupNeedingLedger.getParentLedger());
+              return new AccountAssignment(groupNeedingLedger.getGroupName(), createdLedgerIdentifier);
+            } catch (InterruptedException e) {
+              throw new InterruptedInALambdaException(e);
+            }
+          })
+          .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
+          .forEach(caseAccountAssignmentEntity -> dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity));
+    }
+    catch (final InterruptedInALambdaException e) {
+      e.throwWrappedException();
+    }
+
+    //Create the needed account assignments and persist them for the case.
+    designatorToAccountIdentifierMapper.getLedgersNeedingAccounts()
+        .map(ledger -> {
+          final BigDecimal currentBalance = currentBalances.getOrDefault(ledger.getDesignator(), BigDecimal.ZERO);
+          return new AccountAssignment(ledger.getDesignator(),
+              accountingAdapter.createCaseAccountForLedgerAssignment(
+                  dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
+                  ledger,
+                  currentBalance));})
+        .map(accountAssignment -> CaseMapper.map(accountAssignment, dataContextOfAction.getCustomerCaseEntity()))
+        .forEach(caseAccountAssignmentEntity ->
+            dataContextOfAction.getCustomerCaseEntity().getAccountAssignments().add(caseAccountAssignmentEntity)
+        );
+    caseRepository.save(dataContextOfAction.getCustomerCaseEntity());
   }
 
   private Map<String, BigDecimal> getRequestedChargeAmounts(final @Nullable List<CostComponent> costComponents) {

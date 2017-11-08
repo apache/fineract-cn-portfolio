@@ -18,6 +18,7 @@ package io.mifos.portfolio.api.v1.domain;
 import io.mifos.core.lang.DateConverter;
 import io.mifos.core.test.domain.ValidationTest;
 import io.mifos.core.test.domain.ValidationTestCase;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -44,7 +45,7 @@ public class ImportParametersTest extends ValidationTest<ImportParameters> {
     final ImportParameters ret = new ImportParameters();
     ret.setCaseAccountAssignments(Collections.emptyList());
     ret.setPaymentSize(BigDecimal.TEN);
-    ret.setCurrentBalance(BigDecimal.TEN.multiply(BigDecimal.TEN));
+    ret.setCurrentBalances(Collections.singletonMap(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, BigDecimal.TEN.multiply(BigDecimal.TEN)));
     ret.setStartOfTerm(DateConverter.toIsoString(LocalDateTime.now(Clock.systemUTC())));
     ret.setCreatedOn(DateConverter.toIsoString(LocalDateTime.now(Clock.systemUTC())));
     return ret;
@@ -61,8 +62,8 @@ public class ImportParametersTest extends ValidationTest<ImportParameters> {
         .adjustment(x -> x.setPaymentSize(null))
         .valid(false));
     ret.add(new ValidationTestCase<ImportParameters>("nullCurrentBalance")
-        .adjustment(x -> x.setCurrentBalance(null))
-        .valid(false));
+        .adjustment(x -> x.setCurrentBalances(null))
+        .valid(true));
     return ret;
   }
 

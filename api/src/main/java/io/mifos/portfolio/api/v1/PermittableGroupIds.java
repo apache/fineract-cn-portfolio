@@ -25,5 +25,5 @@ public interface PermittableGroupIds {
   String PRODUCT_MANAGEMENT = "portfolio__v1__products";
   String CASE_MANAGEMENT = "portfolio__v1__case";
   String CASE_DOCUMENT_MANAGEMENT = "portfolio__v1__case_documents";
-  String CASE_IMPORT = "portfolio__v1__case_import";
+  String CASE_STATUS = "portfolio__v1__case_status";
 }

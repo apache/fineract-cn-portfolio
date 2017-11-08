@@ -22,6 +22,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -37,8 +38,7 @@ public class ImportParameters {
   private BigDecimal paymentSize;
 
   @Valid
-  @NotNull
-  private BigDecimal currentBalance;
+  private Map<String, BigDecimal> currentBalances;
 
   @ValidLocalDateTimeString
   @NotNull
@@ -70,13 +70,12 @@ public class ImportParameters {
     this.paymentSize = paymentSize;
   }
 
-  @Nullable
-  public BigDecimal getCurrentBalance() {
-    return currentBalance;
+  public Map<String, BigDecimal> getCurrentBalances() {
+    return currentBalances;
   }
 
-  public void setCurrentBalance(@Nullable BigDecimal currentBalance) {
-    this.currentBalance = currentBalance;
+  public void setCurrentBalances(Map<String, BigDecimal> currentBalances) {
+    this.currentBalances = currentBalances;
   }
 
   public String getStartOfTerm() {
@@ -110,13 +109,13 @@ public class ImportParameters {
     ImportParameters that = (ImportParameters) o;
     return Objects.equals(caseAccountAssignments, that.caseAccountAssignments) &&
         Objects.equals(paymentSize, that.paymentSize) &&
-        Objects.equals(currentBalance, that.currentBalance) &&
+        Objects.equals(currentBalances, that.currentBalances) &&
         Objects.equals(startOfTerm, that.startOfTerm);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(caseAccountAssignments, paymentSize, currentBalance, startOfTerm);
+    return Objects.hash(caseAccountAssignments, paymentSize, currentBalances, startOfTerm);
   }
 
   @Override
@@ -124,7 +123,7 @@ public class ImportParameters {
     return "ImportParameters{" +
         "caseAccountAssignments=" + caseAccountAssignments +
         ", paymentSize=" + paymentSize +
-        ", currentBalance=" + currentBalance +
+        ", currentBalances=" + currentBalances +
         ", startOfTerm='" + startOfTerm + '\'' +
         ", createdOn='" + createdOn + '\'' +
         ", createdBy='" + createdBy + '\'' +

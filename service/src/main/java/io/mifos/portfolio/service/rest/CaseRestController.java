@@ -132,12 +132,27 @@ public class CaseRestController {
           consumes = MediaType.ALL_VALUE,
           produces = MediaType.APPLICATION_JSON_VALUE)
   public @ResponseBody Case getCase(
-          @PathVariable("productidentifier") final String productIdentifier,
-          @PathVariable("caseidentifier") final String caseIdentifier)
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier)
   {
     return caseService.findByIdentifier(productIdentifier, caseIdentifier)
-            .orElseThrow(() -> ServiceException.notFound(
-                    "Instance with identifier " + productIdentifier + "." + caseIdentifier + " doesn't exist."));
+        .orElseThrow(() -> ServiceException.notFound(
+            "Instance with identifier ''{0}.{1}'' doesn''t exist.", productIdentifier, caseIdentifier));
+  }
+
+  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_STATUS)
+  @RequestMapping(
+      value = "{caseidentifier}/status",
+      method = RequestMethod.GET,
+      consumes = MediaType.ALL_VALUE,
+      produces = MediaType.APPLICATION_JSON_VALUE)
+  public @ResponseBody CaseStatus getCaseStatus(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier)
+  {
+    return caseService.findStatusByIdentifier(productIdentifier, caseIdentifier)
+        .orElseThrow(() -> ServiceException.notFound(
+            "Instance with identifier ''{0}.{1}'' doesn''t exist.", productIdentifier, caseIdentifier));
   }
 
   @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_MANAGEMENT)
@@ -235,7 +250,7 @@ public class CaseRestController {
     return new ResponseEntity<>(HttpStatus.ACCEPTED);
   }
 
-  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_IMPORT)
+  @Permittable(value = AcceptedTokenType.TENANT, groupId = PermittableGroupIds.CASE_STATUS)
   @RequestMapping(
       value = "{caseidentifier}/commands/IMPORT",
       method = RequestMethod.POST,

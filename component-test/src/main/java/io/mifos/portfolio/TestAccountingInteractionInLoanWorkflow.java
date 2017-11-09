@@ -103,12 +103,28 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     step2CreateCase();
     step3IImportCaseWhenAccountsDontExistYet(initialDisbursalDate);
 
-    //TODO: test that interest calculation works just like for "normal" loans.
-    step7PaybackPartialAmount(
-        expectedCurrentPrincipal.add(nonLateFees).add(interestAccrued),
-        today,
-        BigDecimal.ZERO);
-    step8Close(today);
+    final List<PlannedPayment> plannedPayments = individualLending.getPaymentScheduleForCaseStream(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        null)
+        .collect(Collectors.toList());
+
+    int week = 3;
+    while (expectedCurrentPrincipal.compareTo(BigDecimal.ZERO) > 0) {
+      logger.info("Simulating week {}. Expected current principal {}.", week, expectedCurrentPrincipal);
+      step6CalculateInterestAndCheckForLatenessForWeek(today, week);
+      final BigDecimal interestAccruedBeforePayment = interestAccrued;
+      final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today.plusDays((week+1)*7));
+      final Payment payment = step7PaybackPartialAmount(nextRepaymentAmount, today.plusDays((week + 1) * 7), BigDecimal.ZERO);
+      final BigDecimal interestAccrual = payment.getBalanceAdjustments().remove(AccountDesignators.INTEREST_ACCRUAL); //Don't compare these with planned payment.
+      final BigDecimal customerLoanInterest = payment.getBalanceAdjustments().remove(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+      Assert.assertEquals("week " + week, interestAccrual.negate(), customerLoanInterest);
+      Assert.assertEquals("week " + week, interestAccruedBeforePayment, customerLoanInterest);
+      //TODO: Assert.assertEquals("week " + week, plannedPayments.get(week+1).getPayment(), payment);
+      week++;
+    }
+
+    step8Close(DateConverter.fromIsoString(plannedPayments.get(plannedPayments.size()-1).getPayment().getDate()));
   }
 
 

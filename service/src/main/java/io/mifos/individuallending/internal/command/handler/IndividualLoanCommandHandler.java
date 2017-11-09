@@ -191,6 +191,12 @@ public class IndividualLoanCommandHandler {
     final CaseEntity customerCase = dataContextOfAction.getCustomerCaseEntity();
 
     recordCommand(
+        command.getImportParameters().getStartOfTerm(),
+        customerCase.getId(),
+        Action.DISBURSE,
+        Optional.empty());
+
+    recordCommand(
         command.getImportParameters().getCreatedOn(),
         customerCase.getId(),
         Action.IMPORT,

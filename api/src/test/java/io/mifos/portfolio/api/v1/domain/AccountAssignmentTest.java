@@ -55,7 +55,7 @@ public class AccountAssignmentTest extends ValidationTest<AccountAssignment> {
         .adjustment(x -> { x.setLedgerIdentifier("zzz"); x.setAccountIdentifier(null); })
         .valid(true));
     ret.add(new ValidationTestCase<AccountAssignment>("alternativeAccountIdentifierSet")
-        .adjustment(x -> x.setAlternativeAccountIdentifier("asd;lf///kjasdf"))
+        .adjustment(x -> x.setReferenceAccountIdentifier("asd;lf///kjasdf"))
         .valid(true));
     return ret;
   }

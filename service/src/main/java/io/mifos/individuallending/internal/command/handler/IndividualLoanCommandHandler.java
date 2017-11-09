@@ -209,8 +209,6 @@ public class IndividualLoanCommandHandler {
     caseParameters.setPaymentSize(command.getImportParameters().getPaymentSize());
     caseParametersRepository.save(caseParameters);
 
-    //TODO: create/connect to accounts in account assignments.
-
     return new IndividualLoanCommandEvent(productIdentifier, caseIdentifier, command.getImportParameters().getCreatedOn());
   }
 
@@ -725,7 +723,7 @@ public class IndividualLoanCommandHandler {
         .map(ledger -> {
           final BigDecimal currentBalance = currentBalances.getOrDefault(ledger.getDesignator(), BigDecimal.ZERO);
           return new AccountAssignment(ledger.getDesignator(),
-              accountingAdapter.createCaseAccountForLedgerAssignment(
+              accountingAdapter.createOrFindCaseAccountForLedgerAssignment(
                   dataContextOfAction.getCaseParametersEntity().getCustomerIdentifier(),
                   ledger,
                   currentBalance));})

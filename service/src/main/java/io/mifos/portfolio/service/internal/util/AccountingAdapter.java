@@ -272,10 +272,18 @@ public class AccountingAdapter {
             productIdentifier, accountDesignator, ledgerIdentifier));
   }
 
-  public String createCaseAccountForLedgerAssignment(
+  public String createOrFindCaseAccountForLedgerAssignment(
       final String customerIdentifier,
       final AccountAssignment ledgerAssignment,
       final BigDecimal currentBalance) {
+    if (ledgerAssignment.getAccountIdentifier() != null) try
+    {
+      final Account existingAccount = ledgerManager.findAccount(ledgerAssignment.getAccountIdentifier());
+      return existingAccount.getIdentifier();
+    }
+    catch (final AccountNotFoundException ignored) {
+      //If the "existing" account doesn't exist after all, create a new one.
+    }
     final Ledger ledger = ledgerManager.findLedger(ledgerAssignment.getLedgerIdentifier());
     final AccountPage accountsOfLedger = ledgerManager.fetchAccountsOfLedger(ledger.getIdentifier(), null, null, null, null);
 
@@ -291,6 +299,7 @@ public class AccountingAdapter {
           final String accountNumber = createCaseAccountNumber(customerIdentifier, ledgerAssignment.getDesignator(), i);
           generatedAccount.setIdentifier(accountNumber);
           generatedAccount.setName(accountNumber);
+          generatedAccount.setReferenceAccount(ledgerAssignment.getReferenceAccountIdentifier());
           try {
             ledgerManager.createAccount(generatedAccount);
             return Optional.of(accountNumber);

@@ -321,6 +321,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       week++;
     }
 
+    Assert.assertEquals(week+1, plannedPayments.size());
+
     step8Close(DateConverter.fromIsoString(plannedPayments.get(plannedPayments.size()-1).getPayment().getDate()));
   }
 

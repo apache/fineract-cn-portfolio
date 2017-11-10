@@ -28,11 +28,14 @@ import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Myrle Krantz
  */
 public class DataContextOfAction {
+  private final static BigDecimal PAYMENT_SIZE_NOT_SET_SEMAPHORE = BigDecimal.ONE.negate();
+
   private final ProductEntity product;
   private final CaseEntity customerCase;
   private final CaseParametersEntity caseParameters;
@@ -80,5 +83,15 @@ public class DataContextOfAction {
 
   public BigDecimal getInterest() {
     return customerCase.getInterest();
+  }
+
+  public Optional<BigDecimal> getPaymentSize() {
+
+    final BigDecimal persistedPaymentSize = caseParameters.getPaymentSize();
+
+    if (persistedPaymentSize == null || persistedPaymentSize.compareTo(PAYMENT_SIZE_NOT_SET_SEMAPHORE) == 0)
+      return Optional.empty();
+
+    return Optional.of(persistedPaymentSize);
   }
 }

@@ -59,6 +59,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private static final BigDecimal LOAN_ORIGINATION_FEE_AMOUNT = BigDecimal.valueOf(50_00, MINOR_CURRENCY_UNIT_DIGITS);
   private static final BigDecimal DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT = BigDecimal.valueOf(10_00, MINOR_CURRENCY_UNIT_DIGITS);
   private static final BigDecimal DISBURSEMENT_FEE_UPPER_RANGE_AMOUNT = BigDecimal.valueOf(1_00, MINOR_CURRENCY_UNIT_DIGITS);
+  private static final BigDecimal IMPORTED_NEXT_REPAYMENT_AMOUNT = BigDecimal.valueOf(300_00, MINOR_CURRENCY_UNIT_DIGITS);
   private static final String DISBURSEMENT_RANGES = "disbursement_ranges";
   private static final String DISBURSEMENT_LOWER_RANGE = "smaller";
   private static final String DISBURSEMENT_UPPER_RANGE = "larger";
@@ -115,6 +116,11 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       step6CalculateInterestAndCheckForLatenessForWeek(today, week);
       final BigDecimal interestAccruedBeforePayment = interestAccrued;
       final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today.plusDays((week+1)*7));
+      final BigDecimal totalDue = expectedCurrentPrincipal.add(interestAccrued).add(nonLateFees);
+      if (totalDue.compareTo(IMPORTED_NEXT_REPAYMENT_AMOUNT) >= 0)
+        Assert.assertEquals(IMPORTED_NEXT_REPAYMENT_AMOUNT, nextRepaymentAmount);
+      else
+        Assert.assertEquals(totalDue, nextRepaymentAmount);
       final Payment payment = step7PaybackPartialAmount(nextRepaymentAmount, today.plusDays((week + 1) * 7), BigDecimal.ZERO);
       final BigDecimal interestAccrual = payment.getBalanceAdjustments().remove(AccountDesignators.INTEREST_ACCRUAL); //Don't compare these with planned payment.
       final BigDecimal customerLoanInterest = payment.getBalanceAdjustments().remove(AccountDesignators.CUSTOMER_LOAN_INTEREST);
@@ -516,7 +522,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private void step3IImportCaseWhenAccountsDontExistYet(final LocalDateTime forDateTime) throws InterruptedException {
     logger.info("step3IImportCaseWhenAccountsDontExistYet");
 
-    final BigDecimal expectedNextRepaymentAmount = BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS);
     final BigDecimal currentPrincipal = BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS);
 
     final AccountAssignment customerLoanPrincipalAccountAssignment = new AccountAssignment();
@@ -538,7 +543,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final ImportParameters importParameters = new ImportParameters();
     importParameters.setCaseAccountAssignments(importAccountAssignments);
-    importParameters.setPaymentSize(expectedNextRepaymentAmount);
+    importParameters.setPaymentSize(IMPORTED_NEXT_REPAYMENT_AMOUNT);
     importParameters.setCreatedOn(DateConverter.toIsoString(forDateTime));
     importParameters.setCurrentBalances(Collections.singletonMap(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, currentPrincipal));
     importParameters.setStartOfTerm(DateConverter.toIsoString(forDateTime));
@@ -585,9 +590,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     expectedCurrentPrincipal = currentPrincipal;
     updateBalanceMock();
 
-    final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(forDateTime);
-    Assert.assertEquals(expectedNextRepaymentAmount, nextRepaymentAmount);
-
     final Case changedCase = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
     final Map<String, String> designatorsAssignedForCase = changedCase.getAccountAssignments().stream()
         .collect(Collectors.toMap(AccountAssignment::getDesignator, AccountAssignment::getAccountIdentifier));
@@ -606,7 +608,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private void step3IImportCaseWhenAccountsExist(final LocalDateTime forDateTime) throws InterruptedException {
     logger.info("step3IImportCaseWhenAccountsExist");
 
-    final BigDecimal expectedNextRepaymentAmount = BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS);
     final BigDecimal currentPrincipal = BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS);
 
     final AccountAssignment customerLoanPrincipalAccountAssignment = new AccountAssignment();
@@ -628,7 +629,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final ImportParameters importParameters = new ImportParameters();
     importParameters.setCaseAccountAssignments(importAccountAssignments);
-    importParameters.setPaymentSize(expectedNextRepaymentAmount);
+    importParameters.setPaymentSize(IMPORTED_NEXT_REPAYMENT_AMOUNT);
     importParameters.setCreatedOn(DateConverter.toIsoString(forDateTime));
     importParameters.setCurrentBalances(Collections.singletonMap(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, currentPrincipal));
     importParameters.setStartOfTerm(DateConverter.toIsoString(forDateTime));
@@ -654,9 +655,6 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     expectedCurrentPrincipal = currentPrincipal;
     updateBalanceMock();
-
-    final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(forDateTime);
-    Assert.assertEquals(expectedNextRepaymentAmount, nextRepaymentAmount);
 
     final Case changedCase = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
     final Map<String, String> designatorsAssignedForCase = changedCase.getAccountAssignments().stream()

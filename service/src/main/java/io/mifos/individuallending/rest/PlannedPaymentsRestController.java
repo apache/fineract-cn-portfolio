@@ -29,8 +29,8 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Collections;
+import java.util.Optional;
 
 /**
  * @author Myrle Krantz
@@ -65,9 +65,9 @@ public class PlannedPaymentsRestController {
   {
     final DataContextOfAction dataContextOfAction = dataContextService.checkedGetDataContext(productIdentifier, caseIdentifier, Collections.emptyList());
 
-    final LocalDate parsedInitialDisbursalDate = initialDisbursalDate == null
-            ? LocalDate.now(ZoneId.of("UTC"))
-            : DateConverter.fromIsoString(initialDisbursalDate).toLocalDate();
+    final Optional<LocalDate> parsedInitialDisbursalDate = initialDisbursalDate == null
+            ? Optional.empty()
+            : Optional.of(DateConverter.fromIsoString(initialDisbursalDate).toLocalDate());
     final Integer pageIndexToUse = pageIndex != null ? pageIndex : 0;
     final Integer sizeToUse = size != null ? size : 20;
 

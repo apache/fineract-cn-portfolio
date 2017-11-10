@@ -59,6 +59,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
   private static final BigDecimal LOAN_ORIGINATION_FEE_AMOUNT = BigDecimal.valueOf(50_00, MINOR_CURRENCY_UNIT_DIGITS);
   private static final BigDecimal DISBURSEMENT_FEE_LOWER_RANGE_AMOUNT = BigDecimal.valueOf(10_00, MINOR_CURRENCY_UNIT_DIGITS);
   private static final BigDecimal DISBURSEMENT_FEE_UPPER_RANGE_AMOUNT = BigDecimal.valueOf(1_00, MINOR_CURRENCY_UNIT_DIGITS);
+  private static final BigDecimal IMPORTED_NEXT_REPAYMENT_AMOUNT = BigDecimal.valueOf(300_00, MINOR_CURRENCY_UNIT_DIGITS);
   private static final String DISBURSEMENT_RANGES = "disbursement_ranges";
   private static final String DISBURSEMENT_LOWER_RANGE = "smaller";
   private static final String DISBURSEMENT_UPPER_RANGE = "larger";
@@ -96,10 +97,57 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
   @Test
   public void workflowImportingLoanFromExternalSystem() throws InterruptedException {
-    final LocalDateTime today = midnightToday();
+    final LocalDateTime initialDisbursalDate = LocalDateTime.of(2017,11,8,0,0);
+    final LocalDateTime today = LocalDateTime.of(2017,11,22,0,0);
+
     step1CreateProduct();
     step2CreateCase();
-    step3IImportCase(today);
+    step3IImportCaseWhenAccountsDontExistYet(initialDisbursalDate);
+
+    final List<PlannedPayment> plannedPayments = individualLending.getPaymentScheduleForCaseStream(
+        product.getIdentifier(),
+        customerCase.getIdentifier(),
+        null)
+        .collect(Collectors.toList());
+
+    int week = 3;
+    while (expectedCurrentPrincipal.compareTo(BigDecimal.ZERO) > 0) {
+      logger.info("Simulating week {}. Expected current principal {}.", week, expectedCurrentPrincipal);
+      step6CalculateInterestAndCheckForLatenessForWeek(today, week);
+      final BigDecimal interestAccruedBeforePayment = interestAccrued;
+      final BigDecimal nextRepaymentAmount = findNextRepaymentAmount(today.plusDays((week+1)*7));
+      final BigDecimal totalDue = expectedCurrentPrincipal.add(interestAccrued).add(nonLateFees);
+      if (totalDue.compareTo(IMPORTED_NEXT_REPAYMENT_AMOUNT) >= 0)
+        Assert.assertEquals(IMPORTED_NEXT_REPAYMENT_AMOUNT, nextRepaymentAmount);
+      else
+        Assert.assertEquals(totalDue, nextRepaymentAmount);
+      final Payment payment = step7PaybackPartialAmount(nextRepaymentAmount, today.plusDays((week + 1) * 7), BigDecimal.ZERO);
+      final BigDecimal interestAccrual = payment.getBalanceAdjustments().remove(AccountDesignators.INTEREST_ACCRUAL); //Don't compare these with planned payment.
+      final BigDecimal customerLoanInterest = payment.getBalanceAdjustments().remove(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+      Assert.assertEquals("week " + week, interestAccrual.negate(), customerLoanInterest);
+      Assert.assertEquals("week " + week, interestAccruedBeforePayment, customerLoanInterest);
+      //TODO: Assert.assertEquals("week " + week, plannedPayments.get(week+1).getPayment(), payment);
+      week++;
+    }
+
+    step8Close(DateConverter.fromIsoString(plannedPayments.get(plannedPayments.size()-1).getPayment().getDate()));
+  }
+
+
+  @Test
+  public void workflowImportingLoanFromExternalSystemConnectingToExistingAccounts() throws InterruptedException {
+    final LocalDateTime initialDisbursalDate = LocalDateTime.of(2017,11,8,0,0);
+    final LocalDateTime today = LocalDateTime.of(2017,11,22,0,0);
+
+    step1CreateProduct();
+    step2CreateCase();
+    step3IImportCaseWhenAccountsExist(initialDisbursalDate);
+
+    step7PaybackPartialAmount(
+        expectedCurrentPrincipal.add(nonLateFees).add(interestAccrued),
+        today,
+        BigDecimal.ZERO);
+    step8Close(today);
   }
 
   @Test
@@ -272,6 +320,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       Assert.assertEquals("week " + week, plannedPayments.get(week+1).getPayment(), payment);
       week++;
     }
+
+    Assert.assertEquals(week+1, plannedPayments.size());
 
     step8Close(DateConverter.fromIsoString(plannedPayments.get(plannedPayments.size()-1).getPayment().getDate()));
   }
@@ -470,26 +520,156 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(), Action.APPROVE, Action.DENY);
   }
 
-  //Open the case and accept a processing fee.
-  private void step3IImportCase(final LocalDateTime forDateTime) throws InterruptedException {
-    logger.info("step3IImportCase");
+  //Import an active case.
+  private void step3IImportCaseWhenAccountsDontExistYet(final LocalDateTime forDateTime) throws InterruptedException {
+    logger.info("step3IImportCaseWhenAccountsDontExistYet");
+
+    final BigDecimal currentPrincipal = BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS);
+
+    final AccountAssignment customerLoanPrincipalAccountAssignment = new AccountAssignment();
+    customerLoanPrincipalAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+    customerLoanPrincipalAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-principal-account-identifier");
+    customerLoanPrincipalAccountAssignment.setLedgerIdentifier(AccountDesignators.CUSTOMER_LOAN_GROUP);
+    final AccountAssignment customerLoanInterestAccountAssignment = new AccountAssignment();
+    customerLoanInterestAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+    customerLoanInterestAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-interest-account-identifier");
+    customerLoanInterestAccountAssignment.setLedgerIdentifier(AccountDesignators.CUSTOMER_LOAN_GROUP);
+    final AccountAssignment customerLoanFeeAccountAssignment = new AccountAssignment();
+    customerLoanFeeAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_FEES);
+    customerLoanFeeAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-fees-account-identifier");
+    customerLoanFeeAccountAssignment.setLedgerIdentifier(AccountDesignators.CUSTOMER_LOAN_GROUP);
+    final ArrayList<AccountAssignment> importAccountAssignments = new ArrayList<>();
+    importAccountAssignments.add(customerLoanPrincipalAccountAssignment);
+    importAccountAssignments.add(customerLoanInterestAccountAssignment);
+    importAccountAssignments.add(customerLoanFeeAccountAssignment);
 
     final ImportParameters importParameters = new ImportParameters();
-    importParameters.setCaseAccountAssignments(Collections.singletonList(assignEntryToTeller()));
-    importParameters.setPaymentSize(BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS));
+    importParameters.setCaseAccountAssignments(importAccountAssignments);
+    importParameters.setPaymentSize(IMPORTED_NEXT_REPAYMENT_AMOUNT);
     importParameters.setCreatedOn(DateConverter.toIsoString(forDateTime));
-    importParameters.setCurrentBalance(BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS));
+    importParameters.setCurrentBalances(Collections.singletonMap(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, currentPrincipal));
     importParameters.setStartOfTerm(DateConverter.toIsoString(forDateTime));
     portfolioManager.executeImportCommand(product.getIdentifier(), customerCase.getIdentifier(), importParameters);
 
     Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.IMPORT_INDIVIDUALLOAN_CASE, new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), DateConverter.toIsoString(forDateTime))));
 
-    //TODO: check payment size, start of term, and end of term and account assignments.
+    final String customerLoanLedgerIdentifier = AccountingFixture.verifyLedgerCreation(
+        ledgerManager,
+        AccountingFixture.CUSTOMER_LOAN_LEDGER_IDENTIFIER,
+        AccountType.ASSET);
 
-    final Case changedCase = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
-    Assert.assertEquals(Case.State.ACTIVE.name(), changedCase.getCurrentState());
+    customerLoanPrincipalIdentifier =
+        AccountingFixture.verifyAccountCreationMatchingDesignator(
+            ledgerManager, customerLoanLedgerIdentifier,
+            AccountDesignators.CUSTOMER_LOAN_PRINCIPAL,
+            customerLoanPrincipalAccountAssignment.getReferenceAccountIdentifier(),
+            AccountType.ASSET,
+            currentPrincipal);
+    customerLoanInterestIdentifier =
+        AccountingFixture.verifyAccountCreationMatchingDesignator(
+            ledgerManager,
+            customerLoanLedgerIdentifier,
+            AccountDesignators.CUSTOMER_LOAN_INTEREST,
+            customerLoanInterestAccountAssignment.getReferenceAccountIdentifier(),
+            AccountType.ASSET,
+            BigDecimal.ZERO);
+    customerLoanFeeIdentifier =
+        AccountingFixture.verifyAccountCreationMatchingDesignator(
+            ledgerManager,
+            customerLoanLedgerIdentifier,
+            AccountDesignators.CUSTOMER_LOAN_FEES,
+            customerLoanFeeAccountAssignment.getReferenceAccountIdentifier(),
+            AccountType.ASSET,
+            BigDecimal.ZERO);
+
+    final CaseStatus changedCaseStatus = portfolioManager.getCaseStatus(product.getIdentifier(), customerCase.getIdentifier());
+    Assert.assertEquals(Case.State.ACTIVE.name(), changedCaseStatus.getCurrentState());
+    Assert.assertEquals(DateConverter.toIsoString(forDateTime), changedCaseStatus.getStartOfTerm());
+    Assert.assertEquals("2018-02-08T00:00:00Z", changedCaseStatus.getEndOfTerm());
     checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
         Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.MARK_IN_ARREARS, Action.WRITE_OFF, Action.CLOSE);
+
+    expectedCurrentPrincipal = currentPrincipal;
+    updateBalanceMock();
+
+    final Case changedCase = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
+    final Map<String, String> designatorsAssignedForCase = changedCase.getAccountAssignments().stream()
+        .collect(Collectors.toMap(AccountAssignment::getDesignator, AccountAssignment::getAccountIdentifier));
+    Assert.assertEquals(
+        customerLoanPrincipalIdentifier,
+        designatorsAssignedForCase.get(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL));
+    Assert.assertEquals(
+        customerLoanInterestIdentifier,
+        designatorsAssignedForCase.get(AccountDesignators.CUSTOMER_LOAN_INTEREST));
+    Assert.assertEquals(
+        customerLoanFeeIdentifier,
+        designatorsAssignedForCase.get(AccountDesignators.CUSTOMER_LOAN_FEES));
+  }
+
+  //Import an active case.
+  private void step3IImportCaseWhenAccountsExist(final LocalDateTime forDateTime) throws InterruptedException {
+    logger.info("step3IImportCaseWhenAccountsExist");
+
+    final BigDecimal currentPrincipal = BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS);
+
+    final AccountAssignment customerLoanPrincipalAccountAssignment = new AccountAssignment();
+    customerLoanPrincipalAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
+    customerLoanPrincipalAccountAssignment.setAccountIdentifier(AccountingFixture.IMPORTED_CUSTOMER_LOAN_PRINCIPAL_ACCOUNT);
+    customerLoanPrincipalAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-principal-account-identifier");
+    final AccountAssignment customerLoanInterestAccountAssignment = new AccountAssignment();
+    customerLoanInterestAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_INTEREST);
+    customerLoanInterestAccountAssignment.setAccountIdentifier(AccountingFixture.IMPORTED_CUSTOMER_LOAN_INTEREST_ACCOUNT);
+    customerLoanInterestAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-interest-account-identifier");
+    final AccountAssignment customerLoanFeeAccountAssignment = new AccountAssignment();
+    customerLoanFeeAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_FEES);
+    customerLoanFeeAccountAssignment.setAccountIdentifier(AccountingFixture.IMPORTED_CUSTOMER_LOAN_FEES_ACCOUNT);
+    customerLoanFeeAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-fees-account-identifier");
+    final ArrayList<AccountAssignment> importAccountAssignments = new ArrayList<>();
+    importAccountAssignments.add(customerLoanPrincipalAccountAssignment);
+    importAccountAssignments.add(customerLoanInterestAccountAssignment);
+    importAccountAssignments.add(customerLoanFeeAccountAssignment);
+
+    final ImportParameters importParameters = new ImportParameters();
+    importParameters.setCaseAccountAssignments(importAccountAssignments);
+    importParameters.setPaymentSize(IMPORTED_NEXT_REPAYMENT_AMOUNT);
+    importParameters.setCreatedOn(DateConverter.toIsoString(forDateTime));
+    importParameters.setCurrentBalances(Collections.singletonMap(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, currentPrincipal));
+    importParameters.setStartOfTerm(DateConverter.toIsoString(forDateTime));
+    portfolioManager.executeImportCommand(product.getIdentifier(), customerCase.getIdentifier(), importParameters);
+
+    Assert.assertTrue(eventRecorder.wait(IndividualLoanEventConstants.IMPORT_INDIVIDUALLOAN_CASE, new IndividualLoanCommandEvent(product.getIdentifier(), customerCase.getIdentifier(), DateConverter.toIsoString(forDateTime))));
+
+    AccountingFixture.verifyLedgerCreation(
+        ledgerManager,
+        AccountingFixture.CUSTOMER_LOAN_LEDGER_IDENTIFIER,
+        AccountType.ASSET);
+
+    customerLoanPrincipalIdentifier = AccountingFixture.IMPORTED_CUSTOMER_LOAN_PRINCIPAL_ACCOUNT;
+    customerLoanInterestIdentifier = AccountingFixture.IMPORTED_CUSTOMER_LOAN_INTEREST_ACCOUNT;
+    customerLoanFeeIdentifier = AccountingFixture.IMPORTED_CUSTOMER_LOAN_FEES_ACCOUNT;
+
+    final CaseStatus changedCaseStatus = portfolioManager.getCaseStatus(product.getIdentifier(), customerCase.getIdentifier());
+    Assert.assertEquals(Case.State.ACTIVE.name(), changedCaseStatus.getCurrentState());
+    Assert.assertEquals(DateConverter.toIsoString(forDateTime), changedCaseStatus.getStartOfTerm());
+    Assert.assertEquals("2018-02-08T00:00:00Z", changedCaseStatus.getEndOfTerm());
+    checkNextActionsCorrect(product.getIdentifier(), customerCase.getIdentifier(),
+        Action.APPLY_INTEREST, Action.MARK_LATE, Action.ACCEPT_PAYMENT, Action.DISBURSE, Action.MARK_IN_ARREARS, Action.WRITE_OFF, Action.CLOSE);
+
+    expectedCurrentPrincipal = currentPrincipal;
+    updateBalanceMock();
+
+    final Case changedCase = portfolioManager.getCase(product.getIdentifier(), customerCase.getIdentifier());
+    final Map<String, String> designatorsAssignedForCase = changedCase.getAccountAssignments().stream()
+        .collect(Collectors.toMap(AccountAssignment::getDesignator, AccountAssignment::getAccountIdentifier));
+    Assert.assertEquals(
+        AccountingFixture.IMPORTED_CUSTOMER_LOAN_PRINCIPAL_ACCOUNT,
+        designatorsAssignedForCase.get(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL));
+    Assert.assertEquals(
+        AccountingFixture.IMPORTED_CUSTOMER_LOAN_INTEREST_ACCOUNT,
+        designatorsAssignedForCase.get(AccountDesignators.CUSTOMER_LOAN_INTEREST));
+    Assert.assertEquals(
+        AccountingFixture.IMPORTED_CUSTOMER_LOAN_FEES_ACCOUNT,
+        designatorsAssignedForCase.get(AccountDesignators.CUSTOMER_LOAN_FEES));
   }
 
 

@@ -60,10 +60,10 @@ public interface RunningBalances {
   BigDecimal getAccruedBalanceForCharge(
       final ChargeDefinition chargeDefinition);
 
-  Optional<LocalDateTime> getStartOfTerm(final DataContextOfAction dataContextOfAction);
+  Optional<LocalDateTime> getStartOfTerm();
 
   default LocalDateTime getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction) {
-    return this.getStartOfTerm(dataContextOfAction)
+    return this.getStartOfTerm()
         .orElseThrow(() -> ServiceException.internalError(
             "Start of term for loan ''{0}'' could not be acquired from accounting.",
             dataContextOfAction.getCompoundIdentifer()));

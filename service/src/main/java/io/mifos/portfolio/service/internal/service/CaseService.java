@@ -18,6 +18,7 @@ package io.mifos.portfolio.service.internal.service;
 import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
+import io.mifos.portfolio.api.v1.domain.CaseStatus;
 import io.mifos.portfolio.api.v1.domain.Payment;
 import io.mifos.portfolio.service.internal.mapper.CaseMapper;
 import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
@@ -95,6 +96,12 @@ public class CaseService {
             .flatMap(caseEntity -> map(caseEntity, minorCurrencyUnitDigits));
   }
 
+  public Optional<CaseStatus> findStatusByIdentifier(final String productIdentifier, final String caseIdentifier)
+  {
+    return caseRepository.findByProductIdentifierAndIdentifier(productIdentifier, caseIdentifier)
+        .map(CaseMapper::mapToStatus);
+  }
+
   public Set<String> getNextActionsForCase(final String productIdentifier, final String caseIdentifier) {
     final PatternFactory pattern = getPatternFactoryOrThrow(productIdentifier);
 
@@ -109,8 +116,8 @@ public class CaseService {
 
   private Optional<Case> map(final CaseEntity caseEntity, final int minorCurrencyUnitDigits) {
     return getPatternFactory(caseEntity.getProductIdentifier())
-            .flatMap(x -> x.getParameters(caseEntity.getId(), minorCurrencyUnitDigits))
-            .map(x -> CaseMapper.map(caseEntity, x));
+        .flatMap(x -> x.getParameters(caseEntity.getId(), minorCurrencyUnitDigits))
+        .map(x -> CaseMapper.map(caseEntity, x));
   }
 
   private PatternFactory getPatternFactoryOrThrow(final String productIdentifier) {

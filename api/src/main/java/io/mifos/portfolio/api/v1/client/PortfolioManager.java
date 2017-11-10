@@ -308,6 +308,15 @@ public interface PortfolioManager {
       @PathVariable("caseidentifier") final String caseIdentifier);
 
   @RequestMapping(
+      value = "/products/{productidentifier}/cases/{caseidentifier}/status",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  CaseStatus getCaseStatus(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier);
+
+  @RequestMapping(
       value = "/products/{productidentifier}/cases/{caseidentifier}",
       method = RequestMethod.PUT,
       produces = MediaType.APPLICATION_JSON_VALUE,

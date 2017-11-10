@@ -31,6 +31,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import javax.annotation.Nullable;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.math.BigDecimal;
@@ -68,6 +69,10 @@ class AccountingFixture {
   static final String PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER = "7353.0";
   static final String GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER = "3010";
   static final String GENERAL_EXPENSE_ACCOUNT_IDENTIFIER = "3011";
+
+  static final String IMPORTED_CUSTOMER_LOAN_PRINCIPAL_ACCOUNT = "clp.blah.blah2";
+  static final String IMPORTED_CUSTOMER_LOAN_INTEREST_ACCOUNT = "cli.blah.blah2";
+  static final String IMPORTED_CUSTOMER_LOAN_FEES_ACCOUNT = "clf.blah.blah3";
 
   static final Map<String, AccountData> accountMap = new HashMap<>();
 
@@ -264,6 +269,27 @@ class AccountingFixture {
     return ret;
   }
 
+  private static Account importedCustomerLoanPrincipalAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(IMPORTED_CUSTOMER_LOAN_PRINCIPAL_ACCOUNT);
+    ret.setType(AccountType.ASSET.name());
+    return ret;
+  }
+
+  private static Account importedCustomerLoanInterestAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(IMPORTED_CUSTOMER_LOAN_INTEREST_ACCOUNT);
+    ret.setType(AccountType.ASSET.name());
+    return ret;
+  }
+
+  private static Account importedCustomerLoanFeeAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(IMPORTED_CUSTOMER_LOAN_FEES_ACCOUNT);
+    ret.setType(AccountType.ASSET.name());
+    return ret;
+  }
+
   private static AccountPage customerLoanAccountsPage() {
     final Account customerLoanAccount1 = new Account();
     customerLoanAccount1.setIdentifier("customerLoanAccount1");
@@ -306,16 +332,22 @@ class AccountingFixture {
   private static class AccountMatcher extends ArgumentMatcher<Account> {
     private final String ledgerIdentifer;
     private final String accountDesignator;
+    private final String referenceAccountIdentifier;
     private final AccountType type;
+    private final BigDecimal balance;
     private Account matchedArgument;
 
     private AccountMatcher(
         final String ledgerIdentifier,
         final String accountDesignator,
-        final AccountType type) {
+        final @Nullable String referenceAccountIdentifier,
+        final AccountType type,
+        final BigDecimal balance) {
       this.ledgerIdentifer = ledgerIdentifier;
       this.accountDesignator = accountDesignator;
+      this.referenceAccountIdentifier = referenceAccountIdentifier;
       this.type = type;
+      this.balance = balance;
       this.matchedArgument = null; //Set when matches called and returns true.
     }
 
@@ -328,10 +360,11 @@ class AccountingFixture {
 
       final Account checkedArgument = (Account) argument;
 
-      final boolean ret = checkedArgument.getLedger().equals(ledgerIdentifer) &&
+      final boolean ret = Objects.equals(checkedArgument.getLedger(), ledgerIdentifer) &&
           checkedArgument.getIdentifier().contains(accountDesignator) &&
-          checkedArgument.getType().equals(type.name()) &&
-          checkedArgument.getBalance() == 0.0;
+          Objects.equals(checkedArgument.getReferenceAccount(), referenceAccountIdentifier) &&
+          Objects.equals(checkedArgument.getType(), type.name()) &&
+          checkedArgument.getBalance().compareTo(balance.doubleValue()) == 0;
 
       if (ret)
         matchedArgument = checkedArgument;
@@ -353,7 +386,9 @@ class AccountingFixture {
       return "AccountMatcher{" +
           "ledgerIdentifer='" + ledgerIdentifer + '\'' +
           ", accountDesignator='" + accountDesignator + '\'' +
+          ", referenceAccountIdentifier='" + referenceAccountIdentifier + '\'' +
           ", type=" + type +
+          ", balance=" + balance +
           '}';
     }
   }
@@ -566,6 +601,9 @@ class AccountingFixture {
     makeAccountResponsive(productLossAllowanceAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(generalLossAllowanceAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(generalExpenseAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(importedCustomerLoanPrincipalAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(importedCustomerLoanInterestAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(importedCustomerLoanFeeAccount(), universalCreationDate, ledgerManagerMock);
 
     Mockito.doReturn(incomeLedger()).when(ledgerManagerMock).findLedger(INCOME_LEDGER_IDENTIFIER);
     Mockito.doReturn(feesAndChargesLedger()).when(ledgerManagerMock).findLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
@@ -591,7 +629,17 @@ class AccountingFixture {
       final String ledgerIdentifier,
       final String accountDesignator,
       final AccountType type) {
-    final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, accountDesignator, type);
+    return verifyAccountCreationMatchingDesignator(ledgerManager, ledgerIdentifier, accountDesignator, null, type, BigDecimal.ZERO);
+  }
+
+  static String verifyAccountCreationMatchingDesignator(
+      final LedgerManager ledgerManager,
+      final String ledgerIdentifier,
+      final String accountDesignator,
+      final @Nullable String referenceAccountIdentifier,
+      final AccountType type,
+      final BigDecimal balance) {
+    final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, accountDesignator, referenceAccountIdentifier, type, balance);
     Mockito.verify(ledgerManager).createAccount(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectAccount)));
     return specifiesCorrectAccount.getMatchedArgument().getIdentifier();
   }

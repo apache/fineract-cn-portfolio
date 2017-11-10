@@ -54,6 +54,10 @@ public class CaseEntity {
   @Column(name = "current_state", nullable = false)
   private String currentState;
 
+  @Column(name = "start_of_term")
+  @Convert(converter = LocalDateTimeConverter.class)
+  @Nullable private LocalDateTime startOfTerm;
+
   @Column(name = "end_of_term")
   @Convert(converter = LocalDateTimeConverter.class)
   @Nullable private LocalDateTime endOfTerm;
@@ -129,6 +133,15 @@ public class CaseEntity {
 
   public void setCurrentState(String currentState) {
     this.currentState = currentState;
+  }
+
+  @Nullable
+  public LocalDateTime getStartOfTerm() {
+    return startOfTerm;
+  }
+
+  public void setStartOfTerm(@Nullable LocalDateTime startOfTerm) {
+    this.startOfTerm = startOfTerm;
   }
 
   public LocalDateTime getEndOfTerm() {

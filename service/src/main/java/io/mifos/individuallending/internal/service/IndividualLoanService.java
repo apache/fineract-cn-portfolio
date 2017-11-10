@@ -28,9 +28,10 @@ import io.mifos.individuallending.internal.service.schedule.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.Nonnull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -51,8 +52,11 @@ public class IndividualLoanService {
       final DataContextOfAction dataContextOfAction,
       final int pageIndex,
       final int size,
-      final @Nonnull LocalDate initialDisbursalDate) {
+      @SuppressWarnings("OptionalUsedAsFieldOrParameterType") final Optional<LocalDate> requestedInitialDisbursalDate) {
     final int minorCurrencyUnitDigits = dataContextOfAction.getProductEntity().getMinorCurrencyUnitDigits();
+    final LocalDate initialDisbursalDate = requestedInitialDisbursalDate
+        .orElse(Optional.ofNullable(dataContextOfAction.getCustomerCaseEntity().getStartOfTerm()).map(LocalDateTime::toLocalDate)
+            .orElseGet(() -> LocalDate.now(ZoneId.of("UTC"))));
 
     final List<ScheduledAction> scheduledActions = ScheduledActionHelpers.getHypotheticalScheduledActions(initialDisbursalDate, dataContextOfAction.getCaseParameters());
 
@@ -60,12 +64,15 @@ public class IndividualLoanService {
 
     final List<ScheduledCharge> scheduledCharges = scheduledChargesService.getScheduledCharges(dataContextOfAction.getProductEntity().getIdentifier(), scheduledActions);
 
-    final BigDecimal loanPaymentSize = CostComponentService.getLoanPaymentSize(
-        dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum(),
-        dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum(),
-        dataContextOfAction.getInterest(),
-        minorCurrencyUnitDigits,
-        scheduledCharges);
+    final Optional<BigDecimal> persistedPaymentSize = dataContextOfAction.getPaymentSize();
+
+    final BigDecimal loanPaymentSize = persistedPaymentSize.orElseGet(() ->
+        CostComponentService.getLoanPaymentSize(
+            dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum(),
+            dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum(),
+            dataContextOfAction.getInterest(),
+            minorCurrencyUnitDigits,
+            scheduledCharges));
 
     final List<PlannedPayment> plannedPaymentsElements = getPlannedPaymentsElements(
         dataContextOfAction.getCaseParametersEntity().getBalanceRangeMaximum(),

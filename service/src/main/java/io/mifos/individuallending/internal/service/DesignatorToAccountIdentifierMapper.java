@@ -178,8 +178,8 @@ public class DesignatorToAccountIdentifierMapper {
     final Set<RequiredAccountAssignment> accountAssignmentsRequired = IndividualLendingPatternFactory.individualLendingPattern().getAccountAssignmentsRequired();
     final Map<String, RequiredAccountAssignment> accountAssignmentsRequiredMap = accountAssignmentsRequired.stream().collect(Collectors.toMap(RequiredAccountAssignment::getAccountDesignator, x -> x));
     final Map<String, String> accountAssignmentAlternativeAccountIdsMap = oneTimeAccountAssignments.stream()
-        .filter(x -> x.getReferenceAccountIdentifier() != null)
-        .collect(Collectors.toMap(AccountAssignment::getDesignator, AccountAssignment::getReferenceAccountIdentifier));
+        .filter(x -> x.getAlternativeAccountNumber() != null)
+        .collect(Collectors.toMap(AccountAssignment::getDesignator, AccountAssignment::getAlternativeAccountNumber));
     final Map<String, String> existingAccountsAssignmentsMap = oneTimeAccountAssignments.stream()
         .filter(x -> x.getAccountIdentifier() != null)
         .collect(Collectors.toMap(AccountAssignment::getDesignator, AccountAssignment::getAccountIdentifier));
@@ -195,7 +195,7 @@ public class DesignatorToAccountIdentifierMapper {
     return ledgerAccountAssignments
         .map(ledgerAccountAssignment -> {
           final AccountAssignment ret = new AccountAssignment(ledgerAccountAssignment);
-          ret.setReferenceAccountIdentifier(accountAssignmentAlternativeAccountIdsMap.get(ledgerAccountAssignment.getDesignator()));
+          ret.setAlternativeAccountNumber(accountAssignmentAlternativeAccountIdsMap.get(ledgerAccountAssignment.getDesignator()));
 
           final String existingAccountSetting = existingAccountsAssignmentsMap.get(ledgerAccountAssignment.getDesignator());
           if (existingAccountSetting != null) ret.setAccountIdentifier(existingAccountSetting);

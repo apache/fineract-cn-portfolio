@@ -332,7 +332,7 @@ class AccountingFixture {
   private static class AccountMatcher extends ArgumentMatcher<Account> {
     private final String ledgerIdentifer;
     private final String accountDesignator;
-    private final String referenceAccountIdentifier;
+    private final String alternativeAccountNumber;
     private final AccountType type;
     private final BigDecimal balance;
     private Account matchedArgument;
@@ -340,12 +340,12 @@ class AccountingFixture {
     private AccountMatcher(
         final String ledgerIdentifier,
         final String accountDesignator,
-        final @Nullable String referenceAccountIdentifier,
+        final @Nullable String alternativeAccountNumber,
         final AccountType type,
         final BigDecimal balance) {
       this.ledgerIdentifer = ledgerIdentifier;
       this.accountDesignator = accountDesignator;
-      this.referenceAccountIdentifier = referenceAccountIdentifier;
+      this.alternativeAccountNumber = alternativeAccountNumber;
       this.type = type;
       this.balance = balance;
       this.matchedArgument = null; //Set when matches called and returns true.
@@ -362,7 +362,7 @@ class AccountingFixture {
 
       final boolean ret = Objects.equals(checkedArgument.getLedger(), ledgerIdentifer) &&
           checkedArgument.getIdentifier().contains(accountDesignator) &&
-          Objects.equals(checkedArgument.getReferenceAccount(), referenceAccountIdentifier) &&
+          Objects.equals(checkedArgument.getAlternativeAccountNumber(), alternativeAccountNumber) &&
           Objects.equals(checkedArgument.getType(), type.name()) &&
           checkedArgument.getBalance().compareTo(balance.doubleValue()) == 0;
 
@@ -386,7 +386,7 @@ class AccountingFixture {
       return "AccountMatcher{" +
           "ledgerIdentifer='" + ledgerIdentifer + '\'' +
           ", accountDesignator='" + accountDesignator + '\'' +
-          ", referenceAccountIdentifier='" + referenceAccountIdentifier + '\'' +
+          ", alternativeAccountNumber='" + alternativeAccountNumber + '\'' +
           ", type=" + type +
           ", balance=" + balance +
           '}';
@@ -636,10 +636,10 @@ class AccountingFixture {
       final LedgerManager ledgerManager,
       final String ledgerIdentifier,
       final String accountDesignator,
-      final @Nullable String referenceAccountIdentifier,
+      final @Nullable String alternativeAccountNumber,
       final AccountType type,
       final BigDecimal balance) {
-    final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, accountDesignator, referenceAccountIdentifier, type, balance);
+    final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, accountDesignator, alternativeAccountNumber, type, balance);
     Mockito.verify(ledgerManager).createAccount(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectAccount)));
     return specifiesCorrectAccount.getMatchedArgument().getIdentifier();
   }

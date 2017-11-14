@@ -528,15 +528,15 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final AccountAssignment customerLoanPrincipalAccountAssignment = new AccountAssignment();
     customerLoanPrincipalAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
-    customerLoanPrincipalAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-principal-account-identifier");
+    customerLoanPrincipalAccountAssignment.setAlternativeAccountNumber("external-system-sourced-customer-loan-principal-account-identifier");
     customerLoanPrincipalAccountAssignment.setLedgerIdentifier(AccountDesignators.CUSTOMER_LOAN_GROUP);
     final AccountAssignment customerLoanInterestAccountAssignment = new AccountAssignment();
     customerLoanInterestAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_INTEREST);
-    customerLoanInterestAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-interest-account-identifier");
+    customerLoanInterestAccountAssignment.setAlternativeAccountNumber("external-system-sourced-customer-loan-interest-account-identifier");
     customerLoanInterestAccountAssignment.setLedgerIdentifier(AccountDesignators.CUSTOMER_LOAN_GROUP);
     final AccountAssignment customerLoanFeeAccountAssignment = new AccountAssignment();
     customerLoanFeeAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_FEES);
-    customerLoanFeeAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-fees-account-identifier");
+    customerLoanFeeAccountAssignment.setAlternativeAccountNumber("external-system-sourced-customer-loan-fees-account-identifier");
     customerLoanFeeAccountAssignment.setLedgerIdentifier(AccountDesignators.CUSTOMER_LOAN_GROUP);
     final ArrayList<AccountAssignment> importAccountAssignments = new ArrayList<>();
     importAccountAssignments.add(customerLoanPrincipalAccountAssignment);
@@ -562,7 +562,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         AccountingFixture.verifyAccountCreationMatchingDesignator(
             ledgerManager, customerLoanLedgerIdentifier,
             AccountDesignators.CUSTOMER_LOAN_PRINCIPAL,
-            customerLoanPrincipalAccountAssignment.getReferenceAccountIdentifier(),
+            customerLoanPrincipalAccountAssignment.getAlternativeAccountNumber(),
             AccountType.ASSET,
             currentPrincipal);
     customerLoanInterestIdentifier =
@@ -570,7 +570,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
             ledgerManager,
             customerLoanLedgerIdentifier,
             AccountDesignators.CUSTOMER_LOAN_INTEREST,
-            customerLoanInterestAccountAssignment.getReferenceAccountIdentifier(),
+            customerLoanInterestAccountAssignment.getAlternativeAccountNumber(),
             AccountType.ASSET,
             BigDecimal.ZERO);
     customerLoanFeeIdentifier =
@@ -578,7 +578,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
             ledgerManager,
             customerLoanLedgerIdentifier,
             AccountDesignators.CUSTOMER_LOAN_FEES,
-            customerLoanFeeAccountAssignment.getReferenceAccountIdentifier(),
+            customerLoanFeeAccountAssignment.getAlternativeAccountNumber(),
             AccountType.ASSET,
             BigDecimal.ZERO);
 
@@ -615,15 +615,15 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     final AccountAssignment customerLoanPrincipalAccountAssignment = new AccountAssignment();
     customerLoanPrincipalAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
     customerLoanPrincipalAccountAssignment.setAccountIdentifier(AccountingFixture.IMPORTED_CUSTOMER_LOAN_PRINCIPAL_ACCOUNT);
-    customerLoanPrincipalAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-principal-account-identifier");
+    customerLoanPrincipalAccountAssignment.setAlternativeAccountNumber("external-system-sourced-customer-loan-principal-account-identifier");
     final AccountAssignment customerLoanInterestAccountAssignment = new AccountAssignment();
     customerLoanInterestAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_INTEREST);
     customerLoanInterestAccountAssignment.setAccountIdentifier(AccountingFixture.IMPORTED_CUSTOMER_LOAN_INTEREST_ACCOUNT);
-    customerLoanInterestAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-interest-account-identifier");
+    customerLoanInterestAccountAssignment.setAlternativeAccountNumber("external-system-sourced-customer-loan-interest-account-identifier");
     final AccountAssignment customerLoanFeeAccountAssignment = new AccountAssignment();
     customerLoanFeeAccountAssignment.setDesignator(AccountDesignators.CUSTOMER_LOAN_FEES);
     customerLoanFeeAccountAssignment.setAccountIdentifier(AccountingFixture.IMPORTED_CUSTOMER_LOAN_FEES_ACCOUNT);
-    customerLoanFeeAccountAssignment.setReferenceAccountIdentifier("external-system-sourced-customer-loan-fees-account-identifier");
+    customerLoanFeeAccountAssignment.setAlternativeAccountNumber("external-system-sourced-customer-loan-fees-account-identifier");
     final ArrayList<AccountAssignment> importAccountAssignments = new ArrayList<>();
     importAccountAssignments.add(customerLoanPrincipalAccountAssignment);
     importAccountAssignments.add(customerLoanInterestAccountAssignment);

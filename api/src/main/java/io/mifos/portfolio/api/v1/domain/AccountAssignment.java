@@ -40,7 +40,7 @@ public final class AccountAssignment {
 
   @Length(max = 256)
   @Nullable
-  private String referenceAccountIdentifier;
+  private String alternativeAccountNumber;
 
   public AccountAssignment() {
   }
@@ -49,7 +49,7 @@ public final class AccountAssignment {
     this.designator = toCopy.designator;
     this.accountIdentifier = toCopy.accountIdentifier;
     this.ledgerIdentifier = toCopy.ledgerIdentifier;
-    this.referenceAccountIdentifier = toCopy.referenceAccountIdentifier;
+    this.alternativeAccountNumber = toCopy.alternativeAccountNumber;
   }
 
   public AccountAssignment(String designator, String accountIdentifier) {
@@ -82,12 +82,12 @@ public final class AccountAssignment {
   }
 
   @Nullable
-  public String getReferenceAccountIdentifier() {
-    return referenceAccountIdentifier;
+  public String getAlternativeAccountNumber() {
+    return alternativeAccountNumber;
   }
 
-  public void setReferenceAccountIdentifier(@Nullable String referenceAccountIdentifier) {
-    this.referenceAccountIdentifier = referenceAccountIdentifier;
+  public void setAlternativeAccountNumber(@Nullable String alternativeAccountNumber) {
+    this.alternativeAccountNumber = alternativeAccountNumber;
   }
 
   @Override
@@ -98,12 +98,12 @@ public final class AccountAssignment {
     return Objects.equals(designator, that.designator) &&
         Objects.equals(accountIdentifier, that.accountIdentifier) &&
         Objects.equals(ledgerIdentifier, that.ledgerIdentifier) &&
-        Objects.equals(referenceAccountIdentifier, that.referenceAccountIdentifier);
+        Objects.equals(alternativeAccountNumber, that.alternativeAccountNumber);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(designator, accountIdentifier, ledgerIdentifier, referenceAccountIdentifier);
+    return Objects.hash(designator, accountIdentifier, ledgerIdentifier, alternativeAccountNumber);
   }
 
   @Override
@@ -112,7 +112,7 @@ public final class AccountAssignment {
         "designator='" + designator + '\'' +
         ", accountIdentifier='" + accountIdentifier + '\'' +
         ", ledgerIdentifier='" + ledgerIdentifier + '\'' +
-        ", referenceAccountIdentifier='" + referenceAccountIdentifier + '\'' +
+        ", alternativeAccountNumber='" + alternativeAccountNumber + '\'' +
         '}';
   }
 }

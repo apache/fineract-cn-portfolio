@@ -244,10 +244,10 @@ public class DesignatorToAccountIdentifierMapperTest {
 
   private static AccountAssignment importParameterAccountAssignment(
       final String accountDesignator,
-      final String referenceAccountIdentifier) {
+      final String alternativeAccountNumber) {
     final AccountAssignment ret = new AccountAssignment();
     ret.setDesignator(accountDesignator);
-    ret.setReferenceAccountIdentifier(referenceAccountIdentifier);
+    ret.setAlternativeAccountNumber(alternativeAccountNumber);
     return ret;
   }
 
@@ -272,11 +272,11 @@ public class DesignatorToAccountIdentifierMapperTest {
   private static AccountAssignment assignLedger(
       final String accountDesignator,
       final String ledgerIdentifier,
-      final String referenceAccountIdentifier) {
+      final String alternativeAccountNumber) {
     final AccountAssignment ret = new AccountAssignment();
     ret.setDesignator(accountDesignator);
     ret.setLedgerIdentifier(ledgerIdentifier);
-    ret.setReferenceAccountIdentifier(referenceAccountIdentifier);
+    ret.setAlternativeAccountNumber(alternativeAccountNumber);
     return ret;
   }
 

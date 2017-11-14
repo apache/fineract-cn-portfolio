@@ -299,7 +299,7 @@ public class AccountingAdapter {
           final String accountNumber = createCaseAccountNumber(customerIdentifier, ledgerAssignment.getDesignator(), i);
           generatedAccount.setIdentifier(accountNumber);
           generatedAccount.setName(accountNumber);
-          generatedAccount.setReferenceAccount(ledgerAssignment.getReferenceAccountIdentifier());
+          generatedAccount.setAlternativeAccountNumber(ledgerAssignment.getAlternativeAccountNumber());
           try {
             ledgerManager.createAccount(generatedAccount);
             return Optional.of(accountNumber);

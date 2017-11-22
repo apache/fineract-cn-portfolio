@@ -91,7 +91,6 @@ public class AccountingAdapter {
       final String transactionDate,
       final String message,
       final String transactionType) {
-    final String transactionUniqueifier = RandomStringUtils.random(26, true, true);
     final JournalEntry journalEntry = getJournalEntry(
         balanceAdjustments,
         designatorToAccountIdentifierMapper,
@@ -99,15 +98,28 @@ public class AccountingAdapter {
         transactionDate,
         message,
         transactionType,
-        transactionUniqueifier,
         UserContextHolder.checkedGetUser());
 
     //noinspection ConstantConditions
     if (journalEntry.getCreditors().isEmpty() && journalEntry.getDebtors().isEmpty())
       return Optional.empty();
 
-    ledgerManager.createJournalEntry(journalEntry);
-    return Optional.of(transactionUniqueifier);
+    while (true) {
+      try {
+        final String transactionUniqueifier = RandomStringUtils.random(26, true, true);
+        journalEntry.setTransactionIdentifier(formulateTransactionIdentifier(message, transactionUniqueifier));
+        ledgerManager.createJournalEntry(journalEntry);
+        return Optional.of(transactionUniqueifier);
+      } catch (final JournalEntryAlreadyExistsException ignore) {
+        //Try again with a new uniqueifier.
+      }
+    }
+  }
+
+  private static String formulateTransactionIdentifier(
+      final String message,
+      final String transactionUniqueifier) {
+    return "portfolio." + message + "." + transactionUniqueifier;
   }
 
   static JournalEntry getJournalEntry(
@@ -117,7 +129,6 @@ public class AccountingAdapter {
       final String transactionDate,
       final String message,
       final String transactionType,
-      final String transactionUniqueifier,
       final String user) {
     final JournalEntry journalEntry = new JournalEntry();
     final Set<Creditor> creditors = new HashSet<>();
@@ -156,7 +167,6 @@ public class AccountingAdapter {
       throw ServiceException.internalError("either only creditors or only debtors were provided.");
 
 
-    final String transactionIdentifier = "portfolio." + message + "." + transactionUniqueifier;
     journalEntry.setCreditors(creditors);
     journalEntry.setDebtors(debtors);
     journalEntry.setClerk(user);
@@ -164,7 +174,6 @@ public class AccountingAdapter {
     journalEntry.setMessage(message);
     journalEntry.setTransactionType(transactionType);
     journalEntry.setNote(note);
-    journalEntry.setTransactionIdentifier(transactionIdentifier);
     return journalEntry;
   }
 

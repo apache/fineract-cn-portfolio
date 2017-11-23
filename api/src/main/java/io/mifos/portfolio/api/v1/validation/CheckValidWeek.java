@@ -30,6 +30,7 @@ public class CheckValidWeek implements ConstraintValidator<ValidWeek, Integer> {
 
   @Override
   public boolean isValid(final Integer value, final ConstraintValidatorContext context) {
-    return value == null || value == 0 || value == 1 || value == 2 || value == -1;
+    //TODO: remove allowance for 3 and 4 once UI is fixed to also not allow them.
+    return value == null || value == 0 || value == 1 || value == 2 || value == 3 || value == 4 || value == -1;
   }
 }

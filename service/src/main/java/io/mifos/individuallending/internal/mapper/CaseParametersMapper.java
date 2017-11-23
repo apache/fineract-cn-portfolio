@@ -138,6 +138,14 @@ public class CaseParametersMapper {
     ret.setAlignmentWeek(instance.getPaymentCycleAlignmentWeek());
     ret.setAlignmentMonth(instance.getPaymentCycleAlignmentMonth());
 
+    //This is necessary because for a while inapproriate values were being accepted for the
+    //alignment week.  Those values are being mapped to -1 which is a sentinel value used to represent the
+    //last week of the month.  If we can fix the existing data, we can remove this code.
+    if (instance.getPaymentCycleAlignmentWeek() != null &&
+        ((instance.getPaymentCycleAlignmentWeek() == 3) ||
+         (instance.getPaymentCycleAlignmentWeek() == 4)))
+      ret.setAlignmentWeek(-1);
+
     return ret;
   }
 

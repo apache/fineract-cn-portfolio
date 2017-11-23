@@ -61,6 +61,21 @@ public class TestCases extends AbstractPortfolioTest {
     }
   }
 
+
+  @Test(expected = IllegalArgumentException.class)
+  public void shouldFailToCreateCaseWithInvalidPaymentCycleAlignmentWeek() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+
+    final Case caseInstance = Fixture.getTestCase(product.getIdentifier());
+    final CaseParameters caseParameters = Fixture.getTestCaseParameters();
+    caseParameters.getPaymentCycle().setAlignmentWeek(4);
+    final Gson gson = new Gson();
+    caseInstance.setParameters(gson.toJson(caseParameters));
+
+    portfolioManager.createCase(product.getIdentifier(), caseInstance);
+    Assert.fail("Should fail because alignment week is invalid.");
+  }
+
   @Test(expected = IllegalArgumentException.class)
   public void shouldFailToCreateCaseWithInterestOutOfRange() throws InterruptedException {
     final Product product = createAndEnableProduct();

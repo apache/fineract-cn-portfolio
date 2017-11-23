@@ -15,6 +15,7 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
+import io.mifos.accounting.api.v1.domain.Account;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
@@ -37,7 +38,7 @@ public class RealRunningBalances implements RunningBalances {
   private final AccountingAdapter accountingAdapter;
   private final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper;
   private final DataContextOfAction dataContextOfAction;
-  private final ExpiringMap<String, Optional<BigDecimal>> realAccountBalanceCache;
+  private final ExpiringMap<String, Optional<Account>> accountCache;
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private Optional<LocalDateTime> startOfTerm;
 
@@ -48,10 +49,10 @@ public class RealRunningBalances implements RunningBalances {
     this.designatorToAccountIdentifierMapper =
         new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     this.dataContextOfAction = dataContextOfAction;
-    this.realAccountBalanceCache = ExpiringMap.builder()
-        .maxSize(20)
+    this.accountCache = ExpiringMap.builder()
+        .maxSize(40)
         .expirationPolicy(ExpirationPolicy.CREATED)
-        .expiration(30,TimeUnit.SECONDS)
+        .expiration(60,TimeUnit.SECONDS)
         .entryLoader((String accountDesignator) -> {
           final Optional<String> accountIdentifier;
           if (accountDesignator.equals(AccountDesignators.ENTRY)) {
@@ -60,7 +61,7 @@ public class RealRunningBalances implements RunningBalances {
           else {
             accountIdentifier = Optional.of(designatorToAccountIdentifierMapper.mapOrThrow(accountDesignator));
           }
-          return accountIdentifier.map(accountingAdapter::getCurrentAccountBalance);
+          return accountIdentifier.map(accountingAdapter::getAccount);
         })
         .build();
     this.startOfTerm = Optional.empty();
@@ -68,7 +69,7 @@ public class RealRunningBalances implements RunningBalances {
 
   @Override
   public Optional<BigDecimal> getAccountBalance(final String accountDesignator) {
-    return realAccountBalanceCache.get(accountDesignator);
+    return accountCache.get(accountDesignator).map(Account::getBalance).map(BigDecimal::valueOf);
   }
 
   @Override

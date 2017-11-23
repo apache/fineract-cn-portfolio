@@ -58,7 +58,7 @@ public class SimulatedRunningBalances implements RunningBalances {
   }
 
   public void adjustBalance(final String key, final BigDecimal amount) {
-    final BigDecimal sign = ACCOUNT_SIGNS.get(key);
+    final BigDecimal sign = getAccountSign(key);
     final BigDecimal currentValue = balances.getOrDefault(key, BigDecimal.ZERO);
     final BigDecimal newValue = currentValue.add(amount.multiply(sign));
     balances.put(key, newValue);

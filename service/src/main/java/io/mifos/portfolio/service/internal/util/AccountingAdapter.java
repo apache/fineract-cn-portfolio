@@ -198,12 +198,12 @@ public class AccountingAdapter {
         .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 
-  public BigDecimal getCurrentAccountBalance(final String accountIdentifier) {
+  public Account getAccount(final String accountIdentifier) {
     try {
       final Account account = ledgerManager.findAccount(accountIdentifier);
       if (account == null || account.getBalance() == null)
         throw ServiceException.internalError("Could not find the account with identifier ''{0}''", accountIdentifier);
-      return BigDecimal.valueOf(account.getBalance());
+      return account;
     }
     catch (final AccountNotFoundException e) {
      throw ServiceException.internalError("Could not find the account with identifier ''{0}''", accountIdentifier);

@@ -55,6 +55,10 @@ public interface RunningBalances {
     //TODO: derive signs from IndividualLendingPatternFactory.individualLendingRequiredAccounts instead.
   }};
 
+  default BigDecimal getAccountSign(String accountDesignator) {
+    return ACCOUNT_SIGNS.get(accountDesignator);
+  }
+
   Optional<BigDecimal> getAccountBalance(final String accountDesignator);
 
   BigDecimal getAccruedBalanceForCharge(
@@ -108,7 +112,7 @@ public interface RunningBalances {
   }
 
   default BigDecimal getMaxDebit(final String accountDesignator, final BigDecimal amount) {
-    if (ACCOUNT_SIGNS.get(accountDesignator).signum() == -1)
+    if (getAccountSign(accountDesignator).signum() == -1)
       return amount;
     else
       return amount.min(getAvailableBalance(accountDesignator, amount));
@@ -122,7 +126,7 @@ public interface RunningBalances {
     //expense account can achieve a "relative" negative balance, and
     // both loss allowance accounts can achieve an "absolute" negative balance.
 
-    if (ACCOUNT_SIGNS.get(accountDesignator).signum() != -1)
+    if (getAccountSign(accountDesignator).signum() != -1)
       return amount;
     else
       return amount.min(getAvailableBalance(accountDesignator, amount));

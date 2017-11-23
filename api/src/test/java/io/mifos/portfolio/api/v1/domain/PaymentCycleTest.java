@@ -54,7 +54,7 @@ public class PaymentCycleTest extends ValidationTest<PaymentCycle> {
             .adjustment(x -> x.setAlignmentDay(null))
             .valid(true));
     ret.add(new ValidationTestCase<PaymentCycle>("invalidAlignmentWeek")
-            .adjustment(x -> x.setAlignmentWeek(3))
+            .adjustment(x -> x.setAlignmentWeek(5))
             .valid(false));
     ret.add(new ValidationTestCase<PaymentCycle>("nullTemporalUnit")
             .adjustment(x -> x.setTemporalUnit(null))

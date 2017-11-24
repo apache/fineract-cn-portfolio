@@ -62,6 +62,7 @@ class AccountingFixture {
   static final String PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER = "1312";
   static final String DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER = "1313";
   static final String CUSTOMERS_DEPOSIT_ACCOUNT = "7352";
+  static final String TELLER_ONE_ACCOUNT = "7354";
   static final String LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER = "7810";
   static final String CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER = "1103";
   static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "1311";
@@ -213,8 +214,17 @@ class AccountingFixture {
 
   private static Account tellerOneAccount() {
     final Account ret = new Account();
-    ret.setIdentifier(CUSTOMERS_DEPOSIT_ACCOUNT);
+    ret.setIdentifier(TELLER_ONE_ACCOUNT);
     ret.setLedger(CASH_LEDGER_IDENTIFIER);
+    ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
+    return ret;
+  }
+
+  private static Account customerDepositAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(CUSTOMERS_DEPOSIT_ACCOUNT);
+    ret.setLedger(CASH_LEDGER_IDENTIFIER); //TODO: The ledger here is wrong.
     ret.setType(AccountType.LIABILITY.name());
     ret.setBalance(0.0);
     return ret;
@@ -612,6 +622,7 @@ class AccountingFixture {
     makeAccountResponsive(processingFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(disbursementFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(tellerOneAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(customerDepositAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(loanInterestAccrualAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(consumerLoanInterestAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(lateFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);

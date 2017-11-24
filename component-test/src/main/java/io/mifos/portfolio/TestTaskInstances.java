@@ -35,7 +35,6 @@ import org.junit.Test;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -194,7 +193,7 @@ public class TestTaskInstances extends AbstractPortfolioTest {
           product.getIdentifier(),
           customerCase.getIdentifier(),
           Action.OPEN,
-          Collections.singletonList(assignEntryToTeller()),
+          assignEntry(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT),
           IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
           Case.State.CREATED);
     }
@@ -207,7 +206,7 @@ public class TestTaskInstances extends AbstractPortfolioTest {
         customerCase.getIdentifier(),
         Action.OPEN,
         LocalDateTime.now(Clock.systemUTC()),
-        Collections.singletonList(assignEntryToTeller()),
+        assignEntry(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT),
         IndividualLoanEventConstants.OPEN_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);
   }

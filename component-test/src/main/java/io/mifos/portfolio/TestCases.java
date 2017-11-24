@@ -68,7 +68,7 @@ public class TestCases extends AbstractPortfolioTest {
 
     final Case caseInstance = Fixture.getTestCase(product.getIdentifier());
     final CaseParameters caseParameters = Fixture.getTestCaseParameters();
-    caseParameters.getPaymentCycle().setAlignmentWeek(4);
+    caseParameters.getPaymentCycle().setAlignmentWeek(5);
     final Gson gson = new Gson();
     caseInstance.setParameters(gson.toJson(caseParameters));
 

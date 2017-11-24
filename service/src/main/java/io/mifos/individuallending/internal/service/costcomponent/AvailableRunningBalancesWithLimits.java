@@ -39,6 +39,12 @@ public class AvailableRunningBalancesWithLimits implements RunningBalances {
     upperLimits.put(designator, limit);
   }
 
+
+  @Override
+  public BigDecimal getAccountSign(final String accountDesignator) {
+    return decoratedRunningBalances.getAccountSign(accountDesignator);
+  }
+
   @Override
   public BigDecimal getAvailableBalance(final String designator, final BigDecimal requestedAmount) {
     final BigDecimal balance = getBalance(designator).orElse(requestedAmount);

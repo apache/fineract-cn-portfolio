@@ -208,6 +208,10 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     );
   }
 
+  //TODO: once we've upgraded to junit 5 replace workflowTerminatingInEarlyLoanPayoff,
+  // and workflowDisbursalAndPayoffFromTellerAccount with one test annotated with
+  //@ParameterizedTest
+  //@ValueSource(strings = { AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT, AccountingFixture.TELLER_ONE_ACCOUNT })
   @Test
   public void workflowTerminatingInEarlyLoanPayoff() throws InterruptedException {
     final LocalDateTime today = midnightToday();
@@ -228,6 +232,29 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
         today,
         BigDecimal.ZERO,
         AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT);
+    step8Close(today);
+  }
+
+  @Test
+  public void workflowDisbursalAndPayoffFromTellerAccount() throws InterruptedException {
+    final LocalDateTime today = midnightToday();
+
+    step1CreateProduct();
+    step2CreateCase();
+    step3OpenCase(today);
+    step4ApproveCase(today);
+    step5Disburse(
+        BigDecimal.valueOf(2_000_00, MINOR_CURRENCY_UNIT_DIGITS),
+        today,
+        UPPER_RANGE_DISBURSEMENT_FEE_ID,
+        BigDecimal.valueOf(20_00, MINOR_CURRENCY_UNIT_DIGITS),
+        AccountingFixture.TELLER_ONE_ACCOUNT);
+    step6CalculateInterestAccrualAndCheckForLateness(midnightToday(), BigDecimal.ZERO);
+    step7PaybackPartialAmount(
+        expectedCurrentPrincipal.add(nonLateFees).add(interestAccrued),
+        today,
+        BigDecimal.ZERO,
+        AccountingFixture.TELLER_ONE_ACCOUNT);
     step8Close(today);
   }
 
@@ -785,6 +812,9 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       final String entryAccountIdentifier) throws InterruptedException {
     logger.info("step5Disburse  '{}'", amount);
     final BigDecimal provisionForLosses = amount.multiply(BigDecimal.valueOf(0.01)).setScale(MINOR_CURRENCY_UNIT_DIGITS, BigDecimal.ROUND_HALF_EVEN);
+
+    AccountingFixture.mockBalance(entryAccountIdentifier, amount);
+
     checkCostComponentForActionCorrect(
         product.getIdentifier(),
         customerCase.getIdentifier(),

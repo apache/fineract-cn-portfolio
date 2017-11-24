@@ -25,39 +25,21 @@ import io.mifos.portfolio.api.v1.domain.RequiredAccountAssignment;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 /**
  * @author Myrle Krantz
  */
 public interface RunningBalances {
-  Map<String, BigDecimal> ACCOUNT_SIGNS = new HashMap<String, BigDecimal>() {{
-    final BigDecimal negative = BigDecimal.valueOf(-1);
-    final BigDecimal positive = BigDecimal.valueOf(1);
+  BigDecimal NEGATIVE = BigDecimal.valueOf(-1);
+  BigDecimal POSITIVE = BigDecimal.valueOf(1);
 
-    this.put(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, negative);
-    this.put(AccountDesignators.CUSTOMER_LOAN_FEES, negative);
-    this.put(AccountDesignators.CUSTOMER_LOAN_INTEREST, negative);
-    this.put(AccountDesignators.LOAN_FUNDS_SOURCE, negative);
-    this.put(AccountDesignators.PROCESSING_FEE_INCOME, positive);
-    this.put(AccountDesignators.ORIGINATION_FEE_INCOME, positive);
-    this.put(AccountDesignators.DISBURSEMENT_FEE_INCOME, positive);
-    this.put(AccountDesignators.INTEREST_INCOME, positive);
-    this.put(AccountDesignators.INTEREST_ACCRUAL, positive);
-    this.put(AccountDesignators.LATE_FEE_INCOME, positive);
-    this.put(AccountDesignators.LATE_FEE_ACCRUAL, positive);
-    this.put(AccountDesignators.PRODUCT_LOSS_ALLOWANCE, negative);
-    this.put(AccountDesignators.GENERAL_LOSS_ALLOWANCE, negative);
-    this.put(AccountDesignators.EXPENSE, negative);
-    this.put(AccountDesignators.ENTRY, positive);
-    //TODO: derive signs from IndividualLendingPatternFactory.individualLendingRequiredAccounts instead.
-  }};
-
-  default BigDecimal getAccountSign(String accountDesignator) {
-    return ACCOUNT_SIGNS.get(accountDesignator);
-  }
+  /**
+   * Most accounts assignments have a required type, but some (entry for example) can change from request to request.
+   *
+   * @return NEGATIVE or POSITIVE constant as defined above depending on the type of the underlying account.
+   */
+  BigDecimal getAccountSign(final String accountDesignator);
 
   Optional<BigDecimal> getAccountBalance(final String accountDesignator);
 
@@ -65,6 +47,11 @@ public interface RunningBalances {
       final ChargeDefinition chargeDefinition);
 
   Optional<LocalDateTime> getStartOfTerm();
+
+  default boolean isAccountNegative(final String accountDesignator) {
+    return getAccountSign(accountDesignator).signum() == -1;
+  }
+
 
   default LocalDateTime getStartOfTermOrThrow(final DataContextOfAction dataContextOfAction) {
     return this.getStartOfTerm()
@@ -112,7 +99,7 @@ public interface RunningBalances {
   }
 
   default BigDecimal getMaxDebit(final String accountDesignator, final BigDecimal amount) {
-    if (getAccountSign(accountDesignator).signum() == -1)
+    if (isAccountNegative(accountDesignator))
       return amount;
     else
       return amount.min(getAvailableBalance(accountDesignator, amount));
@@ -126,7 +113,7 @@ public interface RunningBalances {
     //expense account can achieve a "relative" negative balance, and
     // both loss allowance accounts can achieve an "absolute" negative balance.
 
-    if (getAccountSign(accountDesignator).signum() != -1)
+    if (!isAccountNegative(accountDesignator))
       return amount;
     else
       return amount.min(getAvailableBalance(accountDesignator, amount));

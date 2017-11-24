@@ -16,6 +16,7 @@
 package io.mifos.individuallending.internal.service.costcomponent;
 
 import io.mifos.accounting.api.v1.domain.Account;
+import io.mifos.accounting.api.v1.domain.AccountType;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
@@ -55,7 +56,7 @@ public class RealRunningBalances implements RunningBalances {
         .expiration(60,TimeUnit.SECONDS)
         .entryLoader((String accountDesignator) -> {
           final Optional<String> accountIdentifier;
-          if (accountDesignator.equals(AccountDesignators.ENTRY)) {
+          if (accountDesignator.equals(AccountDesignators.ENTRY) || accountDesignator.equals(AccountDesignators.EXPENSE)) {
             accountIdentifier = designatorToAccountIdentifierMapper.map(accountDesignator);
           }
           else {
@@ -65,6 +66,37 @@ public class RealRunningBalances implements RunningBalances {
         })
         .build();
     this.startOfTerm = Optional.empty();
+  }
+
+  @Override
+  public BigDecimal getAccountSign(final String accountDesignator) {
+    return accountCache.get(accountDesignator)
+        .map(Account::getType)
+        .map(AccountType::valueOf)
+        .flatMap(x -> {
+          switch (x)
+          {
+            case LIABILITY:
+            case REVENUE:
+            case EQUITY:
+              return Optional.of(POSITIVE);
+
+            default:
+            case ASSET:
+            case EXPENSE:
+              return Optional.of(NEGATIVE);
+          }
+        })
+        .orElseGet(() -> {
+          switch (accountDesignator) {
+            case AccountDesignators.EXPENSE:
+              return NEGATIVE;
+            case AccountDesignators.ENTRY:
+              return POSITIVE;
+            default:
+              return NEGATIVE;
+          }}
+        );
   }
 
   @Override

@@ -201,7 +201,7 @@ public class AccountingAdapter {
   public Account getAccount(final String accountIdentifier) {
     try {
       final Account account = ledgerManager.findAccount(accountIdentifier);
-      if (account == null || account.getBalance() == null)
+      if (account == null || account.getBalance() == null || account.getType() == null)
         throw ServiceException.internalError("Could not find the account with identifier ''{0}''", accountIdentifier);
       return account;
     }

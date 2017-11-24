@@ -168,8 +168,8 @@ class AccountingFixture {
   private static Ledger accruedIncomeLedger() {
     final Ledger ret = new Ledger();
     ret.setIdentifier(ACCRUED_INCOME_LEDGER_IDENTIFIER);
-    ret.setParentLedgerIdentifier(ASSET_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.ASSET.name());
+    ret.setParentLedgerIdentifier(ASSET_LEDGER_IDENTIFIER); //TODO: This is inaccurate for a revenue account.
+    ret.setType(AccountType.REVENUE.name());
     ret.setCreatedOn(DateConverter.toIsoString(universalCreationDate));
     return ret;
 
@@ -180,6 +180,7 @@ class AccountingFixture {
     ret.setIdentifier(LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER);
     ret.setLedger(CASH_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -188,6 +189,7 @@ class AccountingFixture {
     ret.setIdentifier(PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -196,6 +198,7 @@ class AccountingFixture {
     ret.setIdentifier(LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -204,6 +207,7 @@ class AccountingFixture {
     ret.setIdentifier(DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -211,7 +215,8 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(CUSTOMERS_DEPOSIT_ACCOUNT);
     ret.setLedger(CASH_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.ASSET.name());
+    ret.setType(AccountType.LIABILITY.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -219,7 +224,8 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER);
     ret.setLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.ASSET.name());
+    ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -228,6 +234,7 @@ class AccountingFixture {
     ret.setIdentifier(CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER);
     ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -236,6 +243,7 @@ class AccountingFixture {
     ret.setIdentifier(LATE_FEE_INCOME_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -244,6 +252,7 @@ class AccountingFixture {
     ret.setIdentifier(LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER);
     ret.setLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -252,6 +261,7 @@ class AccountingFixture {
     ret.setIdentifier(PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER);
     ret.setLedger(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -259,6 +269,7 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER);
     ret.setType(AccountType.EXPENSE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -266,6 +277,7 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(GENERAL_EXPENSE_ACCOUNT_IDENTIFIER);
     ret.setType(AccountType.EXPENSE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -273,6 +285,7 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(IMPORTED_CUSTOMER_LOAN_PRINCIPAL_ACCOUNT);
     ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -280,6 +293,7 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(IMPORTED_CUSTOMER_LOAN_INTEREST_ACCOUNT);
     ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -287,16 +301,20 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(IMPORTED_CUSTOMER_LOAN_FEES_ACCOUNT);
     ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
   private static AccountPage customerLoanAccountsPage() {
     final Account customerLoanAccount1 = new Account();
     customerLoanAccount1.setIdentifier("customerLoanAccount1");
+    customerLoanAccount1.setBalance(0.0);
     final Account customerLoanAccount2 = new Account();
     customerLoanAccount2.setIdentifier("customerLoanAccount2");
+    customerLoanAccount2.setBalance(0.0);
     final Account customerLoanAccount3 = new Account();
     customerLoanAccount3.setIdentifier("customerLoanAccount3");
+    customerLoanAccount3.setBalance(0.0);
 
     final AccountPage ret = new AccountPage();
     ret.setTotalElements(3L);

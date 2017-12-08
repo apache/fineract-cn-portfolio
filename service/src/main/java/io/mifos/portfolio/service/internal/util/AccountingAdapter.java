@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.service.internal.util;
 
+import com.google.common.collect.Sets;
 import io.mifos.accounting.api.v1.client.*;
 import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.UserContextHolder;
@@ -300,6 +301,7 @@ public class AccountingAdapter {
     generatedAccount.setBalance(currentBalance.doubleValue());
     generatedAccount.setType(ledger.getType());
     generatedAccount.setState(Account.State.OPEN.name());
+    generatedAccount.setHolders(Sets.newHashSet(customerIdentifier));
     long guestimatedAccountIndex = accountsOfLedger.getTotalElements() + 1;
     generatedAccount.setLedger(ledger.getIdentifier());
     final Optional<String> createdAccountNumber =

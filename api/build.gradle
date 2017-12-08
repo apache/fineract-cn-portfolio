@@ -36,7 +36,7 @@ publishing {
         api(MavenPublication) {
             from components.java
             groupId project.group
-            artifactId project.name
+            artifactId 'portfolio-' + project.name
             version project.version
         }
     }

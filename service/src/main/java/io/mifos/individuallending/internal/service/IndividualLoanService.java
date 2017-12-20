@@ -43,6 +43,22 @@ import java.util.stream.Collectors;
 public class IndividualLoanService {
   private final ScheduledChargesService scheduledChargesService;
 
+  public static class PlannedPaymentWindow {
+    final int pageIndex;
+    final int size;
+    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
+    final Optional<LocalDate> requestedInitialDisbursalDate;
+
+    public PlannedPaymentWindow(
+        final int pageIndex,
+        final int size,
+        @SuppressWarnings("OptionalUsedAsFieldOrParameterType") final Optional<LocalDate> requestedInitialDisbursalDate) {
+      this.pageIndex = pageIndex;
+      this.size = size;
+      this.requestedInitialDisbursalDate = requestedInitialDisbursalDate;
+    }
+  }
+
   @Autowired
   public IndividualLoanService(final ScheduledChargesService scheduledChargesService) {
     this.scheduledChargesService = scheduledChargesService;
@@ -50,11 +66,9 @@ public class IndividualLoanService {
 
   public PlannedPaymentPage getPlannedPaymentsPage(
       final DataContextOfAction dataContextOfAction,
-      final int pageIndex,
-      final int size,
-      @SuppressWarnings("OptionalUsedAsFieldOrParameterType") final Optional<LocalDate> requestedInitialDisbursalDate) {
+      final PlannedPaymentWindow plannedPaymentWindow) {
     final int minorCurrencyUnitDigits = dataContextOfAction.getProductEntity().getMinorCurrencyUnitDigits();
-    final LocalDate initialDisbursalDate = requestedInitialDisbursalDate
+    final LocalDate initialDisbursalDate = plannedPaymentWindow.requestedInitialDisbursalDate
         .orElse(Optional.ofNullable(dataContextOfAction.getCustomerCaseEntity().getStartOfTerm()).map(LocalDateTime::toLocalDate)
             .orElseGet(() -> LocalDate.now(ZoneId.of("UTC"))));
 
@@ -86,7 +100,7 @@ public class IndividualLoanService {
             .map(IndividualLoanService::chargeNameFromChargeDefinition)
             .collect(Collectors.toSet());
 
-    return constructPage(pageIndex, size, plannedPaymentsElements, chargeNames);
+    return constructPage(plannedPaymentWindow.pageIndex, plannedPaymentWindow.size, plannedPaymentsElements, chargeNames);
   }
 
   private static PlannedPaymentPage constructPage(

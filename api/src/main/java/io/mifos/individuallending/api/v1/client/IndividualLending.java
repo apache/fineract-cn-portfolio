@@ -19,6 +19,7 @@ import io.mifos.core.api.util.CustomFeignClientsConfiguration;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
 import io.mifos.individuallending.api.v1.domain.product.LossProvisionConfiguration;
+import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
 import org.springframework.cloud.netflix.feign.FeignClient;
 import org.springframework.http.MediaType;
@@ -53,10 +54,10 @@ public interface IndividualLending {
       @PathVariable("productidentifier") final String productIdentifier);
 
   @RequestMapping(
-          value = "/individuallending/products/{productidentifier}/cases/{caseidentifier}/plannedpayments",
-          method = RequestMethod.GET,
-          produces = MediaType.ALL_VALUE,
-          consumes = MediaType.APPLICATION_JSON_VALUE
+      value = "/individuallending/products/{productidentifier}/cases/{caseidentifier}/plannedpayments",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
   )
   PlannedPaymentPage getPaymentScheduleForCase(
       @PathVariable("productidentifier") final String productIdentifier,
@@ -64,6 +65,19 @@ public interface IndividualLending {
       @RequestParam(value = "pageIndex", required = false) final Integer pageIndex,
       @RequestParam(value = "size", required = false) final Integer size,
       @RequestParam(value = "initialDisbursalDate", required = false) final String initialDisbursalDate);
+
+  @RequestMapping(
+      value = "/individuallending/products/{productidentifier}/plannedpayments",
+      method = RequestMethod.POST,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  PlannedPaymentPage getPaymentScheduleForParameters(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @RequestParam(value = "pageIndex", required = false) final Integer pageIndex,
+      @RequestParam(value = "size", required = false) final Integer size,
+      @RequestParam(value = "initialDisbursalDate", required = false) final String initialDisbursalDate,
+      final Case caseInstance);
 
   default Stream<PlannedPayment> getPaymentScheduleForCaseStream(
       final String productIdentifier,

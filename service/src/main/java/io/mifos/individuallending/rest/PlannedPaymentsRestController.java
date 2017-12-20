@@ -80,6 +80,7 @@ public class PlannedPaymentsRestController {
       method = RequestMethod.POST,
       consumes = MediaType.ALL_VALUE,
       produces = MediaType.APPLICATION_JSON_VALUE)
+  public @ResponseBody
   PlannedPaymentPage getPaymentScheduleForParameters(
       @PathVariable("productidentifier") final String productIdentifier,
       @RequestParam(value = "pageIndex", required = false) final Integer pageIndex,

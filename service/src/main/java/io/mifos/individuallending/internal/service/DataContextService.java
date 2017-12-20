@@ -15,15 +15,22 @@
  */
 package io.mifos.individuallending.internal.service;
 
+import com.google.gson.Gson;
 import io.mifos.core.lang.ServiceException;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
+import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.service.ServiceConstants;
+import io.mifos.portfolio.service.internal.mapper.CaseMapper;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.CaseRepository;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Nullable;
@@ -37,15 +44,18 @@ public class DataContextService {
   private final ProductRepository productRepository;
   private final CaseRepository caseRepository;
   private final CaseParametersRepository caseParametersRepository;
+  private final Gson gson;
 
   @Autowired
   public DataContextService(
       final ProductRepository productRepository,
       final CaseRepository caseRepository,
-      final CaseParametersRepository caseParametersRepository) {
+      final CaseParametersRepository caseParametersRepository,
+      @Qualifier(ServiceConstants.GSON_NAME) final Gson gson) {
     this.productRepository = productRepository;
     this.caseRepository = caseRepository;
     this.caseParametersRepository = caseParametersRepository;
+    this.gson = gson;
   }
 
   public DataContextOfAction checkedGetDataContext(
@@ -65,6 +75,27 @@ public class DataContextService {
             .orElseThrow(() -> ServiceException.notFound(
                 "Individual loan not found ''{0}.{1}''.",
                 productIdentifier, caseIdentifier));
+
+    return new DataContextOfAction(
+        product,
+        customerCase,
+        caseParameters,
+        oneTimeAccountAssignments);
+  }
+
+  public DataContextOfAction checkedGetDataContext(
+      final String productIdentifier,
+      final Case caseInstance,
+      final @Nullable List<AccountAssignment> oneTimeAccountAssignments) {
+
+    final ProductEntity product =
+        productRepository.findByIdentifier(productIdentifier)
+            .orElseThrow(() -> ServiceException.notFound("Product not found ''{0}''.", productIdentifier));
+    final CaseEntity customerCase = CaseMapper.map(caseInstance);
+
+    final CaseParametersEntity caseParameters = CaseParametersMapper.map(
+        0L,
+        gson.fromJson(caseInstance.getParameters(), CaseParameters.class));
 
     return new DataContextOfAction(
         product,

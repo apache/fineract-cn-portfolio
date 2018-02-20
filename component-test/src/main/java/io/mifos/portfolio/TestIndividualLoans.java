@@ -16,6 +16,7 @@
 package io.mifos.portfolio;
 
 import com.google.gson.Gson;
+import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
@@ -29,6 +30,8 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -83,7 +86,6 @@ public class TestIndividualLoans extends AbstractPortfolioTest {
     final Product product = createAndEnableProduct();
     final Case caseInstance = createCase(product.getIdentifier());
 
-    final IndividualLending individualLending = this.individualLending;
     final PlannedPaymentPage paymentScheduleFirstPage
             = individualLending.getPaymentScheduleForCase(product.getIdentifier(), caseInstance.getIdentifier(), null, null, null);
 
@@ -92,6 +94,36 @@ public class TestIndividualLoans extends AbstractPortfolioTest {
       x.getPayment().getCostComponents().forEach(y -> Assert.assertEquals(product.getMinorCurrencyUnitDigits(), y.getAmount().scale()));
       Assert.assertEquals(product.getMinorCurrencyUnitDigits(), x.getBalances().get(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL).scale());
     });
+  }
+
+  @Test
+  public void plannedPaymentAfterCreationShouldBeSameAsPlannedPaymentViaParameters() throws InterruptedException {
+    final Product product = createAndEnableProduct();
+
+    final String initialDisbursalDate = DateConverter.toIsoString(LocalDateTime.now(Clock.systemUTC()));
+    final Case caseParameters = Fixture.getTestCase(product.getIdentifier());
+
+    final PlannedPaymentPage paymentScheduleFromParametersFirstPage
+        = individualLending.getPaymentScheduleForParameters(
+        product.getIdentifier(),
+        null,
+        null,
+        initialDisbursalDate,
+        caseParameters);
+
+    final Case caseInstance = createCase(product.getIdentifier());
+
+    final PlannedPaymentPage paymentScheduleFirstPage
+        = individualLending.getPaymentScheduleForCase(
+        product.getIdentifier(),
+        caseInstance.getIdentifier(),
+        null,
+        null,
+        initialDisbursalDate);
+
+    Assert.assertNotNull(paymentScheduleFromParametersFirstPage);
+    Assert.assertNotNull(paymentScheduleFirstPage);
+    Assert.assertEquals(paymentScheduleFirstPage, paymentScheduleFromParametersFirstPage);
   }
 
   private Case createCaseForCustomer(final String productIdentifier, final String customerIdentifier) throws InterruptedException {

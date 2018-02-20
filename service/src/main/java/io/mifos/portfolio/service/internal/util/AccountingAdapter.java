@@ -15,6 +15,7 @@
  */
 package io.mifos.portfolio.service.internal.util;
 
+import com.google.common.collect.Sets;
 import io.mifos.accounting.api.v1.client.*;
 import io.mifos.accounting.api.v1.domain.*;
 import io.mifos.core.api.util.UserContextHolder;
@@ -91,7 +92,6 @@ public class AccountingAdapter {
       final String transactionDate,
       final String message,
       final String transactionType) {
-    final String transactionUniqueifier = RandomStringUtils.random(26, true, true);
     final JournalEntry journalEntry = getJournalEntry(
         balanceAdjustments,
         designatorToAccountIdentifierMapper,
@@ -99,15 +99,28 @@ public class AccountingAdapter {
         transactionDate,
         message,
         transactionType,
-        transactionUniqueifier,
         UserContextHolder.checkedGetUser());
 
     //noinspection ConstantConditions
     if (journalEntry.getCreditors().isEmpty() && journalEntry.getDebtors().isEmpty())
       return Optional.empty();
 
-    ledgerManager.createJournalEntry(journalEntry);
-    return Optional.of(transactionUniqueifier);
+    while (true) {
+      try {
+        final String transactionUniqueifier = RandomStringUtils.random(26, true, true);
+        journalEntry.setTransactionIdentifier(formulateTransactionIdentifier(message, transactionUniqueifier));
+        ledgerManager.createJournalEntry(journalEntry);
+        return Optional.of(transactionUniqueifier);
+      } catch (final JournalEntryAlreadyExistsException ignore) {
+        //Try again with a new uniqueifier.
+      }
+    }
+  }
+
+  private static String formulateTransactionIdentifier(
+      final String message,
+      final String transactionUniqueifier) {
+    return "portfolio." + message + "." + transactionUniqueifier;
   }
 
   static JournalEntry getJournalEntry(
@@ -117,7 +130,6 @@ public class AccountingAdapter {
       final String transactionDate,
       final String message,
       final String transactionType,
-      final String transactionUniqueifier,
       final String user) {
     final JournalEntry journalEntry = new JournalEntry();
     final Set<Creditor> creditors = new HashSet<>();
@@ -156,7 +168,6 @@ public class AccountingAdapter {
       throw ServiceException.internalError("either only creditors or only debtors were provided.");
 
 
-    final String transactionIdentifier = "portfolio." + message + "." + transactionUniqueifier;
     journalEntry.setCreditors(creditors);
     journalEntry.setDebtors(debtors);
     journalEntry.setClerk(user);
@@ -164,7 +175,6 @@ public class AccountingAdapter {
     journalEntry.setMessage(message);
     journalEntry.setTransactionType(transactionType);
     journalEntry.setNote(note);
-    journalEntry.setTransactionIdentifier(transactionIdentifier);
     return journalEntry;
   }
 
@@ -189,12 +199,12 @@ public class AccountingAdapter {
         .map(BigDecimal::valueOf).reduce(BigDecimal.ZERO, BigDecimal::add);
   }
 
-  public BigDecimal getCurrentAccountBalance(final String accountIdentifier) {
+  public Account getAccount(final String accountIdentifier) {
     try {
       final Account account = ledgerManager.findAccount(accountIdentifier);
-      if (account == null || account.getBalance() == null)
+      if (account == null || account.getBalance() == null || account.getType() == null)
         throw ServiceException.internalError("Could not find the account with identifier ''{0}''", accountIdentifier);
-      return BigDecimal.valueOf(account.getBalance());
+      return account;
     }
     catch (final AccountNotFoundException e) {
      throw ServiceException.internalError("Could not find the account with identifier ''{0}''", accountIdentifier);
@@ -272,14 +282,26 @@ public class AccountingAdapter {
             productIdentifier, accountDesignator, ledgerIdentifier));
   }
 
-  public String createCaseAccountForLedgerAssignment(final String customerIdentifier, final AccountAssignment ledgerAssignment) {
+  public String createOrFindCaseAccountForLedgerAssignment(
+      final String customerIdentifier,
+      final AccountAssignment ledgerAssignment,
+      final BigDecimal currentBalance) {
+    if (ledgerAssignment.getAccountIdentifier() != null) try
+    {
+      final Account existingAccount = ledgerManager.findAccount(ledgerAssignment.getAccountIdentifier());
+      return existingAccount.getIdentifier();
+    }
+    catch (final AccountNotFoundException ignored) {
+      //If the "existing" account doesn't exist after all, create a new one.
+    }
     final Ledger ledger = ledgerManager.findLedger(ledgerAssignment.getLedgerIdentifier());
     final AccountPage accountsOfLedger = ledgerManager.fetchAccountsOfLedger(ledger.getIdentifier(), null, null, null, null);
 
     final Account generatedAccount = new Account();
-    generatedAccount.setBalance(0.0);
+    generatedAccount.setBalance(currentBalance.doubleValue());
     generatedAccount.setType(ledger.getType());
     generatedAccount.setState(Account.State.OPEN.name());
+    generatedAccount.setHolders(Sets.newHashSet(customerIdentifier));
     long guestimatedAccountIndex = accountsOfLedger.getTotalElements() + 1;
     generatedAccount.setLedger(ledger.getIdentifier());
     final Optional<String> createdAccountNumber =
@@ -288,6 +310,7 @@ public class AccountingAdapter {
           final String accountNumber = createCaseAccountNumber(customerIdentifier, ledgerAssignment.getDesignator(), i);
           generatedAccount.setIdentifier(accountNumber);
           generatedAccount.setName(accountNumber);
+          generatedAccount.setAlternativeAccountNumber(ledgerAssignment.getAlternativeAccountNumber());
           try {
             ledgerManager.createAccount(generatedAccount);
             return Optional.of(accountNumber);

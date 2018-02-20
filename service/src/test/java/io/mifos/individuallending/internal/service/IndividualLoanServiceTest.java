@@ -275,7 +275,7 @@ public class IndividualLoanServiceTest {
     final PlannedPaymentPage firstPage = testSubject.getPlannedPaymentsPage(testCase.getDataContextOfAction(),
             0,
             20,
-            testCase.initialDisbursementDate);
+            Optional.of(testCase.initialDisbursementDate));
 
     Assert.assertFalse(firstPage.getElements().size() == 0);
 
@@ -284,7 +284,7 @@ public class IndividualLoanServiceTest {
             .map(x -> testSubject.getPlannedPaymentsPage(testCase.getDataContextOfAction(),
                 x,
                 20,
-                testCase.initialDisbursementDate))
+                Optional.of(testCase.initialDisbursementDate)))
             .flatMap(x -> x.getElements().stream())
             .collect(Collectors.toList());
 

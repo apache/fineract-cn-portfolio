@@ -31,6 +31,7 @@ import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import javax.annotation.Nullable;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import java.math.BigDecimal;
@@ -61,6 +62,7 @@ class AccountingFixture {
   static final String PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER = "1312";
   static final String DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER = "1313";
   static final String CUSTOMERS_DEPOSIT_ACCOUNT = "7352";
+  static final String TELLER_ONE_ACCOUNT = "7354";
   static final String LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER = "7810";
   static final String CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER = "1103";
   static final String LATE_FEE_INCOME_ACCOUNT_IDENTIFIER = "1311";
@@ -68,6 +70,10 @@ class AccountingFixture {
   static final String PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER = "7353.0";
   static final String GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER = "3010";
   static final String GENERAL_EXPENSE_ACCOUNT_IDENTIFIER = "3011";
+
+  static final String IMPORTED_CUSTOMER_LOAN_PRINCIPAL_ACCOUNT = "clp.blah.blah2";
+  static final String IMPORTED_CUSTOMER_LOAN_INTEREST_ACCOUNT = "cli.blah.blah2";
+  static final String IMPORTED_CUSTOMER_LOAN_FEES_ACCOUNT = "clf.blah.blah3";
 
   static final Map<String, AccountData> accountMap = new HashMap<>();
 
@@ -163,8 +169,8 @@ class AccountingFixture {
   private static Ledger accruedIncomeLedger() {
     final Ledger ret = new Ledger();
     ret.setIdentifier(ACCRUED_INCOME_LEDGER_IDENTIFIER);
-    ret.setParentLedgerIdentifier(ASSET_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.ASSET.name());
+    ret.setParentLedgerIdentifier(ASSET_LEDGER_IDENTIFIER); //TODO: This is inaccurate for a revenue account.
+    ret.setType(AccountType.REVENUE.name());
     ret.setCreatedOn(DateConverter.toIsoString(universalCreationDate));
     return ret;
 
@@ -175,6 +181,7 @@ class AccountingFixture {
     ret.setIdentifier(LOAN_FUNDS_SOURCE_ACCOUNT_IDENTIFIER);
     ret.setLedger(CASH_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -183,6 +190,7 @@ class AccountingFixture {
     ret.setIdentifier(PROCESSING_FEE_INCOME_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -191,6 +199,7 @@ class AccountingFixture {
     ret.setIdentifier(LOAN_ORIGINATION_FEES_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -199,14 +208,25 @@ class AccountingFixture {
     ret.setIdentifier(DISBURSEMENT_FEE_INCOME_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
   private static Account tellerOneAccount() {
     final Account ret = new Account();
-    ret.setIdentifier(CUSTOMERS_DEPOSIT_ACCOUNT);
+    ret.setIdentifier(TELLER_ONE_ACCOUNT);
     ret.setLedger(CASH_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
+    return ret;
+  }
+
+  private static Account customerDepositAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(CUSTOMERS_DEPOSIT_ACCOUNT);
+    ret.setLedger(CASH_LEDGER_IDENTIFIER); //TODO: The ledger here is wrong.
+    ret.setType(AccountType.LIABILITY.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -214,7 +234,8 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(LOAN_INTEREST_ACCRUAL_ACCOUNT_IDENTIFIER);
     ret.setLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
-    ret.setType(AccountType.ASSET.name());
+    ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -223,6 +244,7 @@ class AccountingFixture {
     ret.setIdentifier(CONSUMER_LOAN_INTEREST_ACCOUNT_IDENTIFIER);
     ret.setLedger(LOAN_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -231,6 +253,7 @@ class AccountingFixture {
     ret.setIdentifier(LATE_FEE_INCOME_ACCOUNT_IDENTIFIER);
     ret.setLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -239,6 +262,7 @@ class AccountingFixture {
     ret.setIdentifier(LATE_FEE_ACCRUAL_ACCOUNT_IDENTIFIER);
     ret.setLedger(ACCRUED_INCOME_LEDGER_IDENTIFIER);
     ret.setType(AccountType.REVENUE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -247,6 +271,7 @@ class AccountingFixture {
     ret.setIdentifier(PRODUCT_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER);
     ret.setLedger(CUSTOMER_LOAN_LEDGER_IDENTIFIER);
     ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -254,6 +279,7 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(GENERAL_LOSS_ALLOWANCE_ACCOUNT_IDENTIFIER);
     ret.setType(AccountType.EXPENSE.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
@@ -261,16 +287,44 @@ class AccountingFixture {
     final Account ret = new Account();
     ret.setIdentifier(GENERAL_EXPENSE_ACCOUNT_IDENTIFIER);
     ret.setType(AccountType.EXPENSE.name());
+    ret.setBalance(0.0);
+    return ret;
+  }
+
+  private static Account importedCustomerLoanPrincipalAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(IMPORTED_CUSTOMER_LOAN_PRINCIPAL_ACCOUNT);
+    ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
+    return ret;
+  }
+
+  private static Account importedCustomerLoanInterestAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(IMPORTED_CUSTOMER_LOAN_INTEREST_ACCOUNT);
+    ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
+    return ret;
+  }
+
+  private static Account importedCustomerLoanFeeAccount() {
+    final Account ret = new Account();
+    ret.setIdentifier(IMPORTED_CUSTOMER_LOAN_FEES_ACCOUNT);
+    ret.setType(AccountType.ASSET.name());
+    ret.setBalance(0.0);
     return ret;
   }
 
   private static AccountPage customerLoanAccountsPage() {
     final Account customerLoanAccount1 = new Account();
     customerLoanAccount1.setIdentifier("customerLoanAccount1");
+    customerLoanAccount1.setBalance(0.0);
     final Account customerLoanAccount2 = new Account();
     customerLoanAccount2.setIdentifier("customerLoanAccount2");
+    customerLoanAccount2.setBalance(0.0);
     final Account customerLoanAccount3 = new Account();
     customerLoanAccount3.setIdentifier("customerLoanAccount3");
+    customerLoanAccount3.setBalance(0.0);
 
     final AccountPage ret = new AccountPage();
     ret.setTotalElements(3L);
@@ -306,16 +360,22 @@ class AccountingFixture {
   private static class AccountMatcher extends ArgumentMatcher<Account> {
     private final String ledgerIdentifer;
     private final String accountDesignator;
+    private final String alternativeAccountNumber;
     private final AccountType type;
+    private final BigDecimal balance;
     private Account matchedArgument;
 
     private AccountMatcher(
         final String ledgerIdentifier,
         final String accountDesignator,
-        final AccountType type) {
+        final @Nullable String alternativeAccountNumber,
+        final AccountType type,
+        final BigDecimal balance) {
       this.ledgerIdentifer = ledgerIdentifier;
       this.accountDesignator = accountDesignator;
+      this.alternativeAccountNumber = alternativeAccountNumber;
       this.type = type;
+      this.balance = balance;
       this.matchedArgument = null; //Set when matches called and returns true.
     }
 
@@ -328,10 +388,11 @@ class AccountingFixture {
 
       final Account checkedArgument = (Account) argument;
 
-      final boolean ret = checkedArgument.getLedger().equals(ledgerIdentifer) &&
+      final boolean ret = Objects.equals(checkedArgument.getLedger(), ledgerIdentifer) &&
           checkedArgument.getIdentifier().contains(accountDesignator) &&
-          checkedArgument.getType().equals(type.name()) &&
-          checkedArgument.getBalance() == 0.0;
+          Objects.equals(checkedArgument.getAlternativeAccountNumber(), alternativeAccountNumber) &&
+          Objects.equals(checkedArgument.getType(), type.name()) &&
+          checkedArgument.getBalance().compareTo(balance.doubleValue()) == 0;
 
       if (ret)
         matchedArgument = checkedArgument;
@@ -353,7 +414,9 @@ class AccountingFixture {
       return "AccountMatcher{" +
           "ledgerIdentifer='" + ledgerIdentifer + '\'' +
           ", accountDesignator='" + accountDesignator + '\'' +
+          ", alternativeAccountNumber='" + alternativeAccountNumber + '\'' +
           ", type=" + type +
+          ", balance=" + balance +
           '}';
     }
   }
@@ -559,6 +622,7 @@ class AccountingFixture {
     makeAccountResponsive(processingFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(disbursementFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(tellerOneAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(customerDepositAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(loanInterestAccrualAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(consumerLoanInterestAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(lateFeeIncomeAccount(), universalCreationDate, ledgerManagerMock);
@@ -566,6 +630,9 @@ class AccountingFixture {
     makeAccountResponsive(productLossAllowanceAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(generalLossAllowanceAccount(), universalCreationDate, ledgerManagerMock);
     makeAccountResponsive(generalExpenseAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(importedCustomerLoanPrincipalAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(importedCustomerLoanInterestAccount(), universalCreationDate, ledgerManagerMock);
+    makeAccountResponsive(importedCustomerLoanFeeAccount(), universalCreationDate, ledgerManagerMock);
 
     Mockito.doReturn(incomeLedger()).when(ledgerManagerMock).findLedger(INCOME_LEDGER_IDENTIFIER);
     Mockito.doReturn(feesAndChargesLedger()).when(ledgerManagerMock).findLedger(FEES_AND_CHARGES_LEDGER_IDENTIFIER);
@@ -591,7 +658,17 @@ class AccountingFixture {
       final String ledgerIdentifier,
       final String accountDesignator,
       final AccountType type) {
-    final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, accountDesignator, type);
+    return verifyAccountCreationMatchingDesignator(ledgerManager, ledgerIdentifier, accountDesignator, null, type, BigDecimal.ZERO);
+  }
+
+  static String verifyAccountCreationMatchingDesignator(
+      final LedgerManager ledgerManager,
+      final String ledgerIdentifier,
+      final String accountDesignator,
+      final @Nullable String alternativeAccountNumber,
+      final AccountType type,
+      final BigDecimal balance) {
+    final AccountMatcher specifiesCorrectAccount = new AccountMatcher(ledgerIdentifier, accountDesignator, alternativeAccountNumber, type, balance);
     Mockito.verify(ledgerManager).createAccount(AdditionalMatchers.and(argThat(isValid()), argThat(specifiesCorrectAccount)));
     return specifiesCorrectAccount.getMatchedArgument().getIdentifier();
   }

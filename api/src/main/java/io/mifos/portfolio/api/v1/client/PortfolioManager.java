@@ -308,6 +308,15 @@ public interface PortfolioManager {
       @PathVariable("caseidentifier") final String caseIdentifier);
 
   @RequestMapping(
+      value = "/products/{productidentifier}/cases/{caseidentifier}/status",
+      method = RequestMethod.GET,
+      produces = MediaType.ALL_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE)
+  CaseStatus getCaseStatus(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier);
+
+  @RequestMapping(
       value = "/products/{productidentifier}/cases/{caseidentifier}",
       method = RequestMethod.PUT,
       produces = MediaType.APPLICATION_JSON_VALUE,
@@ -395,6 +404,18 @@ public interface PortfolioManager {
       @PathVariable("caseidentifier") final String caseIdentifier,
       @PathVariable("actionidentifier") final String actionIdentifier,
       final Command command);
+
+  @RequestMapping(
+      value = "/products/{productidentifier}/cases/{caseidentifier}/commands/IMPORT",
+      method = RequestMethod.POST,
+      produces = MediaType.APPLICATION_JSON_VALUE,
+      consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  @ThrowsException(status = HttpStatus.CONFLICT, exception = TaskOutstanding.class)
+  void executeImportCommand(
+      @PathVariable("productidentifier") final String productIdentifier,
+      @PathVariable("caseidentifier") final String caseIdentifier,
+      final ImportParameters command);
 
   @RequestMapping(
       value = "/products/{productidentifier}/cases/{caseidentifier}/tasks/",

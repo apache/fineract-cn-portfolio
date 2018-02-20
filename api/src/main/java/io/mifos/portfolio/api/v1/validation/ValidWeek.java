@@ -30,7 +30,7 @@ import java.lang.annotation.*;
         validatedBy = {CheckValidWeek.class}
 )
 public @interface ValidWeek {
-  String message() default "Only weeks 0, 1, 2, or 4, are allowed.";
+  String message() default "Only weeks 0, 1, 2, or -1, are allowed.";
 
   Class<?>[] groups() default {};
 

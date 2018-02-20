@@ -16,7 +16,7 @@
 
 package io.mifos.individuallending.internal.service.costcomponent;
 
-import io.mifos.individuallending.internal.service.DataContextOfAction;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 
 import java.math.BigDecimal;
@@ -30,6 +30,24 @@ import java.util.Optional;
  * @author Myrle Krantz
  */
 public class SimulatedRunningBalances implements RunningBalances {
+  private final static Map<String, BigDecimal> ACCOUNT_SIGNS = new HashMap<String, BigDecimal>() {{
+    this.put(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, NEGATIVE);
+    this.put(AccountDesignators.CUSTOMER_LOAN_FEES, NEGATIVE);
+    this.put(AccountDesignators.CUSTOMER_LOAN_INTEREST, NEGATIVE);
+    this.put(AccountDesignators.LOAN_FUNDS_SOURCE, NEGATIVE);
+    this.put(AccountDesignators.PROCESSING_FEE_INCOME, POSITIVE);
+    this.put(AccountDesignators.ORIGINATION_FEE_INCOME, POSITIVE);
+    this.put(AccountDesignators.DISBURSEMENT_FEE_INCOME, POSITIVE);
+    this.put(AccountDesignators.INTEREST_INCOME, POSITIVE);
+    this.put(AccountDesignators.INTEREST_ACCRUAL, POSITIVE);
+    this.put(AccountDesignators.LATE_FEE_INCOME, POSITIVE);
+    this.put(AccountDesignators.LATE_FEE_ACCRUAL, POSITIVE);
+    this.put(AccountDesignators.PRODUCT_LOSS_ALLOWANCE, NEGATIVE);
+    this.put(AccountDesignators.GENERAL_LOSS_ALLOWANCE, NEGATIVE);
+    this.put(AccountDesignators.EXPENSE, NEGATIVE);
+    this.put(AccountDesignators.ENTRY, POSITIVE);
+    //TODO: derive signs from IndividualLendingPatternFactory.individualLendingRequiredAccounts instead.
+  }};
   final private Map<String, BigDecimal> balances = new HashMap<>();
   private final LocalDateTime startOfTerm;
 
@@ -39,6 +57,11 @@ public class SimulatedRunningBalances implements RunningBalances {
 
   SimulatedRunningBalances(final LocalDateTime startOfTerm) {
     this.startOfTerm = startOfTerm;
+  }
+
+  @Override
+  public BigDecimal getAccountSign(final String accountDesignator) {
+    return ACCOUNT_SIGNS.get(accountDesignator);
   }
 
   @Override
@@ -54,15 +77,15 @@ public class SimulatedRunningBalances implements RunningBalances {
   }
 
   @Override
-  public Optional<LocalDateTime> getStartOfTerm(final DataContextOfAction dataContextOfAction) {
+  public Optional<LocalDateTime> getStartOfTerm() {
     return Optional.ofNullable(startOfTerm);
   }
 
-  public void adjustBalance(final String key, final BigDecimal amount) {
-    final BigDecimal sign = ACCOUNT_SIGNS.get(key);
-    final BigDecimal currentValue = balances.getOrDefault(key, BigDecimal.ZERO);
-    final BigDecimal newValue = currentValue.add(amount.multiply(sign));
-    balances.put(key, newValue);
+  public void adjustBalance(final String accountDesignator, final BigDecimal amount) {
+    final BigDecimal currentValue = balances.getOrDefault(accountDesignator, BigDecimal.ZERO);
+    final BigDecimal newValue = isAccountNegative(accountDesignator) ? currentValue.add(amount.negate())
+        : currentValue.add(amount);
+    balances.put(accountDesignator, newValue);
   }
 
   Map<String, BigDecimal> snapshot() {

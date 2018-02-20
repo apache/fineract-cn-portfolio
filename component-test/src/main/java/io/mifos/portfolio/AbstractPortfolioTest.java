@@ -312,11 +312,11 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
         new ChargeDefinitionEvent(productIdentifier, feeId)));
   }
 
-  AccountAssignment assignEntryToTeller() {
+  List<AccountAssignment> assignEntry(final String accountIdentifier) {
     final AccountAssignment entryAccountAssignment = new AccountAssignment();
     entryAccountAssignment.setDesignator(AccountDesignators.ENTRY);
-    entryAccountAssignment.setAccountIdentifier(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT);
-    return entryAccountAssignment;
+    entryAccountAssignment.setAccountIdentifier(accountIdentifier);
+    return Collections.singletonList(entryAccountAssignment);
   }
 
   AccountAssignment assignExpenseToGeneralExpense() {

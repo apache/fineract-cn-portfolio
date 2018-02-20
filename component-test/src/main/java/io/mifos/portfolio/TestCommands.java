@@ -22,7 +22,6 @@ import org.junit.Test;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
-import java.util.Collections;
 
 import static io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants.*;
 
@@ -43,7 +42,7 @@ public class TestCommands extends AbstractPortfolioTest {
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.APPROVE,
-        Collections.singletonList(assignEntryToTeller()),
+        assignEntry(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT),
         APPROVE_INDIVIDUALLOAN_CASE,
         Case.State.CREATED);
   }
@@ -58,7 +57,7 @@ public class TestCommands extends AbstractPortfolioTest {
         customerCase.getIdentifier(),
         Action.OPEN,
         LocalDateTime.now(Clock.systemUTC()),
-        Collections.singletonList(assignEntryToTeller()),
+        assignEntry(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT),
         OPEN_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);
 
@@ -66,7 +65,7 @@ public class TestCommands extends AbstractPortfolioTest {
         product.getIdentifier(),
         customerCase.getIdentifier(),
         Action.DISBURSE,
-        Collections.singletonList(assignEntryToTeller()),
+        assignEntry(AccountingFixture.CUSTOMERS_DEPOSIT_ACCOUNT),
         DISBURSE_INDIVIDUALLOAN_CASE,
         Case.State.PENDING);
   }

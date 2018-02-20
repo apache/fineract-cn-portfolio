@@ -16,8 +16,10 @@
 package io.mifos.portfolio.api.v1.domain;
 
 import io.mifos.core.lang.validation.constraints.ValidIdentifier;
+import org.hibernate.validator.constraints.Length;
 import org.hibernate.validator.constraints.ScriptAssert;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 /**
@@ -28,14 +30,26 @@ import java.util.Objects;
 public final class AccountAssignment {
   @ValidIdentifier
   private String designator;
+
   @ValidIdentifier(maxLength = 34, optional = true)
   private String accountIdentifier;
+
   @SuppressWarnings("DefaultAnnotationParam")
   @ValidIdentifier(maxLength = 32, optional = true)
   private String ledgerIdentifier;
 
-  public AccountAssignment() {
+  @Length(max = 256)
+  @Nullable
+  private String alternativeAccountNumber;
 
+  public AccountAssignment() {
+  }
+
+  public AccountAssignment(final AccountAssignment toCopy) {
+    this.designator = toCopy.designator;
+    this.accountIdentifier = toCopy.accountIdentifier;
+    this.ledgerIdentifier = toCopy.ledgerIdentifier;
+    this.alternativeAccountNumber = toCopy.alternativeAccountNumber;
   }
 
   public AccountAssignment(String designator, String accountIdentifier) {
@@ -67,27 +81,38 @@ public final class AccountAssignment {
     this.ledgerIdentifier = ledgerIdentifier;
   }
 
+  @Nullable
+  public String getAlternativeAccountNumber() {
+    return alternativeAccountNumber;
+  }
+
+  public void setAlternativeAccountNumber(@Nullable String alternativeAccountNumber) {
+    this.alternativeAccountNumber = alternativeAccountNumber;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
     if (o == null || getClass() != o.getClass()) return false;
     AccountAssignment that = (AccountAssignment) o;
     return Objects.equals(designator, that.designator) &&
-            Objects.equals(accountIdentifier, that.accountIdentifier) &&
-            Objects.equals(ledgerIdentifier, that.ledgerIdentifier);
+        Objects.equals(accountIdentifier, that.accountIdentifier) &&
+        Objects.equals(ledgerIdentifier, that.ledgerIdentifier) &&
+        Objects.equals(alternativeAccountNumber, that.alternativeAccountNumber);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(designator, accountIdentifier, ledgerIdentifier);
+    return Objects.hash(designator, accountIdentifier, ledgerIdentifier, alternativeAccountNumber);
   }
 
   @Override
   public String toString() {
     return "AccountAssignment{" +
-            "designator='" + designator + '\'' +
-            ", accountIdentifier='" + accountIdentifier + '\'' +
-            ", ledgerIdentifier='" + ledgerIdentifier + '\'' +
-            '}';
+        "designator='" + designator + '\'' +
+        ", accountIdentifier='" + accountIdentifier + '\'' +
+        ", ledgerIdentifier='" + ledgerIdentifier + '\'' +
+        ", alternativeAccountNumber='" + alternativeAccountNumber + '\'' +
+        '}';
   }
 }

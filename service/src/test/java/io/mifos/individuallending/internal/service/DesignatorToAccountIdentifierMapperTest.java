@@ -80,6 +80,12 @@ public class DesignatorToAccountIdentifierMapperTest {
       return this;
     }
 
+    @SuppressWarnings("SameParameterValue")
+    TestCase expectedMapCustomerLoanPrincipalResult(final String newVal) {
+      this.expectedMapCustomerLoanPrincipalResult = Optional.of(newVal);
+      return this;
+    }
+
     @Override
     public String toString() {
       return "TestCase{" +
@@ -127,6 +133,94 @@ public class DesignatorToAccountIdentifierMapperTest {
             Optional.empty())
         .expectedGroupsNeedingLedgers(Collections.emptySet());
     ret.add(groupingIgnoredTestCase);
+
+    final TestCase alternativeIdsGroupedInLedgerTestCase = new TestCase("for import alternative ids are necessary.  Grouped in this case.")
+        .productAccountAssignments(new HashSet<>(Arrays.asList(
+            pAssignLedger(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, "x"),
+            pAssignLedger(AccountDesignators.CUSTOMER_LOAN_INTEREST, "x"),
+            pAssignLedger(AccountDesignators.CUSTOMER_LOAN_FEES, "x")
+        )))
+        .caseAccountAssignments(new HashSet<>(Collections.singletonList(
+            cAssignLedger(AccountDesignators.CUSTOMER_LOAN_GROUP)
+        )))
+        .oneTimeAccountAssignments(Arrays.asList(
+            importParameterAccountAssignment(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, "alternativeCLPName"),
+            importParameterAccountAssignment(AccountDesignators.CUSTOMER_LOAN_INTEREST, "alternativeCLIName"),
+            importParameterAccountAssignment(AccountDesignators.CUSTOMER_LOAN_FEES, "alternativeCLFName")
+        ))
+        .expectedLedgersNeedingAccounts(new HashSet<>(Arrays.asList(
+            assignLedger(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, "y", "alternativeCLPName"),
+            assignLedger(AccountDesignators.CUSTOMER_LOAN_INTEREST, "y", "alternativeCLIName"),
+            assignLedger(AccountDesignators.CUSTOMER_LOAN_FEES, "y", "alternativeCLFName"))))
+        .expectedCaseAccountAssignmentMappingForCustomerLoanGroup(
+            Optional.of(assignAccount(AccountDesignators.CUSTOMER_LOAN_GROUP)))
+        .expectedGroupsNeedingLedgers(new HashSet<>(Collections.singletonList(
+            new DesignatorToAccountIdentifierMapper.GroupNeedingLedger(AccountDesignators.CUSTOMER_LOAN_GROUP, "x"))));
+    ret.add(alternativeIdsGroupedInLedgerTestCase);
+
+
+    final TestCase alternativeIdsNotGroupedTestCase = new TestCase("for import alternative ids are necessary.  Not grouped in this case.")
+        .productAccountAssignments(new HashSet<>(Arrays.asList(
+            pAssignLedger(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, "x"),
+            pAssignLedger(AccountDesignators.CUSTOMER_LOAN_INTEREST, "y"),
+            pAssignLedger(AccountDesignators.CUSTOMER_LOAN_FEES, "z")
+        )))
+        .caseAccountAssignments(Collections.emptySet())
+        .oneTimeAccountAssignments(Arrays.asList(
+            importParameterAccountAssignment(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, "alternativeCLPName"),
+            importParameterAccountAssignment(AccountDesignators.CUSTOMER_LOAN_INTEREST, "alternativeCLIName"),
+            importParameterAccountAssignment(AccountDesignators.CUSTOMER_LOAN_FEES, "alternativeCLFName")
+        ))
+        .expectedLedgersNeedingAccounts(new HashSet<>(Arrays.asList(
+            assignLedger(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, "x", "alternativeCLPName"),
+            assignLedger(AccountDesignators.CUSTOMER_LOAN_INTEREST, "y", "alternativeCLIName"),
+            assignLedger(AccountDesignators.CUSTOMER_LOAN_FEES, "z", "alternativeCLFName"))))
+        .expectedCaseAccountAssignmentMappingForCustomerLoanGroup(
+            Optional.empty())
+        .expectedGroupsNeedingLedgers(Collections.emptySet());
+    ret.add(alternativeIdsNotGroupedTestCase);
+
+    final TestCase existingAccountsTestCase = new TestCase("for import connecting to existing accounts.  Grouping shouldn't be relevant.")
+        .productAccountAssignments(new HashSet<>(Arrays.asList(
+            pAssignLedger(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, "x"),
+            pAssignLedger(AccountDesignators.CUSTOMER_LOAN_INTEREST, "y"),
+            pAssignLedger(AccountDesignators.CUSTOMER_LOAN_FEES, "z")
+        )))
+        .caseAccountAssignments(Collections.emptySet())
+        .oneTimeAccountAssignments(Arrays.asList(
+            importParameterExistingAccountAssignment(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, "existingCLPName"),
+            importParameterExistingAccountAssignment(AccountDesignators.CUSTOMER_LOAN_INTEREST, "existingCLIName"),
+            importParameterExistingAccountAssignment(AccountDesignators.CUSTOMER_LOAN_FEES, "existingCLFName")
+        ))
+        .expectedLedgersNeedingAccounts(new HashSet<>(Arrays.asList(
+            assignLedgerExistingAccount(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL, "x", "existingCLPName"),
+            assignLedgerExistingAccount(AccountDesignators.CUSTOMER_LOAN_INTEREST, "y", "existingCLIName"),
+            assignLedgerExistingAccount(AccountDesignators.CUSTOMER_LOAN_FEES, "z", "existingCLFName")
+        )))
+        .expectedCaseAccountAssignmentMappingForCustomerLoanGroup(
+            Optional.empty())
+        .expectedGroupsNeedingLedgers(Collections.emptySet())
+        .expectedMapCustomerLoanPrincipalResult("existingCLPName");
+    ret.add(existingAccountsTestCase);
+
+    final TestCase alternativeIdsNotGroupedInPatternTestCase = new TestCase("for import alternative ids are necessary.  Not grouped in this case.")
+        .productAccountAssignments(new HashSet<>(Arrays.asList(
+            pAssignLedger("rando1", "x"),
+            pAssignLedger("rando2", "y")
+        )))
+        .caseAccountAssignments(Collections.emptySet())
+        .oneTimeAccountAssignments(Arrays.asList(
+            importParameterAccountAssignment("rando1", "alternativeRando1Name"),
+            importParameterAccountAssignment("rando2", "alternativeRando2Name")
+        ))
+        .expectedLedgersNeedingAccounts(new HashSet<>(Arrays.asList(
+            assignLedger("rando1", "x", "alternativeRando1Name"),
+            assignLedger("rando2", "y", "alternativeRando2Name")
+        )))
+        .expectedCaseAccountAssignmentMappingForCustomerLoanGroup(
+            Optional.empty())
+        .expectedGroupsNeedingLedgers(Collections.emptySet());
+    ret.add(alternativeIdsNotGroupedInPatternTestCase);
     return ret;
   }
 
@@ -148,12 +242,52 @@ public class DesignatorToAccountIdentifierMapperTest {
     return ret;
   }
 
+  private static AccountAssignment importParameterAccountAssignment(
+      final String accountDesignator,
+      final String alternativeAccountNumber) {
+    final AccountAssignment ret = new AccountAssignment();
+    ret.setDesignator(accountDesignator);
+    ret.setAlternativeAccountNumber(alternativeAccountNumber);
+    return ret;
+  }
+
+  private static AccountAssignment importParameterExistingAccountAssignment(
+      final String accountDesignator,
+      final String existingAccountIdentifier) {
+    final AccountAssignment ret = new AccountAssignment();
+    ret.setDesignator(accountDesignator);
+    ret.setAccountIdentifier(existingAccountIdentifier);
+    return ret;
+  }
+
   private static AccountAssignment assignLedger(
       final String accountDesignator,
       final String ledgerIdentifier) {
     final AccountAssignment ret = new AccountAssignment();
     ret.setDesignator(accountDesignator);
     ret.setLedgerIdentifier(ledgerIdentifier);
+    return ret;
+  }
+
+  private static AccountAssignment assignLedger(
+      final String accountDesignator,
+      final String ledgerIdentifier,
+      final String alternativeAccountNumber) {
+    final AccountAssignment ret = new AccountAssignment();
+    ret.setDesignator(accountDesignator);
+    ret.setLedgerIdentifier(ledgerIdentifier);
+    ret.setAlternativeAccountNumber(alternativeAccountNumber);
+    return ret;
+  }
+
+  private static AccountAssignment assignLedgerExistingAccount(
+      final String accountDesignator,
+      final String ledgerIdentifier,
+      final String existingAccountIdentifier) {
+    final AccountAssignment ret = new AccountAssignment();
+    ret.setDesignator(accountDesignator);
+    ret.setLedgerIdentifier(ledgerIdentifier);
+    ret.setAccountIdentifier(existingAccountIdentifier);
     return ret;
   }
 

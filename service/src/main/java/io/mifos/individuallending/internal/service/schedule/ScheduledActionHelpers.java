@@ -233,7 +233,7 @@ public class ScheduledActionHelpers {
         return lastDayOfMonth.minus(7, ChronoUnit.DAYS); //Will align days in next step.
     }
 
-    throw new IllegalStateException("PaymentCycle.alignmentWeek should only ever be 0, 1, 2, or -1.");
+    throw new IllegalStateException("PaymentCycle.alignmentWeek should only ever be 0, 1, 2, or -1, but was " + alignmentWeek);
   }
 
   static private LocalDate alignInDays(final LocalDate paymentDate, final PaymentCycle paymentCycle) {

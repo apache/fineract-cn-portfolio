@@ -177,6 +177,12 @@ public class DesignatorToAccountIdentifierMapper {
     final Set<String> accountAssignmentGroups = IndividualLendingPatternFactory.individualLendingPattern().getAccountAssignmentGroups();
     final Set<RequiredAccountAssignment> accountAssignmentsRequired = IndividualLendingPatternFactory.individualLendingPattern().getAccountAssignmentsRequired();
     final Map<String, RequiredAccountAssignment> accountAssignmentsRequiredMap = accountAssignmentsRequired.stream().collect(Collectors.toMap(RequiredAccountAssignment::getAccountDesignator, x -> x));
+    final Map<String, String> accountAssignmentAlternativeAccountIdsMap = oneTimeAccountAssignments.stream()
+        .filter(x -> x.getAlternativeAccountNumber() != null)
+        .collect(Collectors.toMap(AccountAssignment::getDesignator, AccountAssignment::getAlternativeAccountNumber));
+    final Map<String, String> existingAccountsAssignmentsMap = oneTimeAccountAssignments.stream()
+        .filter(x -> x.getAccountIdentifier() != null)
+        .collect(Collectors.toMap(AccountAssignment::getDesignator, AccountAssignment::getAccountIdentifier));
     final Map<String, Optional<String>> groupToLedgerMapping = accountAssignmentGroups.stream()
         .collect(Collectors.toMap(
             Function.identity(),
@@ -188,20 +194,17 @@ public class DesignatorToAccountIdentifierMapper {
 
     return ledgerAccountAssignments
         .map(ledgerAccountAssignment -> {
-          final String accountAssignmentGroup = accountAssignmentsRequiredMap.get(ledgerAccountAssignment.getDesignator()).getGroup();
-          if (accountAssignmentGroup == null)
-            return ledgerAccountAssignment;
-          else {
-            final Optional<String> changedLedger = groupToLedgerMapping.get(accountAssignmentGroup);
-            if (!changedLedger.isPresent())
-              return ledgerAccountAssignment;
-            else {
-              final AccountAssignment ret = new AccountAssignment();
-              ret.setDesignator(ledgerAccountAssignment.getDesignator());
-              ret.setLedgerIdentifier(changedLedger.get());
-              return ret;
-            }
-          }
+          final AccountAssignment ret = new AccountAssignment(ledgerAccountAssignment);
+          ret.setAlternativeAccountNumber(accountAssignmentAlternativeAccountIdsMap.get(ledgerAccountAssignment.getDesignator()));
+
+          final String existingAccountSetting = existingAccountsAssignmentsMap.get(ledgerAccountAssignment.getDesignator());
+          if (existingAccountSetting != null) ret.setAccountIdentifier(existingAccountSetting);
+
+          final Optional<String> accountAssignmentGroup = Optional.ofNullable(accountAssignmentsRequiredMap.get(ledgerAccountAssignment.getDesignator())).map(RequiredAccountAssignment::getGroup);
+          final Optional<String> changedLedger = accountAssignmentGroup.flatMap(groupToLedgerMapping::get);
+          changedLedger.ifPresent(ret::setLedgerIdentifier);
+
+          return ret;
         });
   }
 }

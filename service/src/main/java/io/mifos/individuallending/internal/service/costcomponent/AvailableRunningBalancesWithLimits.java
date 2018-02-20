@@ -15,7 +15,6 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
-import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 
 import java.math.BigDecimal;
@@ -40,6 +39,12 @@ public class AvailableRunningBalancesWithLimits implements RunningBalances {
     upperLimits.put(designator, limit);
   }
 
+
+  @Override
+  public BigDecimal getAccountSign(final String accountDesignator) {
+    return decoratedRunningBalances.getAccountSign(accountDesignator);
+  }
+
   @Override
   public BigDecimal getAvailableBalance(final String designator, final BigDecimal requestedAmount) {
     final BigDecimal balance = getBalance(designator).orElse(requestedAmount);
@@ -61,7 +66,7 @@ public class AvailableRunningBalancesWithLimits implements RunningBalances {
   }
 
   @Override
-  public Optional<LocalDateTime> getStartOfTerm(final DataContextOfAction dataContextOfAction) {
-    return decoratedRunningBalances.getStartOfTerm(dataContextOfAction);
+  public Optional<LocalDateTime> getStartOfTerm() {
+    return decoratedRunningBalances.getStartOfTerm();
   }
 }

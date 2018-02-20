@@ -19,6 +19,7 @@ import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.core.lang.DateConverter;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.CaseStatus;
 import io.mifos.portfolio.service.internal.repository.CaseAccountAssignmentEntity;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 
@@ -45,6 +46,18 @@ public class CaseMapper {
     ret.setCreatedBy(instance.getCreatedBy());
     ret.setLastModifiedBy(instance.getLastModifiedBy());
     ret.setLastModifiedOn(DateConverter.toIsoString(instance.getLastModifiedOn()));
+
+    return ret;
+  }
+
+  public static CaseStatus mapToStatus(final CaseEntity caseEntity) {
+    final CaseStatus ret = new CaseStatus();
+
+    ret.setCurrentState(caseEntity.getCurrentState());
+    if (caseEntity.getStartOfTerm() != null)
+      ret.setStartOfTerm(DateConverter.toIsoString(caseEntity.getStartOfTerm()));
+    if (caseEntity.getEndOfTerm() != null)
+      ret.setEndOfTerm(DateConverter.toIsoString(caseEntity.getEndOfTerm()));
 
     return ret;
   }

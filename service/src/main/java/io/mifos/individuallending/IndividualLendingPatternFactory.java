@@ -41,6 +41,10 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -188,6 +192,13 @@ public class IndividualLendingPatternFactory implements PatternFactory {
   @Override
   public void checkParameters(final String parameters) {
     final CaseParameters caseParameters = gson.fromJson(parameters, CaseParameters.class);
+
+    final ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+    final Validator validator = factory.getValidator();
+    final Set<ConstraintViolation<CaseParameters>> errors = validator.validate(caseParameters);
+    if (errors.size() != 0) {
+      throw ServiceException.badRequest("CaseParameters are invalid.");
+    }
     final String customerIdentifier = caseParameters.getCustomerIdentifier();
     if (!customerManager.isCustomerInGoodStanding(customerIdentifier))
       throw ServiceException.badRequest("Customer ''{0}'' is either not a customer or is not in good standing.");
@@ -367,7 +378,7 @@ public class IndividualLendingPatternFactory implements PatternFactory {
     {
       case CREATED:
         //noinspection ArraysAsListWithZeroOrOneArgument
-        return new HashSet<>(Arrays.asList(Action.OPEN));
+        return new HashSet<>(Arrays.asList(Action.OPEN, Action.IMPORT));
       case PENDING:
         return new HashSet<>(Arrays.asList(Action.DENY, Action.APPROVE));
       case APPROVED:

@@ -15,6 +15,8 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
+import io.mifos.accounting.api.v1.domain.Account;
+import io.mifos.accounting.api.v1.domain.AccountType;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
@@ -37,7 +39,7 @@ public class RealRunningBalances implements RunningBalances {
   private final AccountingAdapter accountingAdapter;
   private final DesignatorToAccountIdentifierMapper designatorToAccountIdentifierMapper;
   private final DataContextOfAction dataContextOfAction;
-  private final ExpiringMap<String, Optional<BigDecimal>> realAccountBalanceCache;
+  private final ExpiringMap<String, Optional<Account>> accountCache;
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private Optional<LocalDateTime> startOfTerm;
 
@@ -48,27 +50,58 @@ public class RealRunningBalances implements RunningBalances {
     this.designatorToAccountIdentifierMapper =
         new DesignatorToAccountIdentifierMapper(dataContextOfAction);
     this.dataContextOfAction = dataContextOfAction;
-    this.realAccountBalanceCache = ExpiringMap.builder()
-        .maxSize(20)
+    this.accountCache = ExpiringMap.builder()
+        .maxSize(40)
         .expirationPolicy(ExpirationPolicy.CREATED)
-        .expiration(30,TimeUnit.SECONDS)
+        .expiration(60,TimeUnit.SECONDS)
         .entryLoader((String accountDesignator) -> {
           final Optional<String> accountIdentifier;
-          if (accountDesignator.equals(AccountDesignators.ENTRY)) {
+          if (accountDesignator.equals(AccountDesignators.ENTRY) || accountDesignator.equals(AccountDesignators.EXPENSE)) {
             accountIdentifier = designatorToAccountIdentifierMapper.map(accountDesignator);
           }
           else {
             accountIdentifier = Optional.of(designatorToAccountIdentifierMapper.mapOrThrow(accountDesignator));
           }
-          return accountIdentifier.map(accountingAdapter::getCurrentAccountBalance);
+          return accountIdentifier.map(accountingAdapter::getAccount);
         })
         .build();
     this.startOfTerm = Optional.empty();
   }
 
   @Override
+  public BigDecimal getAccountSign(final String accountDesignator) {
+    return accountCache.get(accountDesignator)
+        .map(Account::getType)
+        .map(AccountType::valueOf)
+        .flatMap(x -> {
+          switch (x)
+          {
+            case LIABILITY:
+            case REVENUE:
+            case EQUITY:
+              return Optional.of(POSITIVE);
+
+            default:
+            case ASSET:
+            case EXPENSE:
+              return Optional.of(NEGATIVE);
+          }
+        })
+        .orElseGet(() -> {
+          switch (accountDesignator) {
+            case AccountDesignators.EXPENSE:
+              return NEGATIVE;
+            case AccountDesignators.ENTRY:
+              return POSITIVE;
+            default:
+              return NEGATIVE;
+          }}
+        );
+  }
+
+  @Override
   public Optional<BigDecimal> getAccountBalance(final String accountDesignator) {
-    return realAccountBalanceCache.get(accountDesignator);
+    return accountCache.get(accountDesignator).map(Account::getBalance).map(BigDecimal::valueOf);
   }
 
   @Override
@@ -89,13 +122,22 @@ public class RealRunningBalances implements RunningBalances {
   }
 
   @Override
-  public Optional<LocalDateTime> getStartOfTerm(final DataContextOfAction dataContextOfAction) {
+  public Optional<LocalDateTime> getStartOfTerm() {
     if (!startOfTerm.isPresent()) {
+      final LocalDateTime persistedStartOfTerm = dataContextOfAction.getCustomerCaseEntity().getStartOfTerm();
+      if (persistedStartOfTerm != null) {
+        this.startOfTerm = Optional.of(persistedStartOfTerm);
+        return this.startOfTerm;
+      }
       final String customerLoanPrincipalAccountIdentifier = designatorToAccountIdentifierMapper.mapOrThrow(AccountDesignators.CUSTOMER_LOAN_PRINCIPAL);
 
       this.startOfTerm = accountingAdapter.getDateOfOldestEntryContainingMessage(
           customerLoanPrincipalAccountIdentifier,
           dataContextOfAction.getMessageForCharge(Action.DISBURSE));
+
+      //Moving start of term persistence from accounting to the portfolio db.  Opportunistic migration only right now.
+      startOfTerm.ifPresent(startOfTermPersistedInAccounting ->
+          dataContextOfAction.getCustomerCaseEntity().setStartOfTerm(startOfTermPersistedInAccounting));
     }
 
     return this.startOfTerm;

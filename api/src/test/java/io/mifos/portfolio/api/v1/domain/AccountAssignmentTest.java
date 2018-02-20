@@ -40,20 +40,23 @@ public class AccountAssignmentTest extends ValidationTest<AccountAssignment> {
   public static Collection testCases() {
     final Collection<ValidationTestCase> ret = new ArrayList<>();
     ret.add(new ValidationTestCase<AccountAssignment>("basicCase")
-            .adjustment(x -> {})
-            .valid(true));
+        .adjustment(x -> {})
+        .valid(true));
     ret.add(new ValidationTestCase<AccountAssignment>("designatorNull")
-            .adjustment(x -> x.setDesignator(null))
-            .valid(false));
+        .adjustment(x -> x.setDesignator(null))
+        .valid(false));
     ret.add(new ValidationTestCase<AccountAssignment>("bothAccountAndLedgerSet")
-            .adjustment(x -> x.setLedgerIdentifier("zzz"))
-            .valid(false));
+        .adjustment(x -> x.setLedgerIdentifier("zzz"))
+        .valid(false));
     ret.add(new ValidationTestCase<AccountAssignment>("bothAccountAndLedgerNull")
-            .adjustment(x -> x.setAccountIdentifier(null))
-            .valid(false));
+        .adjustment(x -> x.setAccountIdentifier(null))
+        .valid(false));
     ret.add(new ValidationTestCase<AccountAssignment>("justLedgerSet")
-            .adjustment(x -> { x.setLedgerIdentifier("zzz"); x.setAccountIdentifier(null); })
-            .valid(true));
+        .adjustment(x -> { x.setLedgerIdentifier("zzz"); x.setAccountIdentifier(null); })
+        .valid(true));
+    ret.add(new ValidationTestCase<AccountAssignment>("alternativeAccountIdentifierSet")
+        .adjustment(x -> x.setAlternativeAccountNumber("asd;lf///kjasdf"))
+        .valid(true));
     return ret;
   }
 }

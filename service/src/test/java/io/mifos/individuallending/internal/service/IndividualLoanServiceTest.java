@@ -276,18 +276,18 @@ public class IndividualLoanServiceTest {
   @Test
   public void getPlannedPayments() throws Exception {
     final PlannedPaymentPage firstPage = testSubject.getPlannedPaymentsPage(testCase.getDataContextOfAction(),
-            0,
+            new IndividualLoanService.PlannedPaymentWindow(0,
             20,
-            Optional.of(testCase.initialDisbursementDate));
+            Optional.of(testCase.initialDisbursementDate)));
 
     Assert.assertFalse(firstPage.getElements().size() == 0);
 
     final List<PlannedPayment> allPlannedPayments =
         Stream.iterate(0, x -> x + 1).limit(firstPage.getTotalPages())
             .map(x -> testSubject.getPlannedPaymentsPage(testCase.getDataContextOfAction(),
-                x,
+                    new IndividualLoanService.PlannedPaymentWindow(x,
                 20,
-                Optional.of(testCase.initialDisbursementDate)))
+                Optional.of(testCase.initialDisbursementDate))))
             .flatMap(x -> x.getElements().stream())
             .collect(Collectors.toList());
 

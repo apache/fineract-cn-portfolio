@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/mifos-initiative/mifos.io](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/mifos-initiative/mifos.io?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-This project provides product and case management for Mifos I/O.  Products are described and "instantiated"
+This project provides product and case management for Fineract CN.  Products are described and "instantiated"
 for customers as cases.
 
 ## Abstract

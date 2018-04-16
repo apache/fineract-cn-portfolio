@@ -18,17 +18,16 @@
  */
 package io.mifos.individuallending.api.v1.domain.caseinstance;
 
-import io.mifos.core.lang.validation.constraints.ValidIdentifier;
 import io.mifos.portfolio.api.v1.domain.PaymentCycle;
 import io.mifos.portfolio.api.v1.domain.TermRange;
-import org.hibernate.validator.constraints.Range;
-import org.hibernate.validator.constraints.ScriptAssert;
-
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+import org.apache.fineract.cn.lang.validation.constraints.ValidIdentifier;
+import org.hibernate.validator.constraints.Range;
+import org.hibernate.validator.constraints.ScriptAssert;
 
 /**
  * @author Myrle Krantz

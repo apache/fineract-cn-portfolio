@@ -18,35 +18,51 @@
  */
 package io.mifos.portfolio.service.internal.util;
 
+import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.ENTRY;
+
 import com.google.common.collect.Sets;
-import io.mifos.accounting.api.v1.client.*;
-import io.mifos.accounting.api.v1.domain.*;
-import io.mifos.core.api.util.UserContextHolder;
-import io.mifos.core.lang.DateConverter;
-import io.mifos.core.lang.DateRange;
-import io.mifos.core.lang.ServiceException;
-import io.mifos.core.lang.listening.EventExpectation;
 import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.service.ServiceConstants;
-import org.apache.commons.lang.RandomStringUtils;
-import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
-import static io.mifos.individuallending.api.v1.domain.product.AccountDesignators.ENTRY;
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
+import org.apache.fineract.cn.accounting.api.v1.client.AccountAlreadyExistsException;
+import org.apache.fineract.cn.accounting.api.v1.client.AccountNotFoundException;
+import org.apache.fineract.cn.accounting.api.v1.client.JournalEntryAlreadyExistsException;
+import org.apache.fineract.cn.accounting.api.v1.client.LedgerAlreadyExistsException;
+import org.apache.fineract.cn.accounting.api.v1.client.LedgerManager;
+import org.apache.fineract.cn.accounting.api.v1.client.LedgerNotFoundException;
+import org.apache.fineract.cn.accounting.api.v1.domain.Account;
+import org.apache.fineract.cn.accounting.api.v1.domain.AccountEntry;
+import org.apache.fineract.cn.accounting.api.v1.domain.AccountPage;
+import org.apache.fineract.cn.accounting.api.v1.domain.Creditor;
+import org.apache.fineract.cn.accounting.api.v1.domain.Debtor;
+import org.apache.fineract.cn.accounting.api.v1.domain.JournalEntry;
+import org.apache.fineract.cn.accounting.api.v1.domain.Ledger;
+import org.apache.fineract.cn.api.util.UserContextHolder;
+import org.apache.fineract.cn.lang.DateConverter;
+import org.apache.fineract.cn.lang.DateRange;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.apache.fineract.cn.lang.listening.EventExpectation;
+import org.slf4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
 
 /**
  * @author Myrle Krantz

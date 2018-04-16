@@ -18,7 +18,6 @@
  */
 package io.mifos.individuallending.internal.service;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseCustomerDocuments;
 import io.mifos.individuallending.internal.mapper.CaseCustomerDocumentsMapper;
 import io.mifos.individuallending.internal.repository.CaseCustomerDocumentEntity;
@@ -26,11 +25,11 @@ import io.mifos.individuallending.internal.repository.CaseCustomerDocumentsRepos
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.portfolio.service.internal.repository.CaseRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.Comparator;
 import java.util.stream.Stream;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 /**
  * @author Myrle Krantz
@@ -57,7 +56,8 @@ public class CaseDocumentsService {
     final CaseParametersEntity caseparametersEntity =
         caseRepository.findByProductIdentifierAndIdentifier(productIdentifier, caseIdentifier)
             .flatMap(x -> caseParametersRepository.findByCaseId(x.getId()))
-            .orElseThrow(() -> ServiceException.notFound("Case ''{0}.{1}'' not found", productIdentifier, caseIdentifier));
+            .orElseThrow(() -> ServiceException
+                .notFound("Case ''{0}.{1}'' not found", productIdentifier, caseIdentifier));
 
     return caseCustomerDocumentsRepository.findByCaseParametersId(caseparametersEntity.getId())
         .sorted(Comparator.comparing(CaseCustomerDocumentEntity::getOrder))

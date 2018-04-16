@@ -18,11 +18,6 @@
  */
 package io.mifos.individuallending.internal.command.handler;
 
-import io.mifos.core.command.annotation.Aggregate;
-import io.mifos.core.command.annotation.CommandHandler;
-import io.mifos.core.command.annotation.CommandLogLevel;
-import io.mifos.core.command.annotation.EventEmitter;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseCustomerDocuments;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.individuallending.internal.command.ChangeCaseDocuments;
@@ -33,12 +28,16 @@ import io.mifos.individuallending.internal.repository.CaseParametersEntity;
 import io.mifos.individuallending.internal.repository.CaseParametersRepository;
 import io.mifos.portfolio.api.v1.events.CaseEvent;
 import io.mifos.portfolio.service.internal.repository.CaseRepository;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.apache.fineract.cn.command.annotation.Aggregate;
+import org.apache.fineract.cn.command.annotation.CommandHandler;
+import org.apache.fineract.cn.command.annotation.CommandLogLevel;
+import org.apache.fineract.cn.command.annotation.EventEmitter;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author Myrle Krantz
@@ -65,7 +64,8 @@ public class CaseDocumentsCommandHandler {
     final CaseParametersEntity caseparametersEntity =
         caseRepository.findByProductIdentifierAndIdentifier(command.getProductIdentifier(), command.getCaseIdentifier())
             .flatMap(x -> caseParametersRepository.findByCaseId(x.getId()))
-            .orElseThrow(() -> ServiceException.notFound("Case ''{0}.{1}'' not found", command.getProductIdentifier(), command.getCaseIdentifier()));
+            .orElseThrow(() -> ServiceException
+                .notFound("Case ''{0}.{1}'' not found", command.getProductIdentifier(), command.getCaseIdentifier()));
 
     final Map<CaseCustomerDocuments.Document, CaseCustomerDocumentEntity> existingCaseCustomerDocuments
         = caseCustomerDocumentsRepository.findByCaseParametersId(caseparametersEntity.getId())

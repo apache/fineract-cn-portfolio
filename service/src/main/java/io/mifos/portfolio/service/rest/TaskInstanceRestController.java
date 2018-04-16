@@ -18,11 +18,6 @@
  */
 package io.mifos.portfolio.service.rest;
 
-import io.mifos.anubis.annotation.AcceptedTokenType;
-import io.mifos.anubis.annotation.Permittable;
-import io.mifos.core.api.util.UserContextHolder;
-import io.mifos.core.command.gateway.CommandGateway;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.TaskDefinition;
@@ -32,13 +27,23 @@ import io.mifos.portfolio.service.internal.command.ExecuteTaskInstanceCommand;
 import io.mifos.portfolio.service.internal.service.CaseService;
 import io.mifos.portfolio.service.internal.service.TaskDefinitionService;
 import io.mifos.portfolio.service.internal.service.TaskInstanceService;
+import java.util.List;
+import javax.validation.Valid;
+import org.apache.fineract.cn.anubis.annotation.AcceptedTokenType;
+import org.apache.fineract.cn.anubis.annotation.Permittable;
+import org.apache.fineract.cn.api.util.UserContextHolder;
+import org.apache.fineract.cn.command.gateway.CommandGateway;
+import org.apache.fineract.cn.lang.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import javax.validation.Valid;
-import java.util.List;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * @author Myrle Krantz
@@ -153,7 +158,8 @@ public class TaskInstanceRestController {
   private TaskDefinition checkedGetTaskDefinition(final String productIdentifier,
                                                   final String taskDefinitionIdentifier) throws ServiceException {
     return taskDefinitionService.findByIdentifier(productIdentifier, taskDefinitionIdentifier)
-        .orElseThrow(() -> ServiceException.notFound("No task with the identifier ''{0}.{1}'' exists.", productIdentifier, taskDefinitionIdentifier));
+        .orElseThrow(() -> ServiceException
+            .notFound("No task with the identifier ''{0}.{1}'' exists.", productIdentifier, taskDefinitionIdentifier));
   }
 
   private Case checkedGetCase(final String productIdentifier, final String caseIdentifier) throws ServiceException {

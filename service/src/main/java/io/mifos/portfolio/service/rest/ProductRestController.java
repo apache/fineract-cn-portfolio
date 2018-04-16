@@ -18,11 +18,6 @@
  */
 package io.mifos.portfolio.service.rest;
 
-import io.mifos.anubis.annotation.AcceptedTokenType;
-import io.mifos.anubis.annotation.Permittable;
-import io.mifos.core.api.util.UserContextHolder;
-import io.mifos.core.command.gateway.CommandGateway;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.Pattern;
@@ -38,17 +33,27 @@ import io.mifos.portfolio.service.internal.command.DeleteProductCommand;
 import io.mifos.portfolio.service.internal.service.CaseService;
 import io.mifos.portfolio.service.internal.service.PatternService;
 import io.mifos.portfolio.service.internal.service.ProductService;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import javax.annotation.Nullable;
+import javax.validation.Valid;
+import org.apache.fineract.cn.anubis.annotation.AcceptedTokenType;
+import org.apache.fineract.cn.anubis.annotation.Permittable;
+import org.apache.fineract.cn.api.util.UserContextHolder;
+import org.apache.fineract.cn.command.gateway.CommandGateway;
+import org.apache.fineract.cn.lang.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import javax.annotation.Nullable;
-import javax.validation.Valid;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * @author Myrle Krantz
@@ -86,7 +91,8 @@ public class ProductRestController {
                           @RequestParam(value = "sortColumn", required = false) final String sortColumn,
                           @RequestParam(value = "sortDirection", required = false) final @Valid @ValidSortDirection String sortDirection) {
     if (!CheckValidSortColumn.validate(sortColumn, VALID_SORT_COLUMNS))
-      throw ServiceException.badRequest("Invalid sort column ''{0}''.  Valid inputs are ''{1}''.", sortColumn, VALID_SORT_COLUMNS);
+      throw ServiceException
+          .badRequest("Invalid sort column ''{0}''.  Valid inputs are ''{1}''.", sortColumn, VALID_SORT_COLUMNS);
     if (!CheckValidSortDirection.validate(sortDirection))
       throw ServiceException.badRequest("Invalid sort direction ''{0}''.", sortDirection);
     return this.productService.findEntities(includeDisabled, term, pageIndex, size, sortColumn, sortDirection);

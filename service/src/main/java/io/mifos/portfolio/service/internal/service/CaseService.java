@@ -18,7 +18,6 @@
  */
 package io.mifos.portfolio.service.internal.service;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
 import io.mifos.portfolio.api.v1.domain.CaseStatus;
@@ -31,13 +30,6 @@ import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import io.mifos.products.spi.PatternFactory;
 import io.mifos.products.spi.ProductCommandDispatcher;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -46,6 +38,13 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
 
 /**
  * @author Myrle Krantz
@@ -110,7 +109,8 @@ public class CaseService {
 
     return caseRepository.findByProductIdentifierAndIdentifier(productIdentifier, caseIdentifier)
             .map(x -> pattern.getNextActionsForState(Case.State.valueOf(x.getCurrentState())))
-            .orElseThrow(() -> ServiceException.notFound("Case with identifier ''" + productIdentifier + "." + caseIdentifier + "'' doesn''t exist."));
+            .orElseThrow(() -> ServiceException
+                .notFound("Case with identifier ''" + productIdentifier + "." + caseIdentifier + "'' doesn''t exist."));
   }
 
   public ProductCommandDispatcher getProductCommandDispatcher(final String productIdentifier) {

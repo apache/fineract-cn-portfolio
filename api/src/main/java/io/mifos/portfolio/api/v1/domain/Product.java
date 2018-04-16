@@ -20,14 +20,13 @@ package io.mifos.portfolio.api.v1.domain;
 
 import io.mifos.portfolio.api.v1.validation.ValidAccountAssignments;
 import io.mifos.portfolio.api.v1.validation.ValidCurrencyCode;
-import io.mifos.core.lang.validation.constraints.ValidIdentifier;
-import org.hibernate.validator.constraints.Length;
-import org.hibernate.validator.constraints.Range;
-
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import java.util.Objects;
 import java.util.Set;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+import org.apache.fineract.cn.lang.validation.constraints.ValidIdentifier;
+import org.hibernate.validator.constraints.Length;
+import org.hibernate.validator.constraints.Range;
 
 /**
  * @author Myrle Krantz

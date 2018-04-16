@@ -18,7 +18,6 @@
  */
 package io.mifos.portfolio.service.internal.checker;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.InterestRange;
 import io.mifos.portfolio.api.v1.domain.Product;
@@ -28,10 +27,10 @@ import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import io.mifos.portfolio.service.internal.service.CaseService;
 import io.mifos.portfolio.service.internal.service.ProductService;
 import io.mifos.products.spi.PatternFactory;
+import java.math.BigDecimal;
+import org.apache.fineract.cn.lang.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import java.math.BigDecimal;
 
 /**
  * @author Myrle Krantz
@@ -56,7 +55,8 @@ public class CaseChecker {
 
   public void checkForCreate(final String productIdentifier, final Case instance) {
     caseService.findByIdentifier(productIdentifier, instance.getIdentifier())
-        .ifPresent(x -> {throw ServiceException.conflict("Duplicate identifier: " + productIdentifier + "." + x.getIdentifier());});
+        .ifPresent(x -> {throw ServiceException
+            .conflict("Duplicate identifier: " + productIdentifier + "." + x.getIdentifier());});
 
     final Product product = productService.findByIdentifier(productIdentifier)
         .orElseThrow(() -> ServiceException.badRequest("Product must exist ''{0}''.", productIdentifier));

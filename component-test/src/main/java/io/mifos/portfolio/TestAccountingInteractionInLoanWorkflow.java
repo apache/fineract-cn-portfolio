@@ -18,41 +18,60 @@
  */
 package io.mifos.portfolio;
 
+import static io.mifos.portfolio.Fixture.MINOR_CURRENCY_UNIT_DIGITS;
+
 import com.google.gson.Gson;
-import io.mifos.accounting.api.v1.domain.AccountType;
-import io.mifos.accounting.api.v1.domain.Creditor;
-import io.mifos.accounting.api.v1.domain.Debtor;
-import io.mifos.core.api.util.ApiFactory;
-import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
-import io.mifos.individuallending.api.v1.domain.product.*;
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
+import io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers;
+import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
+import io.mifos.individuallending.api.v1.domain.product.LossProvisionConfiguration;
+import io.mifos.individuallending.api.v1.domain.product.LossProvisionStep;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
-import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.api.v1.domain.AccountAssignment;
+import io.mifos.portfolio.api.v1.domain.BalanceSegmentSet;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.CaseStatus;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.api.v1.domain.CostComponent;
+import io.mifos.portfolio.api.v1.domain.ImportParameters;
+import io.mifos.portfolio.api.v1.domain.Payment;
+import io.mifos.portfolio.api.v1.domain.PaymentCycle;
+import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.domain.TaskDefinition;
 import io.mifos.portfolio.api.v1.events.BalanceSegmentSetEvent;
 import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
-import io.mifos.rhythm.spi.v1.client.BeatListener;
-import io.mifos.rhythm.spi.v1.domain.BeatPublish;
-import io.mifos.rhythm.spi.v1.events.BeatPublishEvent;
-import org.assertj.core.util.Sets;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
-import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-
-import static io.mifos.portfolio.Fixture.MINOR_CURRENCY_UNIT_DIGITS;
+import javax.annotation.Nullable;
+import org.apache.fineract.cn.accounting.api.v1.domain.AccountType;
+import org.apache.fineract.cn.accounting.api.v1.domain.Creditor;
+import org.apache.fineract.cn.accounting.api.v1.domain.Debtor;
+import org.apache.fineract.cn.api.util.ApiFactory;
+import org.apache.fineract.cn.lang.DateConverter;
+import org.apache.fineract.cn.rhythm.spi.v1.client.BeatListener;
+import org.apache.fineract.cn.rhythm.spi.v1.domain.BeatPublish;
+import org.apache.fineract.cn.rhythm.spi.v1.events.BeatPublishEvent;
+import org.assertj.core.util.Sets;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 /**
  * @author Myrle Krantz
@@ -138,7 +157,8 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
       week++;
     }
 
-    step8Close(DateConverter.fromIsoString(plannedPayments.get(plannedPayments.size()-1).getPayment().getDate()));
+    step8Close(DateConverter
+        .fromIsoString(plannedPayments.get(plannedPayments.size()-1).getPayment().getDate()));
   }
 
 
@@ -985,7 +1005,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
     }
     final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
     portfolioBeatListener.publishBeat(interestBeat);
-    Assert.assertTrue(this.eventRecorder.wait(io.mifos.rhythm.spi.v1.events.EventConstants.POST_PUBLISHEDBEAT,
+    Assert.assertTrue(this.eventRecorder.wait(org.apache.fineract.cn.rhythm.spi.v1.events.EventConstants.POST_PUBLISHEDBEAT,
         new BeatPublishEvent(EventConstants.DESTINATION, beatIdentifier, midnightTimeStamp)));
 
     Assert.assertTrue(this.eventRecorder.wait(IndividualLoanEventConstants.CHECK_LATE_INDIVIDUALLOAN_CASE,
@@ -1129,7 +1149,7 @@ public class TestAccountingInteractionInLoanWorkflow extends AbstractPortfolioTe
 
     final BeatPublish interestBeat = new BeatPublish(beatIdentifier, midnightTimeStamp);
     portfolioBeatListener.publishBeat(interestBeat);
-    Assert.assertTrue(this.eventRecorder.wait(io.mifos.rhythm.spi.v1.events.EventConstants.POST_PUBLISHEDBEAT,
+    Assert.assertTrue(this.eventRecorder.wait(org.apache.fineract.cn.rhythm.spi.v1.events.EventConstants.POST_PUBLISHEDBEAT,
         new BeatPublishEvent(EventConstants.DESTINATION, beatIdentifier, midnightTimeStamp)));
 
     Assert.assertTrue(this.eventRecorder.wait(IndividualLoanEventConstants.CHECK_LATE_INDIVIDUALLOAN_CASE,

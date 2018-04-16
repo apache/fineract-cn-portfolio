@@ -18,7 +18,6 @@
  */
 package io.mifos.individuallending.internal.service;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
@@ -27,12 +26,16 @@ import io.mifos.portfolio.service.internal.mapper.CaseMapper;
 import io.mifos.portfolio.service.internal.mapper.ProductMapper;
 import io.mifos.portfolio.service.internal.repository.CaseAccountAssignmentEntity;
 import io.mifos.portfolio.service.internal.repository.ProductAccountAssignmentEntity;
-
-import javax.annotation.Nonnull;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nonnull;
+import org.apache.fineract.cn.lang.ServiceException;
 
 /**
  * @author Myrle Krantz
@@ -99,7 +102,8 @@ public class DesignatorToAccountIdentifierMapper {
 
   public String mapOrThrow(final @Nonnull String accountDesignator) {
     return map(accountDesignator).orElseThrow(() ->
-        ServiceException.badRequest("A required account designator was not set ''{0}''.", accountDesignator));
+        ServiceException
+            .badRequest("A required account designator was not set ''{0}''.", accountDesignator));
   }
 
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")

@@ -18,16 +18,15 @@
  */
 package io.mifos.portfolio.service.internal.util;
 
-import io.mifos.core.lang.ApplicationName;
 import io.mifos.portfolio.service.ServiceConstants;
-import io.mifos.rhythm.api.v1.client.RhythmManager;
-import io.mifos.rhythm.api.v1.domain.Beat;
+import java.util.stream.Stream;
+import org.apache.fineract.cn.lang.ApplicationName;
+import org.apache.fineract.cn.rhythm.api.v1.client.RhythmManager;
+import org.apache.fineract.cn.rhythm.api.v1.domain.Beat;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
-
-import java.util.stream.Stream;
 
 /**
  * @author Myrle Krantz

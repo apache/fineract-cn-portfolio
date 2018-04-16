@@ -18,15 +18,14 @@
  */
 package io.mifos.individuallending.api.v1.domain.caseinstance;
 
-import io.mifos.core.test.domain.ValidationTest;
-import io.mifos.core.test.domain.ValidationTestCase;
-import org.apache.commons.lang.RandomStringUtils;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.fineract.cn.test.domain.ValidationTest;
+import org.apache.fineract.cn.test.domain.ValidationTestCase;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * @author Myrle Krantz

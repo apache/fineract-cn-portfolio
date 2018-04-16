@@ -18,12 +18,6 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
-import io.mifos.core.api.util.UserContextHolder;
-import io.mifos.core.command.annotation.Aggregate;
-import io.mifos.core.command.annotation.CommandHandler;
-import io.mifos.core.command.annotation.CommandLogLevel;
-import io.mifos.core.command.annotation.EventEmitter;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.TaskInstance;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.api.v1.events.TaskInstanceEvent;
@@ -32,10 +26,15 @@ import io.mifos.portfolio.service.internal.command.ExecuteTaskInstanceCommand;
 import io.mifos.portfolio.service.internal.mapper.TaskInstanceMapper;
 import io.mifos.portfolio.service.internal.repository.TaskInstanceEntity;
 import io.mifos.portfolio.service.internal.repository.TaskInstanceRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.time.Clock;
 import java.time.LocalDateTime;
+import org.apache.fineract.cn.api.util.UserContextHolder;
+import org.apache.fineract.cn.command.annotation.Aggregate;
+import org.apache.fineract.cn.command.annotation.CommandHandler;
+import org.apache.fineract.cn.command.annotation.CommandLogLevel;
+import org.apache.fineract.cn.command.annotation.EventEmitter;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author Myrle Krantz

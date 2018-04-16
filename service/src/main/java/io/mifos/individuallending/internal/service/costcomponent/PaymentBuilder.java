@@ -19,7 +19,6 @@
 package io.mifos.individuallending.internal.service.costcomponent;
 
 import com.google.common.collect.Sets;
-import io.mifos.core.lang.DateConverter;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
@@ -28,13 +27,18 @@ import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.CostComponent;
 import io.mifos.portfolio.api.v1.domain.Payment;
 import io.mifos.portfolio.api.v1.domain.RequiredAccountAssignment;
-
-import javax.annotation.Nullable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
+import org.apache.fineract.cn.lang.DateConverter;
 
 /**
  * @author Myrle Krantz

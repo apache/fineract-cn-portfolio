@@ -18,13 +18,12 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
-import io.mifos.core.lang.validation.constraints.ValidIdentifier;
-import io.mifos.core.lang.validation.constraints.ValidIdentifiers;
 import io.mifos.portfolio.api.v1.validation.ValidSegmentList;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
+import org.apache.fineract.cn.lang.validation.constraints.ValidIdentifier;
+import org.apache.fineract.cn.lang.validation.constraints.ValidIdentifiers;
 
 /**
  * @author Myrle Krantz

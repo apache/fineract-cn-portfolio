@@ -18,16 +18,14 @@
  */
 package io.mifos.portfolio.service.rest;
 
-import io.mifos.anubis.annotation.AcceptedTokenType;
-import io.mifos.anubis.annotation.Permittable;
-import io.mifos.core.api.util.UserContextHolder;
-import io.mifos.core.command.gateway.CommandGateway;
-import io.mifos.core.lang.DateConverter;
-import io.mifos.core.lang.ServiceException;
-import io.mifos.core.lang.validation.constraints.ValidLocalDateTimeString;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
-import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.CasePage;
+import io.mifos.portfolio.api.v1.domain.CaseStatus;
+import io.mifos.portfolio.api.v1.domain.Command;
+import io.mifos.portfolio.api.v1.domain.ImportParameters;
+import io.mifos.portfolio.api.v1.domain.Payment;
 import io.mifos.portfolio.service.internal.checker.CaseChecker;
 import io.mifos.portfolio.service.internal.command.ChangeCaseCommand;
 import io.mifos.portfolio.service.internal.command.CreateCaseCommand;
@@ -35,18 +33,30 @@ import io.mifos.portfolio.service.internal.service.CaseService;
 import io.mifos.portfolio.service.internal.service.ProductService;
 import io.mifos.portfolio.service.internal.service.TaskInstanceService;
 import io.mifos.products.spi.ProductCommandDispatcher;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.util.Set;
+import javax.validation.Valid;
+import org.apache.fineract.cn.anubis.annotation.AcceptedTokenType;
+import org.apache.fineract.cn.anubis.annotation.Permittable;
+import org.apache.fineract.cn.api.util.UserContextHolder;
+import org.apache.fineract.cn.command.gateway.CommandGateway;
+import org.apache.fineract.cn.lang.DateConverter;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.apache.fineract.cn.lang.validation.constraints.ValidLocalDateTimeString;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.*;
-
-import javax.validation.Valid;
-import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.LocalDateTime;
-import java.util.Set;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * @author Myrle Krantz
@@ -221,7 +231,8 @@ public class CaseRestController {
     if (forPaymentSize != null && forPaymentSize.compareTo(BigDecimal.ZERO) < 0)
       throw ServiceException.badRequest("forpaymentsize can''t be negative.");
 
-    final LocalDateTime forDateTime = StringUtils.isEmpty(forDateTimeString) ? LocalDateTime.now(Clock.systemUTC()) : DateConverter.fromIsoString(forDateTimeString);
+    final LocalDateTime forDateTime = StringUtils.isEmpty(forDateTimeString) ? LocalDateTime.now(Clock.systemUTC()) : DateConverter
+        .fromIsoString(forDateTimeString);
 
     return caseService.getActionCostComponentsForCase(
         productIdentifier,

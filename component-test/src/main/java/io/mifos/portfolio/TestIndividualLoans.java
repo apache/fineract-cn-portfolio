@@ -19,24 +19,23 @@
 package io.mifos.portfolio;
 
 import com.google.gson.Gson;
-import io.mifos.core.lang.DateConverter;
+import io.mifos.individuallending.api.v1.client.IndividualLending;
+import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
+import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.domain.CasePage;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.events.CaseEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
-import io.mifos.individuallending.api.v1.client.IndividualLending;
-import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
-import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
-
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import org.apache.fineract.cn.lang.DateConverter;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * @author Myrle Krantz

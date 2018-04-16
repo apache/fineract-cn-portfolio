@@ -18,16 +18,15 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
-import io.mifos.core.lang.validation.constraints.ValidIdentifier;
 import io.mifos.portfolio.api.v1.validation.ValidAccountAssignments;
-import org.hibernate.validator.constraints.NotBlank;
-
-import javax.validation.constraints.DecimalMax;
-import javax.validation.constraints.DecimalMin;
-import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.Objects;
 import java.util.Set;
+import javax.validation.constraints.DecimalMax;
+import javax.validation.constraints.DecimalMin;
+import javax.validation.constraints.NotNull;
+import org.apache.fineract.cn.lang.validation.constraints.ValidIdentifier;
+import org.hibernate.validator.constraints.NotBlank;
 
 /**
  * @author Myrle Krantz

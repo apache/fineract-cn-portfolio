@@ -19,7 +19,6 @@
 package io.mifos.individuallending.internal.service;
 
 import com.google.gson.Gson;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.internal.mapper.CaseParametersMapper;
 import io.mifos.individuallending.internal.repository.CaseParametersEntity;
@@ -32,12 +31,12 @@ import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.CaseRepository;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
+import java.util.List;
+import javax.annotation.Nullable;
+import org.apache.fineract.cn.lang.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.Nullable;
-import java.util.List;
 
 /**
  * @author Myrle Krantz
@@ -68,7 +67,8 @@ public class DataContextService {
 
     final ProductEntity product =
         productRepository.findByIdentifier(productIdentifier)
-            .orElseThrow(() -> ServiceException.notFound("Product not found ''{0}''.", productIdentifier));
+            .orElseThrow(() -> ServiceException
+                .notFound("Product not found ''{0}''.", productIdentifier));
     final CaseEntity customerCase =
         caseRepository.findByProductIdentifierAndIdentifier(productIdentifier, caseIdentifier)
             .orElseThrow(() -> ServiceException.notFound("Case not found ''{0}.{1}''.", productIdentifier, caseIdentifier));

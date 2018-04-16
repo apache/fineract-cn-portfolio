@@ -19,20 +19,21 @@
 package io.mifos.portfolio;
 
 import com.google.gson.Gson;
-import io.mifos.core.api.util.NotFoundException;
-import io.mifos.core.test.domain.TimeStampChecker;
 import io.mifos.individuallending.api.v1.domain.product.ProductParameters;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.portfolio.api.v1.client.ProductAlreadyExistsException;
 import io.mifos.portfolio.api.v1.client.ProductDefinitionIncomplete;
 import io.mifos.portfolio.api.v1.client.ProductInUseException;
-import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.api.v1.domain.AccountAssignment;
+import io.mifos.portfolio.api.v1.domain.BalanceRange;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.api.v1.domain.InterestBasis;
+import io.mifos.portfolio.api.v1.domain.InterestRange;
+import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.domain.ProductPage;
+import io.mifos.portfolio.api.v1.domain.TermRange;
 import io.mifos.portfolio.api.v1.events.ChargeDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
-import org.apache.commons.lang.StringUtils;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -40,6 +41,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import org.apache.commons.lang.StringUtils;
+import org.apache.fineract.cn.api.util.NotFoundException;
+import org.apache.fineract.cn.test.domain.TimeStampChecker;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * @author Myrle Krantz

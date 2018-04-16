@@ -18,21 +18,20 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
-import io.mifos.core.lang.DateConverter;
-import io.mifos.core.test.domain.ValidationTest;
-import io.mifos.core.test.domain.ValidationTestCase;
-import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PROCESSING_FEE_ID;
 
+import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-
-import static io.mifos.individuallending.api.v1.domain.product.ChargeIdentifiers.PROCESSING_FEE_ID;
+import org.apache.fineract.cn.lang.DateConverter;
+import org.apache.fineract.cn.test.domain.ValidationTest;
+import org.apache.fineract.cn.test.domain.ValidationTestCase;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * @author Myrle Krantz

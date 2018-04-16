@@ -18,17 +18,16 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
-import io.mifos.core.lang.validation.constraints.ValidIdentifier;
 import io.mifos.portfolio.api.v1.validation.ValidChargeDefinition;
 import io.mifos.portfolio.api.v1.validation.ValidChargeReference;
 import io.mifos.portfolio.api.v1.validation.ValidPaymentCycleUnit;
-import org.hibernate.validator.constraints.NotBlank;
-
-import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import javax.annotation.Nullable;
+import javax.validation.constraints.NotNull;
+import org.apache.fineract.cn.lang.validation.constraints.ValidIdentifier;
+import org.hibernate.validator.constraints.NotBlank;
 
 /**
  * @author Myrle Krantz

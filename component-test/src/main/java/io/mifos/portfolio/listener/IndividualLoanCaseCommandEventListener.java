@@ -20,8 +20,8 @@ package io.mifos.portfolio.listener;
 
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
-import io.mifos.core.lang.config.TenantHeaderFilter;
-import io.mifos.core.test.listener.EventRecorder;
+import org.apache.fineract.cn.lang.config.TenantHeaderFilter;
+import org.apache.fineract.cn.test.listener.EventRecorder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.messaging.handler.annotation.Header;

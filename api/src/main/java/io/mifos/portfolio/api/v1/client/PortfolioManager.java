@@ -18,12 +18,27 @@
  */
 package io.mifos.portfolio.api.v1.client;
 
-import io.mifos.core.api.annotation.ThrowsException;
-import io.mifos.core.api.util.CustomFeignClientsConfiguration;
+import io.mifos.portfolio.api.v1.domain.AccountAssignment;
+import io.mifos.portfolio.api.v1.domain.BalanceSegmentSet;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.CasePage;
+import io.mifos.portfolio.api.v1.domain.CaseStatus;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.api.v1.domain.Command;
+import io.mifos.portfolio.api.v1.domain.ImportParameters;
+import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.portfolio.api.v1.domain.Payment;
-import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.portfolio.api.v1.domain.Product;
+import io.mifos.portfolio.api.v1.domain.ProductPage;
+import io.mifos.portfolio.api.v1.domain.TaskDefinition;
+import io.mifos.portfolio.api.v1.domain.TaskInstance;
 import io.mifos.portfolio.api.v1.validation.ValidSortColumn;
 import io.mifos.portfolio.api.v1.validation.ValidSortDirection;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Set;
+import org.apache.fineract.cn.api.annotation.ThrowsException;
+import org.apache.fineract.cn.api.util.CustomFeignClientsConfiguration;
 import org.springframework.cloud.netflix.feign.FeignClient;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -31,10 +46,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Set;
 
 /**
  * @author Myrle Krantz

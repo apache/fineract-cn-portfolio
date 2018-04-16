@@ -18,11 +18,6 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
-import io.mifos.core.command.annotation.Aggregate;
-import io.mifos.core.command.annotation.CommandHandler;
-import io.mifos.core.command.annotation.CommandLogLevel;
-import io.mifos.core.command.annotation.EventEmitter;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.portfolio.api.v1.domain.AccountAssignment;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
@@ -35,18 +30,27 @@ import io.mifos.portfolio.service.internal.command.DeleteProductCommand;
 import io.mifos.portfolio.service.internal.mapper.ChargeDefinitionMapper;
 import io.mifos.portfolio.service.internal.mapper.ProductMapper;
 import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
-import io.mifos.portfolio.service.internal.repository.*;
+import io.mifos.portfolio.service.internal.repository.CaseRepository;
+import io.mifos.portfolio.service.internal.repository.ChargeDefinitionEntity;
+import io.mifos.portfolio.service.internal.repository.ChargeDefinitionRepository;
+import io.mifos.portfolio.service.internal.repository.ProductAccountAssignmentEntity;
+import io.mifos.portfolio.service.internal.repository.ProductEntity;
+import io.mifos.portfolio.service.internal.repository.ProductRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.products.spi.PatternFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.fineract.cn.command.annotation.Aggregate;
+import org.apache.fineract.cn.command.annotation.CommandHandler;
+import org.apache.fineract.cn.command.annotation.CommandLogLevel;
+import org.apache.fineract.cn.command.annotation.EventEmitter;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author Myrle Krantz
@@ -103,7 +107,8 @@ public class ProductCommandHandler {
     final Product instance = changeProductCommand.getInstance();
 
     if (caseRepository.existsByProductIdentifier(instance.getIdentifier()))
-      throw ServiceException.conflict("Cases exist for product with the identifier '" + instance.getIdentifier() + "'. Product cannot be changed.");
+      throw ServiceException
+          .conflict("Cases exist for product with the identifier '" + instance.getIdentifier() + "'. Product cannot be changed.");
 
     final ProductEntity oldEntity = productRepository
             .findByIdentifier(instance.getIdentifier())

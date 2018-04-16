@@ -18,11 +18,10 @@
  */
 package io.mifos.portfolio.api.v1.validation;
 
-import io.mifos.core.lang.validation.CheckIdentifier;
 import io.mifos.individuallending.api.v1.domain.product.ChargeProportionalDesignator;
-
 import javax.validation.ConstraintValidator;
 import javax.validation.ConstraintValidatorContext;
+import org.apache.fineract.cn.lang.validation.CheckIdentifier;
 
 /**
  * @author Myrle Krantz

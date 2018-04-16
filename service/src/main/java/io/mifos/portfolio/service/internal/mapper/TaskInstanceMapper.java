@@ -18,9 +18,9 @@
  */
 package io.mifos.portfolio.service.internal.mapper;
 
-import io.mifos.core.lang.DateConverter;
 import io.mifos.portfolio.api.v1.domain.TaskInstance;
 import io.mifos.portfolio.service.internal.repository.TaskInstanceEntity;
+import org.apache.fineract.cn.lang.DateConverter;
 
 /**
  * @author Myrle Krantz

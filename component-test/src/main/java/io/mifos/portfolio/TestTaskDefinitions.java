@@ -18,16 +18,15 @@
  */
 package io.mifos.portfolio;
 
-import io.mifos.core.api.util.NotFoundException;
 import io.mifos.portfolio.api.v1.client.ProductInUseException;
 import io.mifos.portfolio.api.v1.domain.Product;
 import io.mifos.portfolio.api.v1.domain.TaskDefinition;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.api.v1.events.TaskDefinitionEvent;
+import java.util.List;
+import org.apache.fineract.cn.api.util.NotFoundException;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.List;
 
 /**
  * @author Myrle Krantz

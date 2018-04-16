@@ -18,12 +18,11 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
-import io.mifos.core.lang.validation.constraints.ValidIdentifier;
+import java.util.Objects;
+import javax.annotation.Nullable;
+import org.apache.fineract.cn.lang.validation.constraints.ValidIdentifier;
 import org.hibernate.validator.constraints.Length;
 import org.hibernate.validator.constraints.ScriptAssert;
-
-import javax.annotation.Nullable;
-import java.util.Objects;
 
 /**
  * @author Myrle Krantz

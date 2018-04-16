@@ -18,11 +18,6 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
-import io.mifos.core.command.annotation.Aggregate;
-import io.mifos.core.command.annotation.CommandHandler;
-import io.mifos.core.command.annotation.CommandLogLevel;
-import io.mifos.core.command.annotation.EventEmitter;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.api.v1.events.CaseEvent;
 import io.mifos.portfolio.api.v1.events.EventConstants;
@@ -30,13 +25,23 @@ import io.mifos.portfolio.service.internal.command.ChangeCaseCommand;
 import io.mifos.portfolio.service.internal.command.CreateCaseCommand;
 import io.mifos.portfolio.service.internal.mapper.CaseMapper;
 import io.mifos.portfolio.service.internal.pattern.PatternFactoryRegistry;
-import io.mifos.portfolio.service.internal.repository.*;
+import io.mifos.portfolio.service.internal.repository.CaseEntity;
+import io.mifos.portfolio.service.internal.repository.CaseRepository;
+import io.mifos.portfolio.service.internal.repository.ProductEntity;
+import io.mifos.portfolio.service.internal.repository.ProductRepository;
+import io.mifos.portfolio.service.internal.repository.TaskDefinitionEntity;
+import io.mifos.portfolio.service.internal.repository.TaskDefinitionRepository;
+import io.mifos.portfolio.service.internal.repository.TaskInstanceEntity;
 import io.mifos.products.spi.PatternFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.fineract.cn.command.annotation.Aggregate;
+import org.apache.fineract.cn.command.annotation.CommandHandler;
+import org.apache.fineract.cn.command.annotation.CommandLogLevel;
+import org.apache.fineract.cn.command.annotation.EventEmitter;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author Myrle Krantz
@@ -98,7 +103,8 @@ public class CaseCommandHandler {
 
     final CaseEntity oldEntity = caseRepository
             .findByProductIdentifierAndIdentifier(instance.getProductIdentifier(), instance.getIdentifier())
-            .orElseThrow(() -> ServiceException.notFound("Case not found '" + instance.getIdentifier() + "'."));
+            .orElseThrow(() -> ServiceException
+                .notFound("Case not found '" + instance.getIdentifier() + "'."));
 
     final CaseEntity newEntity = CaseMapper.mapOverOldEntity(instance, oldEntity);
 

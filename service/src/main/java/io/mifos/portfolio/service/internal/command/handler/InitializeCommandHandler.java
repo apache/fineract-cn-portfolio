@@ -18,18 +18,17 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
-import io.mifos.core.command.annotation.Aggregate;
-import io.mifos.core.command.annotation.CommandHandler;
-import io.mifos.core.command.annotation.CommandLogLevel;
-import io.mifos.core.command.annotation.EventEmitter;
-import io.mifos.core.mariadb.domain.FlywayFactoryBean;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.service.internal.command.InitializeServiceCommand;
 import io.mifos.portfolio.service.internal.util.RhythmAdapter;
+import javax.sql.DataSource;
+import org.apache.fineract.cn.command.annotation.Aggregate;
+import org.apache.fineract.cn.command.annotation.CommandHandler;
+import org.apache.fineract.cn.command.annotation.CommandLogLevel;
+import org.apache.fineract.cn.command.annotation.EventEmitter;
+import org.apache.fineract.cn.mariadb.domain.FlywayFactoryBean;
 import org.flywaydb.core.Flyway;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import javax.sql.DataSource;
 
 @SuppressWarnings({
     "unused"

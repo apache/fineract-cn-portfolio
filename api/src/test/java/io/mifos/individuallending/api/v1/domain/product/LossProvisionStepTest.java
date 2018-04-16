@@ -18,13 +18,12 @@
  */
 package io.mifos.individuallending.api.v1.domain.product;
 
-import io.mifos.core.test.domain.ValidationTest;
-import io.mifos.core.test.domain.ValidationTestCase;
-import org.junit.runners.Parameterized;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
+import org.apache.fineract.cn.test.domain.ValidationTest;
+import org.apache.fineract.cn.test.domain.ValidationTestCase;
+import org.junit.runners.Parameterized;
 
 public class LossProvisionStepTest extends ValidationTest<LossProvisionStep> {
 

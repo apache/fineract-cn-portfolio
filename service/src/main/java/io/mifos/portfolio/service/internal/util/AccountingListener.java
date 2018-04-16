@@ -18,12 +18,12 @@
  */
 package io.mifos.portfolio.service.internal.util;
 
-import io.mifos.accounting.api.v1.EventConstants;
-import io.mifos.core.lang.TenantContextHolder;
-import io.mifos.core.lang.config.TenantHeaderFilter;
-import io.mifos.core.lang.listening.EventExpectation;
-import io.mifos.core.lang.listening.EventKey;
-import io.mifos.core.lang.listening.TenantedEventListener;
+import org.apache.fineract.cn.accounting.api.v1.EventConstants;
+import org.apache.fineract.cn.lang.TenantContextHolder;
+import org.apache.fineract.cn.lang.config.TenantHeaderFilter;
+import org.apache.fineract.cn.lang.listening.EventExpectation;
+import org.apache.fineract.cn.lang.listening.EventKey;
+import org.apache.fineract.cn.lang.listening.TenantedEventListener;
 import org.springframework.jms.annotation.JmsListener;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;

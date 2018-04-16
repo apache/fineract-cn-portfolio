@@ -18,13 +18,21 @@
  */
 package io.mifos.individuallending;
 
-import io.mifos.core.command.gateway.CommandGateway;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
-import io.mifos.individuallending.internal.command.*;
+import io.mifos.individuallending.internal.command.AcceptPaymentCommand;
+import io.mifos.individuallending.internal.command.ApproveCommand;
+import io.mifos.individuallending.internal.command.CloseCommand;
+import io.mifos.individuallending.internal.command.DenyCommand;
+import io.mifos.individuallending.internal.command.DisburseCommand;
+import io.mifos.individuallending.internal.command.ImportCommand;
+import io.mifos.individuallending.internal.command.OpenCommand;
+import io.mifos.individuallending.internal.command.RecoverCommand;
+import io.mifos.individuallending.internal.command.WriteOffCommand;
 import io.mifos.portfolio.api.v1.domain.Command;
 import io.mifos.portfolio.api.v1.domain.ImportParameters;
 import io.mifos.products.spi.ProductCommandDispatcher;
+import org.apache.fineract.cn.command.gateway.CommandGateway;
+import org.apache.fineract.cn.lang.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -74,7 +82,8 @@ public class IndividualLendingCommandDispatcher implements ProductCommandDispatc
         this.commandGateway.process(new RecoverCommand(productIdentifier, caseIdentifier, command));
         break;
       default:
-        throw ServiceException.badRequest("Action ''{0}'' is not implemented for individual loans.", actionIdentifier);
+        throw ServiceException
+            .badRequest("Action ''{0}'' is not implemented for individual loans.", actionIdentifier);
     }
   }
 

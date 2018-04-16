@@ -18,7 +18,6 @@
  */
 package io.mifos.individuallending.internal.service;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.caseinstance.ChargeName;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPayment;
 import io.mifos.individuallending.api.v1.domain.caseinstance.PlannedPaymentPage;
@@ -27,17 +26,28 @@ import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.internal.service.costcomponent.CostComponentService;
 import io.mifos.individuallending.internal.service.costcomponent.PaymentBuilder;
 import io.mifos.individuallending.internal.service.costcomponent.SimulatedRunningBalances;
-import io.mifos.individuallending.internal.service.schedule.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
+import io.mifos.individuallending.internal.service.schedule.Period;
+import io.mifos.individuallending.internal.service.schedule.ScheduledAction;
+import io.mifos.individuallending.internal.service.schedule.ScheduledActionHelpers;
+import io.mifos.individuallending.internal.service.schedule.ScheduledCharge;
+import io.mifos.individuallending.internal.service.schedule.ScheduledChargeComparator;
+import io.mifos.individuallending.internal.service.schedule.ScheduledChargesService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 /**
  * @author Myrle Krantz

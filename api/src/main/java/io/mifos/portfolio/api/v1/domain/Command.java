@@ -18,14 +18,13 @@
  */
 package io.mifos.portfolio.api.v1.domain;
 
-import io.mifos.core.lang.validation.constraints.ValidLocalDateTimeString;
-
-import javax.annotation.Nullable;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Objects;
+import javax.annotation.Nullable;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+import org.apache.fineract.cn.lang.validation.constraints.ValidLocalDateTimeString;
 
 /**
  * @author Myrle Krantz

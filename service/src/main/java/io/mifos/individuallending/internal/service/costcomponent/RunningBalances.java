@@ -18,17 +18,16 @@
  */
 package io.mifos.individuallending.internal.service.costcomponent;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.IndividualLendingPatternFactory;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
 import io.mifos.portfolio.api.v1.domain.Pattern;
 import io.mifos.portfolio.api.v1.domain.RequiredAccountAssignment;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import org.apache.fineract.cn.lang.ServiceException;
 
 /**
  * @author Myrle Krantz

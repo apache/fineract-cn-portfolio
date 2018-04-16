@@ -18,19 +18,18 @@
  */
 package io.mifos.portfolio.service.internal.command.handler;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.portfolio.service.internal.repository.ProductAccountAssignmentEntity;
 import io.mifos.portfolio.service.internal.repository.ProductEntity;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
-import org.junit.Assert;
-import org.junit.Test;
-import org.mockito.Mockito;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * @author Myrle Krantz

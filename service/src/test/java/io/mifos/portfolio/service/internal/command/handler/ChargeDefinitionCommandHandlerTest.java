@@ -21,12 +21,11 @@ package io.mifos.portfolio.service.internal.command.handler;
 import io.mifos.portfolio.service.internal.command.DeleteProductChargeDefinitionCommand;
 import io.mifos.portfolio.service.internal.repository.BalanceSegmentRepository;
 import io.mifos.portfolio.service.internal.repository.ChargeDefinitionRepository;
-import io.mifos.core.lang.ServiceException;
+import java.util.Optional;
+import org.apache.fineract.cn.lang.ServiceException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import java.util.Optional;
 
 /**
  * @author Myrle Krantz

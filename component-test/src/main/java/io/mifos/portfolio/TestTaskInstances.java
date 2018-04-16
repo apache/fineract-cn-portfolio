@@ -18,9 +18,6 @@
  */
 package io.mifos.portfolio;
 
-import io.mifos.core.api.context.AutoUserContext;
-import io.mifos.core.api.util.NotFoundException;
-import io.mifos.core.test.domain.TimeStampChecker;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanEventConstants;
 import io.mifos.portfolio.api.v1.client.TaskExecutionBySameUserAsCaseCreation;
@@ -32,14 +29,16 @@ import io.mifos.portfolio.api.v1.domain.TaskInstance;
 import io.mifos.portfolio.api.v1.events.EventConstants;
 import io.mifos.portfolio.api.v1.events.TaskDefinitionEvent;
 import io.mifos.portfolio.api.v1.events.TaskInstanceEvent;
-import org.junit.Assert;
-import org.junit.Test;
-
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import org.apache.fineract.cn.api.context.AutoUserContext;
+import org.apache.fineract.cn.api.util.NotFoundException;
+import org.apache.fineract.cn.test.domain.TimeStampChecker;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  * @author Myrle Krantz

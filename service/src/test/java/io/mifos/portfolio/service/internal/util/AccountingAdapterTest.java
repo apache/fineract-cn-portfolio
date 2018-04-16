@@ -19,21 +19,20 @@
 package io.mifos.portfolio.service.internal.util;
 
 import com.google.common.collect.Sets;
-import io.mifos.accounting.api.v1.client.JournalEntryAlreadyExistsException;
-import io.mifos.accounting.api.v1.client.LedgerManager;
-import io.mifos.accounting.api.v1.domain.Creditor;
-import io.mifos.accounting.api.v1.domain.Debtor;
-import io.mifos.accounting.api.v1.domain.JournalEntry;
-import io.mifos.core.api.util.UserContextHolder;
 import io.mifos.individuallending.internal.service.DesignatorToAccountIdentifierMapper;
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
+import org.apache.fineract.cn.accounting.api.v1.client.JournalEntryAlreadyExistsException;
+import org.apache.fineract.cn.accounting.api.v1.client.LedgerManager;
+import org.apache.fineract.cn.accounting.api.v1.domain.Creditor;
+import org.apache.fineract.cn.accounting.api.v1.domain.Debtor;
+import org.apache.fineract.cn.accounting.api.v1.domain.JournalEntry;
+import org.apache.fineract.cn.api.util.UserContextHolder;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
-
-import java.math.BigDecimal;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author Myrle Krantz

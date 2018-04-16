@@ -18,14 +18,6 @@
  */
 package io.mifos.individuallending.internal.command.handler;
 
-import io.mifos.core.command.annotation.Aggregate;
-import io.mifos.core.command.annotation.CommandHandler;
-import io.mifos.core.command.annotation.CommandLogLevel;
-import io.mifos.core.command.annotation.EventEmitter;
-import io.mifos.core.command.internal.CommandBus;
-import io.mifos.core.lang.ApplicationName;
-import io.mifos.core.lang.DateConverter;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
 import io.mifos.individuallending.api.v1.events.IndividualLoanCommandEvent;
@@ -51,16 +43,6 @@ import io.mifos.portfolio.service.internal.repository.CaseCommandRepository;
 import io.mifos.portfolio.service.internal.repository.CaseEntity;
 import io.mifos.portfolio.service.internal.repository.CaseRepository;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
-import io.mifos.rhythm.spi.v1.domain.BeatPublish;
-import io.mifos.rhythm.spi.v1.events.BeatPublishEvent;
-import io.mifos.rhythm.spi.v1.events.EventConstants;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -70,6 +52,23 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.apache.fineract.cn.command.annotation.Aggregate;
+import org.apache.fineract.cn.command.annotation.CommandHandler;
+import org.apache.fineract.cn.command.annotation.CommandLogLevel;
+import org.apache.fineract.cn.command.annotation.EventEmitter;
+import org.apache.fineract.cn.command.internal.CommandBus;
+import org.apache.fineract.cn.lang.ApplicationName;
+import org.apache.fineract.cn.lang.DateConverter;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.apache.fineract.cn.rhythm.spi.v1.domain.BeatPublish;
+import org.apache.fineract.cn.rhythm.spi.v1.events.BeatPublishEvent;
+import org.apache.fineract.cn.rhythm.spi.v1.events.EventConstants;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author Myrle Krantz
@@ -164,7 +163,8 @@ public class BeatPublishCommandHandler {
 
     final LocalDateTime dateOfMostRecentDisbursement = dateOfMostRecentDisburse(dataContextOfAction.getCustomerCaseEntity().getId())
             .orElseThrow(() ->
-                ServiceException.badRequest("No last disbursal date for ''{0}.{1}'' could be determined.  " +
+                ServiceException
+                    .badRequest("No last disbursal date for ''{0}.{1}'' could be determined.  " +
                     "Therefore it cannot be checked for lateness.", productIdentifier, caseIdentifier));
 
     final List<Period> repaymentPeriods = ScheduledActionHelpers.generateRepaymentPeriods(

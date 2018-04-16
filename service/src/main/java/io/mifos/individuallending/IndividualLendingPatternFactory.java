@@ -19,9 +19,6 @@
 package io.mifos.individuallending;
 
 import com.google.gson.Gson;
-import io.mifos.accounting.api.v1.domain.AccountType;
-import io.mifos.core.lang.ServiceException;
-import io.mifos.customer.api.v1.client.CustomerManager;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseParameters;
 import io.mifos.individuallending.api.v1.domain.product.AccountDesignators;
 import io.mifos.individuallending.api.v1.domain.workflow.Action;
@@ -33,27 +30,52 @@ import io.mifos.individuallending.internal.repository.CreditWorthinessFactorType
 import io.mifos.individuallending.internal.service.ChargeDefinitionService;
 import io.mifos.individuallending.internal.service.DataContextOfAction;
 import io.mifos.individuallending.internal.service.DataContextService;
-import io.mifos.individuallending.internal.service.costcomponent.*;
-import io.mifos.portfolio.api.v1.domain.*;
+import io.mifos.individuallending.internal.service.costcomponent.AcceptPaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.ApplyInterestPaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.ApprovePaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.ClosePaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.DenyPaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.DisbursePaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.MarkInArrearsPaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.MarkLatePaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.OpenPaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.PaymentBuilder;
+import io.mifos.individuallending.internal.service.costcomponent.PaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.RealRunningBalances;
+import io.mifos.individuallending.internal.service.costcomponent.RecoverPaymentBuilderService;
+import io.mifos.individuallending.internal.service.costcomponent.WriteOffPaymentBuilderService;
+import io.mifos.portfolio.api.v1.domain.Case;
+import io.mifos.portfolio.api.v1.domain.ChargeDefinition;
+import io.mifos.portfolio.api.v1.domain.Pattern;
+import io.mifos.portfolio.api.v1.domain.Payment;
+import io.mifos.portfolio.api.v1.domain.RequiredAccountAssignment;
 import io.mifos.portfolio.service.ServiceConstants;
 import io.mifos.portfolio.service.internal.util.AccountingAdapter;
 import io.mifos.products.spi.PatternFactory;
 import io.mifos.products.spi.ProductCommandDispatcher;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.validation.ConstraintViolation;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import org.apache.fineract.cn.accounting.api.v1.domain.AccountType;
+import org.apache.fineract.cn.customer.api.v1.client.CustomerManager;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author Myrle Krantz

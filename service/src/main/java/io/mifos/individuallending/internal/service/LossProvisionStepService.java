@@ -18,17 +18,16 @@
  */
 package io.mifos.individuallending.internal.service;
 
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.product.LossProvisionStep;
 import io.mifos.individuallending.internal.mapper.LossProvisionStepMapper;
 import io.mifos.individuallending.internal.repository.LossProvisionStepRepository;
 import io.mifos.portfolio.service.internal.repository.ProductRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.apache.fineract.cn.lang.ServiceException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 /**
  * @author Myrle Krantz
@@ -55,7 +54,8 @@ public class LossProvisionStepService {
   public List<LossProvisionStep> findByProductIdentifier(
       final String productIdentifier) {
     final Long productId = productRepository.findByIdentifier(productIdentifier)
-        .orElseThrow(() -> ServiceException.notFound("Product ''{}'' doesn''t exist.", productIdentifier))
+        .orElseThrow(() -> ServiceException
+            .notFound("Product ''{}'' doesn''t exist.", productIdentifier))
         .getId();
     return lossProvisionStepRepository.findByProductIdOrderByDaysLateAsc(productId)
         .map(LossProvisionStepMapper::map)

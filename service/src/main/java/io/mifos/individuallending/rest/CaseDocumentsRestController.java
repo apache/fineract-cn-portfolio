@@ -18,23 +18,27 @@
  */
 package io.mifos.individuallending.rest;
 
-import io.mifos.anubis.annotation.AcceptedTokenType;
-import io.mifos.anubis.annotation.Permittable;
-import io.mifos.core.command.gateway.CommandGateway;
-import io.mifos.core.lang.ServiceException;
 import io.mifos.individuallending.api.v1.domain.caseinstance.CaseCustomerDocuments;
 import io.mifos.individuallending.internal.command.ChangeCaseDocuments;
 import io.mifos.individuallending.internal.service.CaseDocumentsService;
 import io.mifos.portfolio.api.v1.PermittableGroupIds;
 import io.mifos.portfolio.api.v1.domain.Case;
 import io.mifos.portfolio.service.internal.service.CaseService;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.fineract.cn.anubis.annotation.AcceptedTokenType;
+import org.apache.fineract.cn.anubis.annotation.Permittable;
+import org.apache.fineract.cn.command.gateway.CommandGateway;
+import org.apache.fineract.cn.lang.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.stream.Collectors;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/individuallending/products/{productidentifier}/cases/{caseidentifier}/documents")
@@ -94,6 +98,7 @@ public class CaseDocumentsRestController {
   private void throwIfCaseDoesntExist(final String productIdentifier, final String caseIdentifier) throws ServiceException {
     //noinspection unused
     Case x = caseService.findByIdentifier(productIdentifier, caseIdentifier)
-        .orElseThrow(() -> ServiceException.notFound("Case ''{0}.{1}'' does not exist.", productIdentifier, caseIdentifier));
+        .orElseThrow(() -> ServiceException
+            .notFound("Case ''{0}.{1}'' does not exist.", productIdentifier, caseIdentifier));
   }
 }

@@ -19,20 +19,20 @@ group 'org.apache.fineract.cn.portfolio'
 version '0.1.0-BUILD-SNAPSHOT'
 
 ext.versions = [
-        frameworkanubis     : '0.1.0-BUILD-SNAPSHOT',
-        frameworkapi        : '0.1.0-BUILD-SNAPSHOT',
-        frameworklang       : '0.1.0-BUILD-SNAPSHOT',
-        frameworkmariadb    : '0.1.0-BUILD-SNAPSHOT',
-        frameworkcassandra  : '0.1.0-BUILD-SNAPSHOT',
-        frameworkcommand    : '0.1.0-BUILD-SNAPSHOT',
-        frameworktest       : '0.1.0-BUILD-SNAPSHOT',
-        frameworkasync      : '0.1.0-BUILD-SNAPSHOT',
-        frameworkaccounting : '0.1.0-BUILD-SNAPSHOT',
-        mifosrhythm         : '0.1.0-BUILD-SNAPSHOT',
-        mifoscustomer       : '0.1.0-BUILD-SNAPSHOT',
-        validator    : '5.3.0.Final',
-        javamoneylib : '0.9-SNAPSHOT',
-        expiringmap         : '0.5.8'
+        frameworkanubis      : '0.1.0-BUILD-SNAPSHOT',
+        frameworkapi         : '0.1.0-BUILD-SNAPSHOT',
+        frameworklang        : '0.1.0-BUILD-SNAPSHOT',
+        frameworkmariadb     : '0.1.0-BUILD-SNAPSHOT',
+        frameworkcassandra   : '0.1.0-BUILD-SNAPSHOT',
+        frameworkcommand     : '0.1.0-BUILD-SNAPSHOT',
+        frameworktest        : '0.1.0-BUILD-SNAPSHOT',
+        frameworkasync       : '0.1.0-BUILD-SNAPSHOT',
+        fineractcnaccounting : '0.1.0-BUILD-SNAPSHOT',
+        fineractcnrhythm     : '0.1.0-BUILD-SNAPSHOT',
+        fineractcncustomer   : '0.1.0-BUILD-SNAPSHOT',
+        validator            : '5.3.0.Final',
+        javamoneylib         : '0.9-SNAPSHOT',
+        expiringmap          : '0.5.8'
 ]
 
 apply plugin: 'java'

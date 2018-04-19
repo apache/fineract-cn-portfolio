@@ -26,10 +26,6 @@ import org.apache.fineract.cn.individuallending.internal.service.RateCollectors;
 import org.apache.fineract.cn.individuallending.internal.service.schedule.Period;
 import org.apache.fineract.cn.individuallending.internal.service.schedule.ScheduledCharge;
 import org.apache.fineract.cn.portfolio.api.v1.domain.ChargeDefinition;
-import org.javamoney.calc.common.Rate;
-import org.javamoney.moneta.Money;
-
-import javax.money.MonetaryAmount;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -214,11 +210,12 @@ public class CostComponentService {
         AccountDesignators.CUSTOMER_LOAN_PRINCIPAL,
         AccountDesignators.CUSTOMER_LOAN_FEES).negate();
 
-    final MonetaryAmount presentValue = AnnuityPayment.calculate(
-        Money.of(finalDisbursementSize, "XXX"),
-        Rate.of(geometricMeanAccrualRate),
-        periodCount);
-    return BigDecimal.valueOf(presentValue.getNumber().doubleValueExact()).setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
+    final BigDecimal presentValue = AnnuityPayment.calculate(
+        finalDisbursementSize,
+        geometricMeanAccrualRate,
+        periodCount,
+        minorCurrencyUnitDigits);
+    return presentValue.setScale(minorCurrencyUnitDigits, BigDecimal.ROUND_HALF_EVEN);
   }
 
   private static boolean isIncurralActionForAccruedCharge(final ChargeDefinition chargeDefinition, final Action action) {

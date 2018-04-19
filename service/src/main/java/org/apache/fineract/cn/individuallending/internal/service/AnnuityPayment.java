@@ -18,21 +18,18 @@
  */
 package org.apache.fineract.cn.individuallending.internal.service;
 
-import org.javamoney.calc.CalculationContext;
-import org.javamoney.calc.common.Rate;
 
+import java.math.MathContext;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
-import javax.money.MonetaryAmount;
-import javax.money.MonetaryOperator;
 import java.math.BigDecimal;
 import java.util.Objects;
 
 /**
  * @author Myrle Krantz
  */
-public final class AnnuityPayment implements MonetaryOperator {
-  private Rate rate;
+public final class AnnuityPayment {
+  private BigDecimal rate;
   private int periods;
 
   /**
@@ -41,7 +38,7 @@ public final class AnnuityPayment implements MonetaryOperator {
    * @param rate    the target rate, not null.
    * @param periods the periods, >= 0.
    */
-  private AnnuityPayment(final @Nonnull Rate rate, final @Nonnegative int periods)
+  private AnnuityPayment(final @Nonnull BigDecimal rate, final @Nonnegative int periods)
   {
     this.rate = Objects.requireNonNull(rate);
     if (periods < 0) {
@@ -50,31 +47,35 @@ public final class AnnuityPayment implements MonetaryOperator {
     this.periods = periods;
   }
 
-  public static AnnuityPayment of(final @Nonnull Rate rate, final @Nonnegative int periods)
+  public static AnnuityPayment of(final @Nonnull BigDecimal rate, final @Nonnegative int periods)
   {
     return new AnnuityPayment(rate, periods);
   }
 
-  public static MonetaryAmount calculate(
-      final @Nonnull MonetaryAmount amount,
-      final @Nonnull Rate rate,
-      final @Nonnegative int periods)
+  public static BigDecimal calculate(
+      final @Nonnull BigDecimal amount,
+      final @Nonnull BigDecimal rate,
+      final @Nonnegative int periods,
+      final @Nonnegative int precision)
   {
     Objects.requireNonNull(amount, "Amount required");
     Objects.requireNonNull(rate, "Rate required");
-    if (rate.get().compareTo(BigDecimal.ZERO) == 0)
-      return amount.divide(periods);
+    if (rate.compareTo(BigDecimal.ZERO) == 0)
+      return amount.divide(BigDecimal.valueOf(periods), precision, BigDecimal.ROUND_HALF_EVEN);
 
     // AP(m) = m*r / [ (1-((1 + r).pow(-n))) ]
 
-    return amount.multiply(rate.get()).divide(
-            BigDecimal.ONE.subtract((BigDecimal.ONE.add(rate.get())
-                    .pow(-1 * periods, CalculationContext.mathContext()))));
+    return amount.multiply(rate).divide(
+            BigDecimal.ONE.subtract((BigDecimal.ONE.add(rate)
+                    .pow(-1 * periods, MathContext.DECIMAL64))),
+        precision, BigDecimal.ROUND_HALF_EVEN);
   }
 
-  @Override
-  public MonetaryAmount apply(final @Nonnull MonetaryAmount amount) {
-    return calculate(amount, rate, periods);
+  public BigDecimal apply(
+      final @Nonnull BigDecimal amount,
+      final @Nonnegative int precision)
+  {
+    return calculate(amount, rate, periods, precision);
   }
 
   @Override

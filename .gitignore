@@ -2,6 +2,9 @@
 .idea
 build/
 target/
+api/out/
+component-test/out/
+service/out
 
 # Ignore Gradle GUI config
 gradle-app.setting

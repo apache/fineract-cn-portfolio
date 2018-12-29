@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.apache.fineract.cn.portfolio;
 
 import com.google.gson.Gson;
@@ -27,140 +45,140 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 public class TaskDefinitionApiDocumentation extends AbstractPortfolioTest {
 
-    @Rule
-    public final JUnitRestDocumentation restDocumentation = new JUnitRestDocumentation("build/doc/generated-snippets/test-taskdefinition");
+  @Rule
+  public final JUnitRestDocumentation restDocumentation = new JUnitRestDocumentation("build/doc/generated-snippets/test-taskdefinition");
 
-    @Autowired
-    private WebApplicationContext context;
+  @Autowired
+  private WebApplicationContext context;
 
-    private MockMvc mockMvc;
+  private MockMvc mockMvc;
 
-    @Before
-    public void setUp ( ) {
+  @Before
+  public void setUp() {
 
-        this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
-                .apply(documentationConfiguration(this.restDocumentation))
-                .alwaysDo(document("{method-name}", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint())))
-                .build();
+    this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
+            .apply(documentationConfiguration(this.restDocumentation))
+            .alwaysDo(document("{method-name}", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint())))
+            .build();
+  }
+
+  @Test
+  public void documentListTaskDefinitions() throws Exception {
+    final Product product = createProduct();
+
+    try {
+      this.mockMvc.perform(get("/products/" + product.getIdentifier() + "/tasks/")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .contentType(MediaType.APPLICATION_JSON_VALUE)
+              .header(TENANT_HEADER, tenantDataStoreContext.getTenantName()))
+              .andExpect(status().isOk())
+              .andDo(document(
+                      "document-list-task-definitions", preprocessRequest(prettyPrint()),
+                      responseFields(
+                              fieldWithPath("identifier").type("String").description("task identifier's identifier"),
+                              fieldWithPath("name").type("String").description("task identifier's name"),
+                              fieldWithPath("description").type("String").description("task identifier's description"),
+                              fieldWithPath("actions").description("The task definition action"),
+                              fieldWithPath("fourEyes").type("String").description("task identifier's identifier"),
+                              fieldWithPath("mandatory").type("String").description("task identifier's identifier")
+                      )
+              ));
+    } catch (Exception e) {
+      e.printStackTrace();
     }
 
-    @Test
-    public void documentListTaskDefinitions ( ) throws Exception {
-        final Product product = createProduct();
+  }
 
-        try {
-            this.mockMvc.perform(get("/products/" +product.getIdentifier()+"/tasks/")
-                    .accept(MediaType.APPLICATION_JSON_VALUE)
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .header(TENANT_HEADER, tenantDataStoreContext.getTenantName()))
-                    .andExpect(status().isOk())
-                    .andDo(document(
-                            "document-list-task-definitions", preprocessRequest(prettyPrint()),
-                            responseFields(
-                                    fieldWithPath("identifier").type("String").description("task identifier's identifier"),
-                                    fieldWithPath("name").type("String").description("task identifier's name"),
-                                    fieldWithPath("description").type("String").description("task identifier's description"),
-                                    fieldWithPath("actions").description("The task definition action"),
-                                    fieldWithPath("fourEyes").type("String").description("task identifier's identifier"),
-                                    fieldWithPath("mandatory").type("String").description("task identifier's identifier")
-                            )
-                    ));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
 
+  @Test
+  public void documentGetTaskDefinition() throws Exception {
+    final Product product = createProduct();
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+
+    try {
+      this.mockMvc.perform(get("/products/" + product.getIdentifier() + "/tasks/" + taskDefinition.getIdentifier())
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .contentType(MediaType.APPLICATION_JSON_VALUE)
+              .header(TENANT_HEADER, tenantDataStoreContext.getTenantName()))
+              .andExpect(status().isOk())
+              .andDo(document(
+                      "document-get-task-definition", preprocessRequest(prettyPrint()),
+                      responseFields(
+                              fieldWithPath("identifier").type("String").description("task identifier's identifier"),
+                              fieldWithPath("name").type("String").description("task identifier's name"),
+                              fieldWithPath("description").type("String").description("task identifier's description"),
+                              fieldWithPath("actions").description("The task definition action"),
+                              fieldWithPath("fourEyes").type("String").description("task identifier's identifier"),
+                              fieldWithPath("mandatory").type("String").description("task identifier's identifier")
+                      )
+              ));
+    } catch (Exception e) {
+      e.printStackTrace();
     }
 
+  }
 
-    @Test
-    public void documentGetTaskDefinition ( ) throws Exception {
-        final Product product = createProduct();
-        final TaskDefinition taskDefinition = createTaskDefinition(product);
+  @Test
+  public void documentChangeTaskDefinition() throws Exception {
 
-        try {
-            this.mockMvc.perform(get("/products/" +product.getIdentifier()+"/tasks/" +taskDefinition.getIdentifier())
-                    .accept(MediaType.APPLICATION_JSON_VALUE)
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .header(TENANT_HEADER, tenantDataStoreContext.getTenantName()))
-                    .andExpect(status().isOk())
-                    .andDo(document(
-                            "document-get-task-definition", preprocessRequest(prettyPrint()),
-                            responseFields(
-                                    fieldWithPath("identifier").type("String").description("task identifier's identifier"),
-                                    fieldWithPath("name").type("String").description("task identifier's name"),
-                                    fieldWithPath("description").type("String").description("task identifier's description"),
-                                    fieldWithPath("actions").description("The task definition action"),
-                                    fieldWithPath("fourEyes").type("String").description("task identifier's identifier"),
-                                    fieldWithPath("mandatory").type("String").description("task identifier's identifier")
-                            )
-                    ));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    final Product product = createProduct();
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+    taskDefinition.setDescription("Describe task definition");
+    taskDefinition.setFourEyes(false);
 
-    }
+    Gson gson = new Gson();
+    this.mockMvc.perform(put("/products/" + product.getIdentifier() + "/tasks/" + taskDefinition.getIdentifier())
+            .accept(MediaType.APPLICATION_JSON_VALUE)
+            .contentType(MediaType.APPLICATION_JSON_VALUE)
+            .header(TENANT_HEADER, tenantDataStoreContext.getTenantName())
+            .content(gson.toJson(taskDefinition)))
+            .andExpect(status().isAccepted())
+            .andDo(document(
+                    "document-change-task-definition", preprocessRequest(prettyPrint()),
+                    requestFields(
+                            fieldWithPath("identifier").type("String").description("task identifier's identifier"),
+                            fieldWithPath("name").type("String").description("task identifier's name"),
+                            fieldWithPath("description").type("String").description("task identifier's description"),
+                            fieldWithPath("actions").description("The task definition action"),
+                            fieldWithPath("fourEyes").type("String").description("task identifier's identifier"),
+                            fieldWithPath("mandatory").type("String").description("task identifier's identifier")
+                    )
 
-    @Test
-    public void documentChangeTaskDefinition () throws Exception {
+            ));
 
-        final Product product = createProduct();
-        final TaskDefinition taskDefinition = createTaskDefinition(product);
-        taskDefinition.setDescription("Describe task definition");
-        taskDefinition.setFourEyes(false);
+  }
 
-        Gson gson = new Gson();
-        this.mockMvc.perform(put("/products/" + product.getIdentifier() + "/tasks/" +taskDefinition.getIdentifier() )
-                .accept(MediaType.APPLICATION_JSON_VALUE)
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .header(TENANT_HEADER, tenantDataStoreContext.getTenantName())
-                .content(gson.toJson(taskDefinition)))
-                .andExpect(status().isAccepted())
-                .andDo(document(
-                        "document-change-task-definition", preprocessRequest(prettyPrint()),
-                        requestFields(
-                                fieldWithPath("identifier").type("String").description("task identifier's identifier"),
-                                fieldWithPath("name").type("String").description("task identifier's name"),
-                                fieldWithPath("description").type("String").description("task identifier's description"),
-                                fieldWithPath("actions").description("The task definition action"),
-                                fieldWithPath("fourEyes").type("String").description("task identifier's identifier"),
-                                fieldWithPath("mandatory").type("String").description("task identifier's identifier")
-                        )
+  @Test
+  public void documentAddTaskDefinition() throws Exception {
 
-                        ));
+    final Product product = createProduct();
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
+    taskDefinition.setIdentifier("ask");
 
-    }
+    Gson gson = new Gson();
+    this.mockMvc.perform(post("/products/" + product.getIdentifier() + "/tasks/")
+            .contentType(MediaType.APPLICATION_JSON_VALUE)
+            .content(gson.toJson(taskDefinition)))
+            .andExpect(status().isAccepted())
+            .andDo(document("document-add-task-definition", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint()),
+                    requestFields(
+                            fieldWithPath("identifier").type("String").description("task identifier's identifier"),
+                            fieldWithPath("name").type("String").description("task identifier's name"),
+                            fieldWithPath("description").type("String").description("task identifier's description"),
+                            fieldWithPath("actions").description("The task definition action"),
+                            fieldWithPath("fourEyes").type("String").description("task identifier's identifier"),
+                            fieldWithPath("mandatory").type("String").description("task identifier's identifier"))));
+  }
 
-    @Test
-    public void documentAddTaskDefinition () throws Exception {
+  @Test
+  public void documentDeleteTaskDefinition() throws Exception {
+    final Product product = createProduct();
+    final TaskDefinition taskDefinition = createTaskDefinition(product);
 
-        final Product product = createProduct();
-        final TaskDefinition taskDefinition = createTaskDefinition(product);
-        taskDefinition.setIdentifier("ask");
-
-        Gson gson = new Gson();
-        this.mockMvc.perform(post("/products/"+product.getIdentifier()+"/tasks/")
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content(gson.toJson(taskDefinition)))
-                .andExpect(status().isAccepted())
-                .andDo(document("document-add-task-definition", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint()),
-                        requestFields(
-                                fieldWithPath("identifier").type("String").description("task identifier's identifier"),
-                                fieldWithPath("name").type("String").description("task identifier's name"),
-                                fieldWithPath("description").type("String").description("task identifier's description"),
-                                fieldWithPath("actions").description("The task definition action"),
-                                fieldWithPath("fourEyes").type("String").description("task identifier's identifier"),
-                                fieldWithPath("mandatory").type("String").description("task identifier's identifier"))));
-    }
-
-    @Test
-    public void documentDeleteTaskDefinition () throws Exception {
-        final Product product = createProduct();
-        final TaskDefinition taskDefinition = createTaskDefinition(product);
-
-        this.mockMvc.perform(delete("/products/"+product.getIdentifier()+"/tasks/" + taskDefinition.getIdentifier())
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .accept(MediaType.ALL_VALUE))
-                .andExpect(status().isAccepted())
-                .andDo(document("document-delete-task-definition", preprocessResponse(prettyPrint())));
-    }
+    this.mockMvc.perform(delete("/products/" + product.getIdentifier() + "/tasks/" + taskDefinition.getIdentifier())
+            .contentType(MediaType.APPLICATION_JSON_VALUE)
+            .accept(MediaType.ALL_VALUE))
+            .andExpect(status().isAccepted())
+            .andDo(document("document-delete-task-definition", preprocessResponse(prettyPrint())));
+  }
 }

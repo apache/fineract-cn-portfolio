@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 package org.apache.fineract.cn.portfolio;
 
 import com.google.gson.Gson;
@@ -33,207 +51,207 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 public class ChargeDefinitionApiDocumentation extends AbstractPortfolioTest {
 
-    @Rule
-    public final JUnitRestDocumentation restDocumentation = new JUnitRestDocumentation("build/doc/generated-snippets/test-chargedefinitions");
+  @Rule
+  public final JUnitRestDocumentation restDocumentation = new JUnitRestDocumentation("build/doc/generated-snippets/test-chargedefinitions");
 
-    @Autowired
-    private WebApplicationContext context;
+  @Autowired
+  private WebApplicationContext context;
 
-    private MockMvc mockMvc;
+  private MockMvc mockMvc;
 
-    @Before
-    public void setUp() {
+  @Before
+  public void setUp() {
 
-        this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
-                .apply(documentationConfiguration(this.restDocumentation))
-                .alwaysDo(document("{method-name}", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint())))
-                .build();
-    }
+    this.mockMvc = MockMvcBuilders.webAppContextSetup(this.context)
+            .apply(documentationConfiguration(this.restDocumentation))
+            .alwaysDo(document("{method-name}", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint())))
+            .build();
+  }
 
-    @Test
-    public void documentGetAllChargeDefinitions ( ) throws Exception {
-        final Product product = createProduct();
+  @Test
+  public void documentGetAllChargeDefinitions() throws Exception {
+    final Product product = createProduct();
 
-        try {
-            this.mockMvc.perform(get("/products/" +product.getIdentifier()+"/charges/")
-                    .accept(MediaType.APPLICATION_JSON_VALUE)
-                    .contentType(MediaType.APPLICATION_JSON_VALUE)
-                    .header(TENANT_HEADER, tenantDataStoreContext.getTenantName()))
-                    .andExpect(status().isOk())
-                    .andDo(document(
-                            "document-get-all-charge-definitions", preprocessRequest(prettyPrint()),
-                            responseFields(
+    try {
+      this.mockMvc.perform(get("/products/" + product.getIdentifier() + "/charges/")
+              .accept(MediaType.APPLICATION_JSON_VALUE)
+              .contentType(MediaType.APPLICATION_JSON_VALUE)
+              .header(TENANT_HEADER, tenantDataStoreContext.getTenantName()))
+              .andExpect(status().isOk())
+              .andDo(document(
+                      "document-get-all-charge-definitions", preprocessRequest(prettyPrint()),
+                      responseFields(
 
-                                    fieldWithPath("identifier").description("Charge definition's identifier"),
-                                    fieldWithPath("name").description("Charge definitions given name"),
-                                    fieldWithPath("description").description("Charge definitions description"),
-                                    fieldWithPath("accrueAction").description("Charge definitions accrue action"),
-                                    fieldWithPath("proportionalTo").description("Charge definitions proportional to"),
-                                    fieldWithPath("accrualAccountDesignator").description("Charge definitions accrual acion generatort"),
-                                    fieldWithPath("forCycleSizeUnit").description("Charge definitions cycle size unit"),
-                                    fieldWithPath("forSegmentSet").description("Charge definitions segment set"),
-                                    fieldWithPath("fromSegment").description("Charge definitions from segment"),
-                                    fieldWithPath("toSegment").description("Charge definitions to segment"),
-                                    fieldWithPath("chargeOnTop").description("Charge definitions charge on top"),
-                                    fieldWithPath("fromAccountDesignator").description("From account designator"),
-                                    fieldWithPath("toAccountDesignator").description("To account designator"),
-                                    fieldWithPath("amount").description("Charge definition's amount"),
-                                    fieldWithPath("chargeMethod").description("Charge definitions charge method"),
-                                    fieldWithPath("chargeAction").description("Charge definition's charge action"),
-                                    fieldWithPath("description").description("Employee's middle name"),
-                                    fieldWithPath("readOnly").description("Readability"))));
+                              fieldWithPath("identifier").description("Charge definition's identifier"),
+                              fieldWithPath("name").description("Charge definitions given name"),
+                              fieldWithPath("description").description("Charge definitions description"),
+                              fieldWithPath("accrueAction").description("Charge definitions accrue action"),
+                              fieldWithPath("proportionalTo").description("Charge definitions proportional to"),
+                              fieldWithPath("accrualAccountDesignator").description("Charge definitions accrual acion generatort"),
+                              fieldWithPath("forCycleSizeUnit").description("Charge definitions cycle size unit"),
+                              fieldWithPath("forSegmentSet").description("Charge definitions segment set"),
+                              fieldWithPath("fromSegment").description("Charge definitions from segment"),
+                              fieldWithPath("toSegment").description("Charge definitions to segment"),
+                              fieldWithPath("chargeOnTop").description("Charge definitions charge on top"),
+                              fieldWithPath("fromAccountDesignator").description("From account designator"),
+                              fieldWithPath("toAccountDesignator").description("To account designator"),
+                              fieldWithPath("amount").description("Charge definition's amount"),
+                              fieldWithPath("chargeMethod").description("Charge definitions charge method"),
+                              fieldWithPath("chargeAction").description("Charge definition's charge action"),
+                              fieldWithPath("description").description("Employee's middle name"),
+                              fieldWithPath("readOnly").description("Readability"))));
 
     } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+      e.printStackTrace();
     }
 
-
-    @Test
-    public void documentCreateChargeDefinition() throws Exception {
-
-        final Product product = createProduct();
-
-        final ChargeDefinition chargeDefinition = new ChargeDefinition();
-        chargeDefinition.setIdentifier("charge123");
-        chargeDefinition.setName("core123");
-        chargeDefinition.setFromAccountDesignator("Pembe");
-        chargeDefinition.setToAccountDesignator("Miriam");
-        chargeDefinition.setAmount(BigDecimal.ONE.setScale(3, BigDecimal.ROUND_UNNECESSARY));
-        chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
-        chargeDefinition.setChargeAction(Action.OPEN.name());
-        chargeDefinition.setDescription("describe charge");
+  }
 
 
-        Gson gson = new Gson();
-        this.mockMvc.perform(post("/products/"+product.getIdentifier()+"/charges/")
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .content(gson.toJson(chargeDefinition)))
-                .andExpect(status().isAccepted())
-                .andDo(document("document-create-charge-definition", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint()),
-                        requestFields(
-                                fieldWithPath("identifier").description("Charge definition's identifier"),
-                                fieldWithPath("name").description("Charge definitions given name"),
-                                fieldWithPath("fromAccountDesignator").description("From account designator"),
-                                fieldWithPath("toAccountDesignator").description("To account designator"),
-                                fieldWithPath("amount").description("Charge definition's amount"),
-                                fieldWithPath("chargeMethod").description("Charge definitions charge method"),
-                                fieldWithPath("chargeAction").description("Charge definition's charge action"),
-                                fieldWithPath("description").description("Employee's middle name"),
-                                fieldWithPath("readOnly").description("Readability"))));
+  @Test
+  public void documentCreateChargeDefinition() throws Exception {
 
-    }
+    final Product product = createProduct();
 
-    @Test
-    public void documentChangeChargeDefinition() throws Exception {
-
-        final Product product = createProduct();
-
-        final ChargeDefinition chargeDefinition = new ChargeDefinition();
-        chargeDefinition.setIdentifier("charge124");
-        chargeDefinition.setName("core123");
-        chargeDefinition.setFromAccountDesignator("Pembe");
-        chargeDefinition.setToAccountDesignator("Miriam");
-        chargeDefinition.setAmount(BigDecimal.ONE.setScale(3, BigDecimal.ROUND_UNNECESSARY));
-        chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
-        chargeDefinition.setChargeAction(Action.OPEN.name());
-        chargeDefinition.setDescription("describe charge");
-
-        portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinition);
-
-        chargeDefinition.setName("charge12345");
-        chargeDefinition.setFromAccountDesignator("Paul");
-        chargeDefinition.setToAccountDesignator("Motia");
-
-        Gson gson = new Gson();
-        this.mockMvc.perform(put("/products/" + product.getIdentifier() + "/charges/" + chargeDefinition.getIdentifier())
-                .accept(MediaType.APPLICATION_JSON_VALUE)
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .header(TENANT_HEADER, tenantDataStoreContext.getTenantName())
-                .content(gson.toJson(chargeDefinition)))
-                .andExpect(status().isAccepted())
-                .andDo(document(
-                        "document-change-charge-definition", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint()),
-                        requestFields(
-                                fieldWithPath("identifier").description("Charge definition's identifier"),
-                                fieldWithPath("name").description("Charge definitions given name"),
-                                fieldWithPath("fromAccountDesignator").description("From account designator"),
-                                fieldWithPath("toAccountDesignator").description("To account designator"),
-                                fieldWithPath("amount").description("Charge definition's amount"),
-                                fieldWithPath("chargeMethod").description("Charge definitions charge method"),
-                                fieldWithPath("chargeAction").description("Charge definition's charge action"),
-                                fieldWithPath("description").description("Employee's middle name"),
-                                fieldWithPath("readOnly").description("Readability"))));
-    }
-
-    @Test
-    public void documentGetChargeDefinition() throws Exception {
-
-        final Product product = createProduct();
-
-        final ChargeDefinition chargeDefinition = new ChargeDefinition();
-        chargeDefinition.setIdentifier("charge10");
-        chargeDefinition.setName("core123");
-        chargeDefinition.setFromAccountDesignator("pembe");
-        chargeDefinition.setToAccountDesignator("miriam");
-        chargeDefinition.setAmount(BigDecimal.ONE.setScale(3, BigDecimal.ROUND_UNNECESSARY));
-        chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
-        chargeDefinition.setChargeAction(Action.OPEN.name());
-        chargeDefinition.setDescription("describe charge");
-
-        portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinition);
+    final ChargeDefinition chargeDefinition = new ChargeDefinition();
+    chargeDefinition.setIdentifier("charge123");
+    chargeDefinition.setName("core123");
+    chargeDefinition.setFromAccountDesignator("Pembe");
+    chargeDefinition.setToAccountDesignator("Miriam");
+    chargeDefinition.setAmount(BigDecimal.ONE.setScale(3, BigDecimal.ROUND_UNNECESSARY));
+    chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+    chargeDefinition.setChargeAction(Action.OPEN.name());
+    chargeDefinition.setDescription("describe charge");
 
 
-        this.mockMvc.perform(get("/products/" + product.getIdentifier() + "/charges/" + chargeDefinition.getIdentifier())
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .accept(MediaType.ALL_VALUE))
-                .andExpect(status().isOk())
-                .andDo(document("document-get-case-document", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint()),
-                        responseFields(
-                                fieldWithPath("identifier").description("Charge definition's identifier"),
-                                fieldWithPath("name").description("Charge definitions given name"),
-                                fieldWithPath("description").description("Charge definitions description"),
-                                fieldWithPath("accrueAction").description("Charge definitions accrue action"),
-                                fieldWithPath("proportionalTo").description("Charge definitions proportional to"),
-                                fieldWithPath("accrualAccountDesignator").description("Charge definitions accrual acion generatort"),
-                                fieldWithPath("forCycleSizeUnit").description("Charge definitions cycle size unit"),
-                                fieldWithPath("forSegmentSet").description("Charge definitions segment set"),
-                                fieldWithPath("fromSegment").description("Charge definitions from segment"),
-                                fieldWithPath("toSegment").description("Charge definitions to segment"),
-                                fieldWithPath("chargeOnTop").description("Charge definitions charge on top"),
-                                fieldWithPath("fromAccountDesignator").description("From account designator"),
-                                fieldWithPath("toAccountDesignator").description("To account designator"),
-                                fieldWithPath("amount").description("Charge definition's amount"),
-                                fieldWithPath("chargeMethod").description("Charge definitions charge method"),
-                                fieldWithPath("chargeAction").description("Charge definition's charge action"),
-                                fieldWithPath("description").description("Employee's middle name"),
-                                fieldWithPath("readOnly").description("Readability"))));
-    }
+    Gson gson = new Gson();
+    this.mockMvc.perform(post("/products/" + product.getIdentifier() + "/charges/")
+            .contentType(MediaType.APPLICATION_JSON_VALUE)
+            .content(gson.toJson(chargeDefinition)))
+            .andExpect(status().isAccepted())
+            .andDo(document("document-create-charge-definition", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint()),
+                    requestFields(
+                            fieldWithPath("identifier").description("Charge definition's identifier"),
+                            fieldWithPath("name").description("Charge definitions given name"),
+                            fieldWithPath("fromAccountDesignator").description("From account designator"),
+                            fieldWithPath("toAccountDesignator").description("To account designator"),
+                            fieldWithPath("amount").description("Charge definition's amount"),
+                            fieldWithPath("chargeMethod").description("Charge definitions charge method"),
+                            fieldWithPath("chargeAction").description("Charge definition's charge action"),
+                            fieldWithPath("description").description("Employee's middle name"),
+                            fieldWithPath("readOnly").description("Readability"))));
 
-    @Test
-    public void documentDeleteChargeDefinition () throws Exception{
+  }
 
-        final Product product = createProduct();
+  @Test
+  public void documentChangeChargeDefinition() throws Exception {
 
-        final ChargeDefinition chargeDefinitionToDelete = new ChargeDefinition();
-        chargeDefinitionToDelete.setAmount(BigDecimal.TEN);
-        chargeDefinitionToDelete.setIdentifier("random123");
-        chargeDefinitionToDelete.setName("account");
-        chargeDefinitionToDelete.setDescription("account charge definition");
-        chargeDefinitionToDelete.setChargeAction(Action.APPROVE.name());
-        chargeDefinitionToDelete.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
-        chargeDefinitionToDelete.setToAccountDesignator(AccountDesignators.GENERAL_LOSS_ALLOWANCE);
-        chargeDefinitionToDelete.setFromAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
-        portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinitionToDelete);
-        this.eventRecorder.wait(EventConstants.POST_CHARGE_DEFINITION,
-                new ChargeDefinitionEvent(product.getIdentifier(), chargeDefinitionToDelete.getIdentifier()));
+    final Product product = createProduct();
 
-        this.mockMvc.perform(delete("/products/"+product.getIdentifier()+"/charges/" + chargeDefinitionToDelete.getIdentifier())
-                .contentType(MediaType.APPLICATION_JSON_VALUE)
-                .accept(MediaType.ALL_VALUE))
-                .andExpect(status().isAccepted())
-                .andDo(document("document-delete-charge-definition", preprocessResponse(prettyPrint())));
-    }
+    final ChargeDefinition chargeDefinition = new ChargeDefinition();
+    chargeDefinition.setIdentifier("charge124");
+    chargeDefinition.setName("core123");
+    chargeDefinition.setFromAccountDesignator("Pembe");
+    chargeDefinition.setToAccountDesignator("Miriam");
+    chargeDefinition.setAmount(BigDecimal.ONE.setScale(3, BigDecimal.ROUND_UNNECESSARY));
+    chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+    chargeDefinition.setChargeAction(Action.OPEN.name());
+    chargeDefinition.setDescription("describe charge");
+
+    portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinition);
+
+    chargeDefinition.setName("charge12345");
+    chargeDefinition.setFromAccountDesignator("Paul");
+    chargeDefinition.setToAccountDesignator("Motia");
+
+    Gson gson = new Gson();
+    this.mockMvc.perform(put("/products/" + product.getIdentifier() + "/charges/" + chargeDefinition.getIdentifier())
+            .accept(MediaType.APPLICATION_JSON_VALUE)
+            .contentType(MediaType.APPLICATION_JSON_VALUE)
+            .header(TENANT_HEADER, tenantDataStoreContext.getTenantName())
+            .content(gson.toJson(chargeDefinition)))
+            .andExpect(status().isAccepted())
+            .andDo(document(
+                    "document-change-charge-definition", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint()),
+                    requestFields(
+                            fieldWithPath("identifier").description("Charge definition's identifier"),
+                            fieldWithPath("name").description("Charge definitions given name"),
+                            fieldWithPath("fromAccountDesignator").description("From account designator"),
+                            fieldWithPath("toAccountDesignator").description("To account designator"),
+                            fieldWithPath("amount").description("Charge definition's amount"),
+                            fieldWithPath("chargeMethod").description("Charge definitions charge method"),
+                            fieldWithPath("chargeAction").description("Charge definition's charge action"),
+                            fieldWithPath("description").description("Employee's middle name"),
+                            fieldWithPath("readOnly").description("Readability"))));
+  }
+
+  @Test
+  public void documentGetChargeDefinition() throws Exception {
+
+    final Product product = createProduct();
+
+    final ChargeDefinition chargeDefinition = new ChargeDefinition();
+    chargeDefinition.setIdentifier("charge10");
+    chargeDefinition.setName("core123");
+    chargeDefinition.setFromAccountDesignator("pembe");
+    chargeDefinition.setToAccountDesignator("miriam");
+    chargeDefinition.setAmount(BigDecimal.ONE.setScale(3, BigDecimal.ROUND_UNNECESSARY));
+    chargeDefinition.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+    chargeDefinition.setChargeAction(Action.OPEN.name());
+    chargeDefinition.setDescription("describe charge");
+
+    portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinition);
+
+
+    this.mockMvc.perform(get("/products/" + product.getIdentifier() + "/charges/" + chargeDefinition.getIdentifier())
+            .contentType(MediaType.APPLICATION_JSON_VALUE)
+            .accept(MediaType.ALL_VALUE))
+            .andExpect(status().isOk())
+            .andDo(document("document-get-case-document", preprocessRequest(prettyPrint()), preprocessResponse(prettyPrint()),
+                    responseFields(
+                            fieldWithPath("identifier").description("Charge definition's identifier"),
+                            fieldWithPath("name").description("Charge definitions given name"),
+                            fieldWithPath("description").description("Charge definitions description"),
+                            fieldWithPath("accrueAction").description("Charge definitions accrue action"),
+                            fieldWithPath("proportionalTo").description("Charge definitions proportional to"),
+                            fieldWithPath("accrualAccountDesignator").description("Charge definitions accrual acion generatort"),
+                            fieldWithPath("forCycleSizeUnit").description("Charge definitions cycle size unit"),
+                            fieldWithPath("forSegmentSet").description("Charge definitions segment set"),
+                            fieldWithPath("fromSegment").description("Charge definitions from segment"),
+                            fieldWithPath("toSegment").description("Charge definitions to segment"),
+                            fieldWithPath("chargeOnTop").description("Charge definitions charge on top"),
+                            fieldWithPath("fromAccountDesignator").description("From account designator"),
+                            fieldWithPath("toAccountDesignator").description("To account designator"),
+                            fieldWithPath("amount").description("Charge definition's amount"),
+                            fieldWithPath("chargeMethod").description("Charge definitions charge method"),
+                            fieldWithPath("chargeAction").description("Charge definition's charge action"),
+                            fieldWithPath("description").description("Employee's middle name"),
+                            fieldWithPath("readOnly").description("Readability"))));
+  }
+
+  @Test
+  public void documentDeleteChargeDefinition() throws Exception {
+
+    final Product product = createProduct();
+
+    final ChargeDefinition chargeDefinitionToDelete = new ChargeDefinition();
+    chargeDefinitionToDelete.setAmount(BigDecimal.TEN);
+    chargeDefinitionToDelete.setIdentifier("random123");
+    chargeDefinitionToDelete.setName("account");
+    chargeDefinitionToDelete.setDescription("account charge definition");
+    chargeDefinitionToDelete.setChargeAction(Action.APPROVE.name());
+    chargeDefinitionToDelete.setChargeMethod(ChargeDefinition.ChargeMethod.FIXED);
+    chargeDefinitionToDelete.setToAccountDesignator(AccountDesignators.GENERAL_LOSS_ALLOWANCE);
+    chargeDefinitionToDelete.setFromAccountDesignator(AccountDesignators.INTEREST_ACCRUAL);
+    portfolioManager.createChargeDefinition(product.getIdentifier(), chargeDefinitionToDelete);
+    this.eventRecorder.wait(EventConstants.POST_CHARGE_DEFINITION,
+            new ChargeDefinitionEvent(product.getIdentifier(), chargeDefinitionToDelete.getIdentifier()));
+
+    this.mockMvc.perform(delete("/products/" + product.getIdentifier() + "/charges/" + chargeDefinitionToDelete.getIdentifier())
+            .contentType(MediaType.APPLICATION_JSON_VALUE)
+            .accept(MediaType.ALL_VALUE))
+            .andExpect(status().isAccepted())
+            .andDo(document("document-delete-charge-definition", preprocessResponse(prettyPrint())));
+  }
 
 }

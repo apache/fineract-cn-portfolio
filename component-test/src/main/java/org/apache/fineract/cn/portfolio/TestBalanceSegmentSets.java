@@ -39,7 +39,7 @@ public class TestBalanceSegmentSets extends AbstractPortfolioTest {
     final Product product = createProduct();
 
     final BalanceSegmentSet balanceSegmentSet = new BalanceSegmentSet();
-    balanceSegmentSet.setIdentifier(testEnvironment.generateUniqueIdentifer("bss"));
+    balanceSegmentSet.setIdentifier(testEnvironment.generateUniqueIdentifier("bss"));
     balanceSegmentSet.setSegments(Arrays.asList(
         BigDecimal.ZERO.setScale(4, BigDecimal.ROUND_HALF_EVEN),
         BigDecimal.TEN.setScale(4, BigDecimal.ROUND_HALF_EVEN),
@@ -66,7 +66,7 @@ public class TestBalanceSegmentSets extends AbstractPortfolioTest {
 
 
     final BalanceSegmentSet balanceSegmentSet2 = new BalanceSegmentSet();
-    balanceSegmentSet2.setIdentifier(testEnvironment.generateUniqueIdentifer("bss"));
+    balanceSegmentSet2.setIdentifier(testEnvironment.generateUniqueIdentifier("bss"));
     balanceSegmentSet2.setSegments(Arrays.asList(
         BigDecimal.ZERO.setScale(4, BigDecimal.ROUND_HALF_EVEN),
         BigDecimal.TEN.setScale(4, BigDecimal.ROUND_HALF_EVEN),

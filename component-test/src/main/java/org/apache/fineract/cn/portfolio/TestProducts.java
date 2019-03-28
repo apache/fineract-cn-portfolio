@@ -181,7 +181,7 @@ public class TestProducts extends AbstractPortfolioTest {
     final Set<AccountAssignment> incompleteAccountAssignments = portfolioManager.getIncompleteAccountAssignments(product.getIdentifier());
 
     final Set<AccountAssignment> accountAssignments = incompleteAccountAssignments.stream()
-            .map(x -> new AccountAssignment(x.getDesignator(), testEnvironment.generateUniqueIdentifer("account")))
+            .map(x -> new AccountAssignment(x.getDesignator(), testEnvironment.generateUniqueIdentifier("account")))
             .collect(Collectors.toSet());
 
     product.setAccountAssignments(accountAssignments);

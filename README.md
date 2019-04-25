@@ -1,4 +1,4 @@
-# Apache Fineract CN Portfolio
+# Apache Fineract CN Portfolio [![Build Status](https://api.travis-ci.com/apache/fineract-cn-portfolio.svg?branch=develop)](https://travis-ci.com/apache/fineract-cn-portfolio)
 
 This project provides product and case management for Fineract CN.  Products are described and "instantiated"
 for customers as cases.

@@ -17,6 +17,15 @@
 -- under the License.
 --
 
-# noinspection SqlNoDataSourceInspectionForFile
-
-ALTER TABLE bastet_p_chrg_defs ADD COLUMN proportional_to VARCHAR(32) NULL DEFAULT NULL;
+CREATE TABLE bastet_c_task_insts (
+  id BIGSERIAL NOT NULL,
+  case_id                  BIGINT         NOT NULL,
+  task_def_id              BIGINT         NOT NULL,
+  a_comment                VARCHAR(4096)  NOT NULL,
+  executed_on              TIMESTAMP(3)   NULL,
+  executed_by              VARCHAR(32)    NULL,
+  CONSTRAINT bastet_c_task_inst_pk PRIMARY KEY (id),
+  CONSTRAINT bastet_c_task_inst_uq UNIQUE (case_id, task_def_id),
+  CONSTRAINT bastet_c_task_inst_case_fk FOREIGN KEY (case_id) REFERENCES bastet_cases (id),
+  CONSTRAINT bastet_c_task_inst_def_fk FOREIGN KEY (task_def_id) REFERENCES bastet_p_task_defs (id)
+);

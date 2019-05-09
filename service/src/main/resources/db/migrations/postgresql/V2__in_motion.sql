@@ -17,14 +17,6 @@
 -- under the License.
 --
 
-CREATE TABLE bastet_il_c_docs (
-  id BIGINT NOT NULL AUTO_INCREMENT,
-  case_id                  BIGINT         NOT NULL,
-  customer_identifier      VARCHAR(32)    NOT NULL,
-  document_identifier      VARCHAR(32)    NOT NULL,
-  list_order               INT            NOT NULL,
+/*# noinspection SqlNoDataSourceInspectionForFile*/
 
-  CONSTRAINT bastet_il_c_docs_pk PRIMARY KEY (id),
-  CONSTRAINT bastet_il_c_docs_uq UNIQUE (case_id, customer_identifier, document_identifier),
-  CONSTRAINT bastet_il_c_docs_fk FOREIGN KEY (case_id) REFERENCES bastet_il_cases (id)
-);
+ALTER TABLE bastet_p_chrg_defs ADD COLUMN proportional_to VARCHAR(32) NULL DEFAULT NULL;

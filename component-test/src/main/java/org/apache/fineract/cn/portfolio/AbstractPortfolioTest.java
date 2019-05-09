@@ -118,7 +118,7 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
 
   @ClassRule
   public final static TenantDataStoreContextTestRule tenantDataStoreContext
-      = TenantDataStoreContextTestRule.forRandomTenantName(cassandraInitializer, mariaDBInitializer);
+      = TenantDataStoreContextTestRule.forRandomTenantName(cassandraInitializer, postgreSQLInitializer);
 
   @Rule
   public final TenantApplicationSecurityEnvironmentTestRule tenantApplicationSecurityEnvironment

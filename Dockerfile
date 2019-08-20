@@ -16,7 +16,13 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-FROM openjdk:8-jdk-alpine
+FROM openjdk:8-jdk-alpine AS builder
+RUN mkdir builddir
+COPY . builddir
+WORKDIR builddir
+RUN ./gradlew publishToMavenLocal
+
+FROM openjdk:8-jdk-alpine AS runner
 
 ARG portfolio_port=2026
 
@@ -26,6 +32,6 @@ ENV server.max-http-header-size=16384 \
     server.port=$portfolio_port
 
 WORKDIR /tmp
-COPY portfolio-service-boot-0.1.0-BUILD-SNAPSHOT.jar .
+COPY --from=builder /builddir/service/build/libs/service-0.1.0-BUILD-SNAPSHOT-boot.jar ./portfolio-service-boot.jar
 
-CMD ["java", "-jar", "portfolio-service-boot-0.1.0-BUILD-SNAPSHOT.jar"]
+CMD ["java", "-jar", "portfolio-service-boot.jar"]

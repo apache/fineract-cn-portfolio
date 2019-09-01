@@ -2,7 +2,10 @@
 .idea
 build/
 target/
-**/out
+
+api/out/
+component-test/out/
+service/out
 
 # Ignore Gradle GUI config
 gradle-app.setting
@@ -15,3 +18,5 @@ gradle-app.setting
 *.log
 
 *.toDelete
+
+*.jar

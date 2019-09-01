@@ -1,0 +1,33 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+language: java
+sudo: false
+jdk:
+- openjdk8
+install: true
+script: "./travis.sh"
+env:
+  global:
+    - BUILD_SNAPSHOTS_BRANCH=develop
+    - ARTIFACTORY_URL=https://mifos.jfrog.io/mifos
+    - ARTIFACTORY_USER=travis-ci
+    - secure: "Q+gO7X7kludIHuAI/VIiI60olEHEkUVVPT0atuf9GceT6IaKjWkdO2w3uwltNpedGcNX07bA2P/5ELxCkiL+maCbxXED2u/+zZfvKenUzRsDXkaZ4PjX9T0poX+cai4yO4uEdUSq5qmVun7JN4KB5hQq96yMditRtHb4LWM28r6owRykQ1aRNGsWlYhFTni63HSICyZFpuWc1/7N6ClEJYiJRwkNG2NFHpqi9CkpX9YgIoJgx7226RBMm6azRek5BAMNWsRYn7iKDcL6XakWUrXGPTBM37Cg75ClCrweXwi9J1d7O7gEYrqhPgzzKWpg4vrnaZwRhGV1esAhXKUuHyMyfM1UTez3zRancNJj8SmdXPHCU45vc6r5qdJTzt8GCyJGxIe0Wh/X/8j/4oMC7vBOELqIINU0V/aopFAeutrUxacdl91qF7iV6xZBxLmrSJeRMLL/d4LENFysSozfH1E50rWxnou/fm2acjl/6uyCoe4IcA7hUBgnJhd6GRwkg/Uu/Y7HmFBcvMUveziFG/Dy8zlNZBuXRbdbwkGpnFtxjRADw97VkiRpI+yn+uisXbUN//t7yWgxEO3MovUylNdRjsNHE/VzVz5Q3UZihL9NUqY8pmWbV2zZ85lSgTVlp0gY6M+94y4WO8La2yzW8h9rbsCzdGlX5FVtsW0jKr4="
+after_failure:
+  - ./gradlew rat
+  - cat api/build/reports/rat/rat-report.txt

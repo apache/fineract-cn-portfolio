@@ -38,7 +38,7 @@ public interface CaseRepository extends JpaRepository<CaseEntity, Long> {
   Page<CaseEntity> findByProductIdentifierAndCurrentStateIn(String productIdentifier, Collection<String> currentStates, Pageable pageRequest);
 
   //TODO: It should be possible to delete the @Query once we've updated to spring-data-release train ingalls.
-  @Query("SELECT COUNT(t) > 0  FROM CaseEntity t WHERE t.productIdentifier = :productIdentifier")
+  @Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END FROM CaseEntity t WHERE t.productIdentifier = :productIdentifier")
   boolean existsByProductIdentifier(@Param("productIdentifier") String productIdentifier);
 
   Stream<CaseEntity> findByCurrentStateIn(Collection<String> currentStates);

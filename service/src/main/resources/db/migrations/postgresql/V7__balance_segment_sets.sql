@@ -17,12 +17,17 @@
 -- under the License.
 --
 
-CREATE TABLE bastet_il_late_cases (
-  id BIGINT NOT NULL AUTO_INCREMENT,
-  case_id                  BIGINT         NOT NULL,
-  late_since               TIMESTAMP(3)   NOT NULL,
-
-  CONSTRAINT bastet_il_late_cases_pk PRIMARY KEY (id),
-  CONSTRAINT bastet_il_late_cases_uq UNIQUE (case_id),
-  CONSTRAINT bastet_il_late_cases_fk FOREIGN KEY (case_id) REFERENCES bastet_cases (id)
+CREATE TABLE bastet_p_balance_segs (
+  id BIGSERIAL NOT NULL,
+  seg_set_identifier       VARCHAR(32)    NOT NULL,
+  segment_identifier       VARCHAR(32)    NOT NULL,
+  product_id               BIGINT         NOT NULL,
+  lower_bound              DECIMAL(19,4)  NOT NULL,
+  CONSTRAINT bastet_p_balance_segs_pk PRIMARY KEY (id),
+  CONSTRAINT bastet_p_balance_segs_uq UNIQUE (product_id, seg_set_identifier, segment_identifier),
+  CONSTRAINT bastet_p_balance_segs_fk FOREIGN KEY (product_id) REFERENCES bastet_products (id)
 );
+
+ALTER TABLE bastet_p_chrg_defs ADD COLUMN segment_set VARCHAR(32) NULL DEFAULT NULL;
+ALTER TABLE bastet_p_chrg_defs ADD COLUMN from_segment VARCHAR(32) NULL DEFAULT NULL;
+ALTER TABLE bastet_p_chrg_defs ADD COLUMN to_segment VARCHAR(32) NULL DEFAULT NULL;

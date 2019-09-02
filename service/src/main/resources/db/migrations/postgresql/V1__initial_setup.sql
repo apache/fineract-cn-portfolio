@@ -17,10 +17,10 @@
 -- under the License.
 --
 
-# noinspection SqlNoDataSourceInspectionForFile
+/*# noinspection SqlNoDataSourceInspectionForFile*/
 
 CREATE TABLE bastet_products (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+  id BIGSERIAL NOT NULL,
   identifier               VARCHAR(32)    NOT NULL,
   a_name                   VARCHAR(256)   NOT NULL,
   term_range_temporal_unit VARCHAR(128)   NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE bastet_products (
 );
 
 CREATE TABLE bastet_p_acct_assigns (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+  id BIGSERIAL NOT NULL,
   designator               VARCHAR(32)    NOT NULL,
   identifier               VARCHAR(34)    NOT NULL,
   product_id               BIGINT         NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE bastet_p_acct_assigns (
 );
 
 CREATE TABLE bastet_p_task_defs (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+  id BIGSERIAL NOT NULL,
   identifier               VARCHAR(32)    NOT NULL,
   product_id               BIGINT         NOT NULL,
   a_name                   VARCHAR(256)   NOT NULL,
@@ -71,7 +71,7 @@ CREATE TABLE bastet_p_task_defs (
 );
 
 CREATE TABLE bastet_p_chrg_defs (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+  id BIGSERIAL NOT NULL,
   identifier               VARCHAR(32)    NOT NULL,
   product_id               BIGINT         NOT NULL,
   a_name                   VARCHAR(256)   NOT NULL,
@@ -90,7 +90,7 @@ CREATE TABLE bastet_p_chrg_defs (
 );
 
 CREATE TABLE bastet_cases (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+  id BIGSERIAL NOT NULL,
   identifier               VARCHAR(32) NOT NULL,
   product_identifier       VARCHAR(32) NOT NULL,
   current_state            VARCHAR(32)   NOT NULL,
@@ -103,7 +103,7 @@ CREATE TABLE bastet_cases (
 );
 
 CREATE TABLE bastet_c_acct_assigns (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+  id BIGSERIAL NOT NULL,
   designator               VARCHAR(32)    NOT NULL,
   identifier               VARCHAR(34)    NOT NULL,
   case_id                  BIGINT         NOT NULL,
@@ -113,7 +113,7 @@ CREATE TABLE bastet_c_acct_assigns (
 );
 
 CREATE TABLE bastet_il_cases (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+  id BIGSERIAL NOT NULL,
   case_id                  BIGINT         NOT NULL,
   customer_identifier      VARCHAR(32)    NOT NULL,
   term_range_temporal_unit VARCHAR(128)   NOT NULL,
@@ -131,7 +131,7 @@ CREATE TABLE bastet_il_cases (
 );
 
 CREATE TABLE bastet_il_c_credit_facts (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+  id BIGSERIAL NOT NULL,
   case_id                  BIGINT         NOT NULL,
   customer_identifier      VARCHAR(32)    NOT NULL,
   position_in_factor       INT            NOT NULL,

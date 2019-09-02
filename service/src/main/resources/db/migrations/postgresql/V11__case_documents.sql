@@ -17,15 +17,14 @@
 -- under the License.
 --
 
-CREATE TABLE bastet_c_task_insts (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+CREATE TABLE bastet_il_c_docs (
+  id BIGSERIAL NOT NULL,
   case_id                  BIGINT         NOT NULL,
-  task_def_id              BIGINT         NOT NULL,
-  a_comment                VARCHAR(4096)  NOT NULL,
-  executed_on              TIMESTAMP(3)   NULL,
-  executed_by              VARCHAR(32)    NULL,
-  CONSTRAINT bastet_c_task_inst_pk PRIMARY KEY (id),
-  CONSTRAINT bastet_c_task_inst_uq UNIQUE (case_id, task_def_id),
-  CONSTRAINT bastet_c_task_inst_case_fk FOREIGN KEY (case_id) REFERENCES bastet_cases (id),
-  CONSTRAINT bastet_c_task_inst_def_fk FOREIGN KEY (task_def_id) REFERENCES bastet_p_task_defs (id)
+  customer_identifier      VARCHAR(32)    NOT NULL,
+  document_identifier      VARCHAR(32)    NOT NULL,
+  list_order               INT            NOT NULL,
+
+  CONSTRAINT bastet_il_c_docs_pk PRIMARY KEY (id),
+  CONSTRAINT bastet_il_c_docs_uq UNIQUE (case_id, customer_identifier, document_identifier),
+  CONSTRAINT bastet_il_c_docs_fk FOREIGN KEY (case_id) REFERENCES bastet_il_cases (id)
 );

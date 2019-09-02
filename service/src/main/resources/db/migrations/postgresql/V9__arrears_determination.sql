@@ -18,7 +18,7 @@
 --
 
 CREATE TABLE bastet_case_commands (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+  id BIGSERIAL NOT NULL,
   case_id                  BIGINT         NOT NULL,
   action_name              VARCHAR(32)    NOT NULL,
   created_on               TIMESTAMP(3)   NOT NULL,
@@ -31,7 +31,7 @@ CREATE TABLE bastet_case_commands (
 );
 
 CREATE TABLE bastet_p_arrears_config (
-  id BIGINT NOT NULL AUTO_INCREMENT,
+  id BIGSERIAL NOT NULL,
   product_id               BIGINT         NOT NULL,
   days_late                INT            NOT NULL,
   percent_provision        DECIMAL(5,2)   NOT NULL,

@@ -54,7 +54,7 @@ eureka:
     preferIpAddress: true
 
 server:
-  port: 8081
+  port: 2026
   contextPath: /portfolio/v1/*
 
 cassandra:

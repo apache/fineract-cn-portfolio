@@ -35,11 +35,6 @@ ext.versions = [
         expiringmap          : '0.5.8'
 ]
 
-apply plugin: 'java'
-apply plugin: 'idea'
-apply plugin: 'maven-publish'
-apply plugin: 'io.spring.dependency-management'
-
 tasks.withType(JavaCompile) {
     sourceCompatibility = JavaVersion.VERSION_1_8
     targetCompatibility = JavaVersion.VERSION_1_8
@@ -76,7 +71,7 @@ dependencies {
 }
 
 jar {
-    from sourceSets.main.allSource
+    from sourceSets.main.java
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 

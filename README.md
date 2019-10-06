@@ -1,7 +1,9 @@
-# Apache Fineract CN Portfolio [![Build Status](https://api.travis-ci.com/apache/fineract-cn-portfolio.svg?branch=develop)](https://travis-ci.com/apache/fineract-cn-portfolio)
+# Apache Fineract CN Portfolio [![Build Status](https://api.travis-ci.com/apache/fineract-cn-portfolio.svg?branch=develop)](https://travis-ci.com/apache/fineract-cn-portfolio) [![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/apache/fineract-cn-portfolio)](https://hub.docker.com/r/apache/fineract-cn-portfolio/builds)
 
 This project provides product and case management for Fineract CN.  Products are described and "instantiated"
 for customers as cases.
+[Read more](https://cwiki.apache.org/confluence/display/FINERACT/Fineract+CN+Project+Structure#FineractCNProjectStructure-portfolio).
+
 
 ## Abstract
 Apache Fineract CN is an application framework for digital financial services, a system to support nationwide and cross-national financial transactions and help to level and speed the creation of an inclusive, interconnected digital economy for every nation in the world.

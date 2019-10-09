@@ -22,7 +22,7 @@ ext.versions = [
         frameworkanubis      : '0.1.0-BUILD-SNAPSHOT',
         frameworkapi         : '0.1.0-BUILD-SNAPSHOT',
         frameworklang        : '0.1.0-BUILD-SNAPSHOT',
-        frameworkmariadb     : '0.1.0-BUILD-SNAPSHOT',
+        frameworkpostgresql  : '0.1.0-BUILD-SNAPSHOT',
         frameworkcassandra   : '0.1.0-BUILD-SNAPSHOT',
         frameworkcommand     : '0.1.0-BUILD-SNAPSHOT',
         frameworktest        : '0.1.0-BUILD-SNAPSHOT',
@@ -34,11 +34,6 @@ ext.versions = [
         javamoneylib         : '0.9-SNAPSHOT',
         expiringmap          : '0.5.8'
 ]
-
-apply plugin: 'java'
-apply plugin: 'idea'
-apply plugin: 'maven-publish'
-apply plugin: 'io.spring.dependency-management'
 
 tasks.withType(JavaCompile) {
     sourceCompatibility = JavaVersion.VERSION_1_8
@@ -76,7 +71,7 @@ dependencies {
 }
 
 jar {
-    from sourceSets.main.allSource
+    from sourceSets.main.java
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
@@ -111,6 +106,8 @@ license {
 rat {
     // List of exclude directives, defaults to ['**/.gradle/**']
     excludes = [
+            "**/*.log",
+            "**/banner.txt",
             "**/.dockerignore/**",
             "**/.idea/**",
             "**/.gradle/**",
@@ -120,5 +117,4 @@ rat {
             "gradlew.bat",
             "README.md"
     ]
-    plainOutput = true
 }

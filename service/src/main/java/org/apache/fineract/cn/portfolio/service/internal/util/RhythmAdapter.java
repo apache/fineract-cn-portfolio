@@ -63,7 +63,7 @@ public class RhythmAdapter {
       rhythmManager.createBeat(applicationName.toString(), beat);
     }
     catch (final Exception e) {
-      logger.error("Creating interest calculation beat {} failed with exception e.", beat, e);
+      logger.error("Creating interest calculation beat {} for application {} failed", beat, applicationName, e);
     }
   }
 }

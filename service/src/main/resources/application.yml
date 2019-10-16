@@ -46,7 +46,7 @@ eureka:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
   instance:
-    preferIpAddress: true
+    homePageUrl: "http://${eureka.hostname}:2026/portfolio/v1/"
 
 server:
   port: 2026

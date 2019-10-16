@@ -40,18 +40,13 @@ spring:
       enabled: false
     config:
       enabled: false
-  datasource:
-    driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/seshat
-    username: postgres
-    password: postgres
 
 eureka:
   client:
     serviceUrl:
       defaultZone: http://localhost:8761/eureka/
   instance:
-    preferIpAddress: true
+    homePageUrl: "http://${eureka.hostname}:2026/portfolio/v1/"
 
 server:
   port: 2026

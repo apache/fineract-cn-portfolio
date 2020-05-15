@@ -2,6 +2,10 @@
 .idea
 build/
 target/
+.classpath
+.project
+.settings
+bin
 
 api/out/
 component-test/out/

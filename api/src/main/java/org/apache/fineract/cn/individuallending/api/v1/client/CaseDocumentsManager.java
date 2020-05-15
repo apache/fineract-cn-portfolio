@@ -20,7 +20,7 @@ package org.apache.fineract.cn.individuallending.api.v1.client;
 
 import org.apache.fineract.cn.individuallending.api.v1.domain.caseinstance.CaseCustomerDocuments;
 import org.apache.fineract.cn.api.util.CustomFeignClientsConfiguration;
-import org.springframework.cloud.netflix.feign.FeignClient;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;

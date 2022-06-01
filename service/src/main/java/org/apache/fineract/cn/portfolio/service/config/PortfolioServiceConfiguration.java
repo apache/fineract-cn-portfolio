@@ -49,7 +49,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 
 @Configuration
 @EnableAutoConfiguration
-@EnableDiscoveryClient
 @EnableAsync
 @EnableTenantContext
 @EnablePostgreSQL
@@ -65,7 +64,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter
 @EnableJpaRepositories(basePackages = "org.apache.fineract.cn.portfolio.service.internal.repository")
 @EntityScan(basePackages = "org.apache.fineract.cn.portfolio.service.internal.repository")
 @EnableFeignClients(clients = {LedgerManager.class, RhythmManager.class, CustomerManager.class})
-@RibbonClient(name = "portfolio-v1")
 @EnableApplicationName
 @Import(IndividualLendingConfiguration.class)
 public class PortfolioServiceConfiguration extends WebMvcConfigurerAdapter {

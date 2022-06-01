@@ -30,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
  * @author Myrle Krantz
  */
 @SuppressWarnings("unused")
-@FeignClient(value = "portfolio-v1", path = "/portfolio/v1", configuration = CustomFeignClientsConfiguration.class)
+@FeignClient(path = "/portfolio/v1", url = "http://${kubernetes.portfolio.service.name}:${kubernetes.portfolio.server.port}", configuration = CustomFeignClientsConfiguration.class)
 public interface CaseDocumentsManager {
   @RequestMapping(
       value = "/individuallending/products/{productidentifier}/cases/{caseidentifier}/documents",

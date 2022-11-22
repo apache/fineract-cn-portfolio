@@ -41,13 +41,6 @@ spring:
     config:
       enabled: false
 
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
-  instance:
-    homePageUrl: "http://${eureka.hostname}:2026/portfolio/v1/"
-
 server:
   port: 2026
   contextPath: /portfolio/v1/*
@@ -86,3 +79,29 @@ async:
 
 flyway:
   enabled: false
+
+kubernetes:
+  portfolio:
+    service:
+      name: portfolio-service
+    server:
+      port: 2026
+  accounting:
+    service:
+      name: accounting-service
+    server:
+      port: 2025
+  customer:
+    service:
+      name: customer-service
+    server:
+      port: 2024
+  rhythm:
+    service:
+      name: rhythm-service
+    server:
+      port: 2022
+
+ribbon:
+  eureka:
+    enabled: false

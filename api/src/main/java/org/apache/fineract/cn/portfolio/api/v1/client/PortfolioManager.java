@@ -51,7 +51,7 @@ import org.springframework.web.bind.annotation.RequestParam;
  * @author Myrle Krantz
  */
 @SuppressWarnings("unused")
-@FeignClient(value = "portfolio-v1", path = "/portfolio/v1", configuration = CustomFeignClientsConfiguration.class)
+@FeignClient(value = "${kubernetes.portfolio.service.name}", path = "/portfolio/v1", url = "http://${kubernetes.portfolio.service.name}:${kubernetes.portfolio.server.port}", configuration = CustomFeignClientsConfiguration.class)
 public interface PortfolioManager {
 
   @RequestMapping(

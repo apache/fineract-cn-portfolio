@@ -100,7 +100,6 @@ public class AbstractPortfolioTest extends SuiteTestEnvironment {
   @EnableEventRecording
   @EnableFeignClients(basePackages = {"org.apache.fineract.cn.portfolio.api.v1",
       "org.apache.fineract.cn.individuallending.api.v1"})
-  @RibbonClient(name = APP_NAME)
   @Import({PortfolioServiceConfiguration.class})
   @ComponentScan("org.apache.fineract.cn.portfolio.listener")
   public static class TestConfiguration {

@@ -1,4 +1,4 @@
-# Apache Fineract CN Portfolio [![Build Status](https://api.travis-ci.com/apache/fineract-cn-portfolio.svg?branch=develop)](https://travis-ci.com/apache/fineract-cn-portfolio) [![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/apache/fineract-cn-portfolio)](https://hub.docker.com/r/apache/fineract-cn-portfolio/builds)
+# Apache Fineract CN Portfolio [![Docker Cloud Build Status](https://img.shields.io/docker/cloud/build/apache/fineract-cn-portfolio)](https://hub.docker.com/r/apache/fineract-cn-portfolio/builds)
 
 This project provides product and case management for Fineract CN.  Products are described and "instantiated"
 for customers as cases.
